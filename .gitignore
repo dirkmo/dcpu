@@ -1,0 +1,5 @@
+*.o
+*.mk
+trace.vcd
+fetcher/
+regfile/
