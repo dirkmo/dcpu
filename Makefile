@@ -1,13 +1,22 @@
 .PHONY: all sim-regfile sim-fetcher fetcher
 
+UNAME := $(shell uname -s)
+
+VFLAGS = -Wall -trace -cc --exe --Mdir $@
+GTKWAVE := gtkwave
+ifeq ($(UNAME),Darwin)
+VFLAGS += --compiler clang
+GTKWAVE := /Applications/gtkwave.app/Contents/MacOS/gtkwave-bin
+endif
+
 all: regfile fetcher
 
 regfile:
-	verilator -Wall -trace -cc regfile.v --exe --Mdir regfile regfiletest.cpp
+	verilator $(VFLAGS) regfile.v regfiletest.cpp
 	cd regfile/ && make -j4 -f Vregfile.mk
 
 fetcher:
-	verilator -Wall -trace -cc fetcher.v --exe --Mdir fetcher fetchertest.cpp
+	verilator $(VFLAGS) fetcher.v fetchertest.cpp
 	cd fetcher/ && make -j4 -f Vfetcher.mk
 	
 sim-regfile: regfile
@@ -17,7 +26,7 @@ sim-fetcher: fetcher
 	fetcher/Vfetcher
 
 wave: sim-fetcher
-	gtkwave trace.vcd &
+	$(GTKWAVE) trace.vcd &
 
 clean:
 	rm -rf regfile/ fetcher/
