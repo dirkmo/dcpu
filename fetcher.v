@@ -66,8 +66,11 @@ wire [2:0] amode = o_instruction[35:33];
 
 always @(posedge i_clk) begin
     o_pc_wr <= 0;
-    if( fetch_next ) begin
+    if( just_fetched ) begin
         o_pc <= i_pc + (aligned ? 4 : 2);
+        if( amode == AMODE16 ) begin
+            o_pc <= i_pc + 2;
+        end
         o_pc_wr <= 1;
     end
 end
