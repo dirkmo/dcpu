@@ -16,7 +16,7 @@ sim-regfile: regfile
 sim-fetcher: fetcher
 	fetcher/Vfetcher
 
-wave:
+wave: sim-fetcher
 	gtkwave trace.vcd &
 
 clean:
