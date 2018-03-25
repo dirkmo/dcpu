@@ -40,36 +40,51 @@ input [31:0] i_pc;
 output reg [31:0] o_pc;
 output reg o_pc_wr;
 
-output reg [47:0] o_instruction;
 output reg o_valid;
 output reg o_error;
 
-reg fetch_next; // shall be high for one clock cycle
-
-reg [2:0] fetchcount; // number of halfwords fetched
-reg first_fetched; // =1 if first fetch has been performed
-
-wire just_fetched = o_wb_cyc && i_wb_ack;
+output [47:0] o_instruction;
 
 // 47..43 opcode
 // 42..40 cc
 // 39..36 Ra
-// 35..33 amode
+// 35 unused
+// 34..32 amode
 
 parameter
     AMODE16 = 3'b000,
     AMODE32 = 3'b001,
     AMODE48 = 3'b010;
 
+wire [2:0] amode = r_instruction[34:32];
+
+assign o_instruction = amode == AMODE16 ? { r_instruction[47:32], 32'd0 }
+                     : amode == AMODE32 ? { r_instruction[47:16], 16'd0 }
+                     : r_instruction[47:0];
+
+reg [47:0] r_instruction;
+
+reg fetch_next; // shall be high for one clock cycle
+
+reg [2:0] fetchcount; // number of halfwords fetched
+reg first_fetched; // =1 if first fetch has been performed
+
+reg just_fetched;
+always @(posedge i_clk)
+    if( i_reset ) begin
+        just_fetched <= 0;
+    end else begin
+        just_fetched <= o_wb_cyc && i_wb_ack;
+    end
+
 wire aligned = ~i_pc[1];
-wire [2:0] amode = o_instruction[35:33];
 
 always @(posedge i_clk) begin
     o_pc_wr <= 0;
     if( just_fetched ) begin
         o_pc <= i_pc + (aligned ? 4 : 2);
         if( amode == AMODE16 ) begin
-            o_pc <= i_pc + 2;
+            //o_pc <= i_pc + 2;
         end
         o_pc_wr <= 1;
     end
@@ -118,14 +133,15 @@ end
 always @(posedge i_clk) begin
     if(o_wb_cyc && i_wb_ack) begin
         if( fetchcount==0 ) begin
-            if( aligned )
-                o_instruction[47:16] <= i_wb_dat;
-            else
-                o_instruction[47:32] <= i_wb_dat[15:0];
+            if( aligned ) begin
+                r_instruction[47:16] <= i_wb_dat;
+            end else begin
+                r_instruction[47:32] <= i_wb_dat[15:0];
+            end
         end if( fetchcount == 1 ) begin
-            o_instruction[31:0] <= i_wb_dat;
+            r_instruction[31:0] <= i_wb_dat;
         end else if( fetchcount == 2 ) begin
-            o_instruction[15:0] <= i_wb_dat[31:16];
+            r_instruction[15:0] <= i_wb_dat[31:16];
         end
     end
 end

@@ -5,6 +5,14 @@
 #include <stdio.h>
 #include <assert.h>
 
+uint64_t* tickcounter = NULL;
+
+uint64_t tickcount() {
+    if( tickcounter ) {
+        return *tickcounter*10;
+    }
+}
+
 class Wishbone {
 public:
     uint32_t addr;
@@ -76,14 +84,14 @@ public:
                     if( bus->stb&4 ) mem[addr+1] = (bus->dat >> 16) & 0xFF;
                     if( bus->stb&2 ) mem[addr+2] = (bus->dat >>  8) & 0xFF;
                     if( bus->stb&1 ) mem[addr+3] = (bus->dat >>  0) & 0xFF;
-                    printf("mem write %08X: %08X\n", addr, bus->dat);
+                    printf("%lu: mem write %08X: %08X\n", tickcount(), addr, bus->dat);
                 } else {
                     bus->dat = 0;
                     if( bus->stb&8 ) bus->dat |= (mem[addr+0] << 24);
                     if( bus->stb&4 ) bus->dat |= (mem[addr+1] << 16);
                     if( bus->stb&2 ) bus->dat |= (mem[addr+2] <<  8);
                     if( bus->stb&1 ) bus->dat |= (mem[addr+3] <<  0);
-                    printf("mem read %08X: %08X\n", addr, bus->dat);
+                    printf("%lu: mem read %08X: %08X\n", tickcount(), addr, bus->dat);
                 }
                 bus->ack = true;
             }
@@ -99,11 +107,17 @@ int main(int argc, char **argv, char **env) {
     tb->opentrace("trace.vcd");
     
     Wishbone *bus = new Wishbone;
-    uint8_t data[] = {100, 0, 101, 0, 102, 0 };
+    uint8_t data[] = {
+        100, 0,
+        101, 1, 0, 0,
+        102, 1, 0, 0,
+        0xFF, 0xFF, 0xFF, 0xFF
+    };
     Memory mem(1024);
     mem.set(0, data, sizeof(data));
     
     uint32_t pc = 0;
+    tickcounter = &tb->m_tickcount;
 
     tb->reset();
     tb->i_pc(pc);
@@ -119,12 +133,13 @@ int main(int argc, char **argv, char **env) {
         tb->i_pc(pc);
         if( tb->m_core->o_valid ) {
             tb->i_fetch(true);
+            printf("%u: Instruction: %lX\n", tickcount(), tb->m_core->o_instruction);
         }
         tb->tick();
         tb->i_fetch(false);
         if( tb->m_core->o_pc_wr ) {
             pc = tb->m_core->o_pc;
-            printf("PC: %08X\n", pc);
+            printf("%u: PC: %08X\n", tickcount(), pc);
         }
     }
     
