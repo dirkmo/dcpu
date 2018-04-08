@@ -107,14 +107,13 @@ int main(int argc, char **argv, char **env) {
     tb->opentrace("trace.vcd");
     
     Wishbone *bus = new Wishbone;
-    uint8_t data[] = {
-        100, 0,
-        101, 1, 0, 0,
-        102, 1, 0, 0,
-        0xFF, 0xFF, 0xFF, 0xFF
+    uint8_t big_endian_data[] = {
+        0x64, 0x00, // 16 bit
+        0x65, 0x01, 0x00, 0x01, // 32 bit
+        0x66, 0x02, 0x00, 0x01, 0x02, 0x03, // 48 bit
     };
     Memory mem(1024);
-    mem.set(0, data, sizeof(data));
+    mem.set(0, big_endian_data, sizeof(big_endian_data));
     
     uint32_t pc = 0;
     tickcounter = &tb->m_tickcount;
@@ -125,7 +124,7 @@ int main(int argc, char **argv, char **env) {
 
     tb->i_fetch(true);
 
-    while( !tb->done() && tb->m_tickcount < 5000 ) {
+    while( !tb->done() && tb->m_tickcount < 50 ) {
         tb->updateBusState(bus);
         bus->ack = false;
         mem.task( (bus->addr < 1024) && bus->cyc, bus);
