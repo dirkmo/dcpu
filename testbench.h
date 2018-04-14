@@ -8,6 +8,7 @@ uint64_t tickcount() {
     if( tickcounter ) {
         return *tickcounter*10;
     }
+	return 0;
 }
 
 template<class MODULE>	class TESTBENCH {
