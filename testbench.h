@@ -1,5 +1,14 @@
 #include <stdint.h>
 #include <verilated_vcd_c.h>
+#include <stdio.h>
+
+uint64_t* tickcounter = NULL;
+
+uint64_t tickcount() {
+    if( tickcounter ) {
+        return *tickcounter*10;
+    }
+}
 
 template<class MODULE>	class TESTBENCH {
 public:
@@ -80,5 +89,67 @@ public:
 
 	virtual bool done() {
         return Verilated::gotFinish();
+    }
+};
+
+class Wishbone {
+public:
+    uint32_t addr;
+    bool cyc;
+    bool we;
+    bool ack;
+    bool err;
+    uint8_t stb;
+    uint32_t dat;
+
+    uint32_t mask() {
+        return ((stb>>0)&1)*0xFF | ((stb>>1)&1)*0xFF00 |
+            ((stb>>2)&1)*0xFF0000 | ((stb>>3)&1)*0xFF000000;
+    }
+};
+
+class Memory {
+public:
+    uint8_t *mem = NULL;
+    uint32_t size;
+    
+    Memory(uint32_t size) {
+        mem = new uint8_t[size];
+        this->size = size;
+    }
+
+    ~Memory() {
+        delete[] mem;
+    }
+
+    void set(uint32_t addr, uint8_t *dat, uint32_t len) {
+        assert(addr + len < size);
+        while(len--) {
+            mem[addr++] = *dat++;
+        }
+    }
+
+    void task(bool sel, Wishbone *bus) {
+        if( sel ) {
+            if( bus->cyc && bus->stb>0 ) {
+                uint32_t addr = bus->addr - (bus->addr%4);
+                assert( bus->addr < size-3);
+                if( bus->we ) {
+                    if( bus->stb&8 ) mem[addr+0] = (bus->dat >> 24) & 0xFF;
+                    if( bus->stb&4 ) mem[addr+1] = (bus->dat >> 16) & 0xFF;
+                    if( bus->stb&2 ) mem[addr+2] = (bus->dat >>  8) & 0xFF;
+                    if( bus->stb&1 ) mem[addr+3] = (bus->dat >>  0) & 0xFF;
+                    printf("%lu: mem write %08X: %08X\n", tickcount(), addr, bus->dat);
+                } else {
+                    bus->dat = 0;
+                    if( bus->stb&8 ) bus->dat |= (mem[addr+0] << 24);
+                    if( bus->stb&4 ) bus->dat |= (mem[addr+1] << 16);
+                    if( bus->stb&2 ) bus->dat |= (mem[addr+2] <<  8);
+                    if( bus->stb&1 ) bus->dat |= (mem[addr+3] <<  0);
+                    printf("%lu: mem read %08X: %08X\n", tickcount(), addr, bus->dat);
+                }
+                bus->ack = true;
+            }
+        }
     }
 };

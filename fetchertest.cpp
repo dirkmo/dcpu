@@ -5,14 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-uint64_t* tickcounter = NULL;
-
-uint64_t tickcount() {
-    if( tickcounter ) {
-        return *tickcounter*10;
-    }
-}
-
+/*
 class Wishbone {
 public:
     uint32_t addr;
@@ -29,29 +22,6 @@ public:
     }
 };
 
-class fetchertest : public TESTBENCH<Vfetcher> {
-public:
-    void i_pc(uint32_t pc) { m_core->i_pc = pc; }
-    uint32_t o_pc() { return m_core->o_pc; }
-    void i_fetch(bool fetch) {
-        m_core->i_fetch = fetch;
-    }
-    void updateBusState(Wishbone *bus) {
-        bus->addr = m_core->o_wb_addr;
-        bus->we = m_core->o_wb_we;
-        bus->cyc = m_core->o_wb_cyc;
-        bus->stb = m_core->o_wb_stb;
-        m_core->i_wb_err = bus->err;
-        m_core->i_wb_ack = bus->ack;
-        if( bus->stb>0) {
-            if(bus->we) {
-                bus->dat = m_core->o_wb_dat & bus->mask();
-            } else {
-                m_core->i_wb_dat = bus->dat & bus->mask();
-            }
-        }
-    }
-};
 
 class Memory {
 public:
@@ -98,7 +68,31 @@ public:
         }
     }
 };
+*/
 
+class fetchertest : public TESTBENCH<Vfetcher> {
+public:
+    void i_pc(uint32_t pc) { m_core->i_pc = pc; }
+    uint32_t o_pc() { return m_core->o_pc; }
+    void i_fetch(bool fetch) {
+        m_core->i_fetch = fetch;
+    }
+    void updateBusState(Wishbone *bus) {
+        bus->addr = m_core->o_wb_addr;
+        bus->we = m_core->o_wb_we;
+        bus->cyc = m_core->o_wb_cyc;
+        bus->stb = m_core->o_wb_stb;
+        m_core->i_wb_err = bus->err;
+        m_core->i_wb_ack = bus->ack;
+        if( bus->stb>0) {
+            if(bus->we) {
+                bus->dat = m_core->o_wb_dat & bus->mask();
+            } else {
+                m_core->i_wb_dat = bus->dat & bus->mask();
+            }
+        }
+    }
+};
 
 int main(int argc, char **argv, char **env) {
     Verilated::commandArgs(argc, argv);

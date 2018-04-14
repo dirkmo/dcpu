@@ -1,0 +1,86 @@
+Basic instruction format:
+    op(6) cc(3) ra(4) am(3) | [Immediates...]
+
+15 14 13 12 11 10  9 8 7  6 5 4 3  2 1 0
+[ op            ]  [cc ]  [ra   ]  [am ]
+
+
+Short instruction:
+    op(6) cc(3) ra(4) 000
+
+12 bit immediate:
+    op(6) cc(3) ra(4) 001 | rb(4) imm(12)
+
+28 bit immediate:
+    op(6) cc(3) ra(4) 010 | rb(4) imm(12) imm(16)
+
+32Bit immediate:
+    op(6) cc(3) ra(4) 011 | imm(32)
+
+
+(op in hex)
+
+ 6'h00 nop
+
+    0x0000
+    0x0001 0000
+    0x0002 0000 0000
+    0x0003 0000 0000
+
+
+6'h01 ld
+    ld (rb+i), ra
+    op     cc  ra   am    rb   #imm12
+    000001 000 0000 001 | 0001 0000 0000 0001
+    
+    ld (rb+i), ra
+    op     cc  ra   am    rb   #imm28
+    000001 000 0000 010 | 0001 0000 0000 0000 0000 0000 0000 0010
+
+    ld (i), ra
+    op     cc  ra   am    #imm32
+    000001 000 0000 011 | 0001 0010 0011 0100 0101 0110 0111 1000
+
+6'h02 ldh
+
+6'h03 ldb
+
+6'h04 st
+    st ra, (rb+i)
+    op     cc  ra   am    rb   #imm12
+    000010 000 0000 001 | 0001 0000 0000 0000
+    
+    st ra, (rb+i)
+    op     cc  ra   am    rb   #imm28
+    000010 000 0000 001 | 0001 0000 0000 0000 0000 0000 0000 0000
+
+    st ra, (i)
+    op     cc  ra   am    #imm32
+    000010 000 0000 001 | 0000 0000 0000 0000 0000 0000 0000 0000
+
+6'h05 sth
+
+6'h06 stb
+
+6'h07 mov
+    mov rb+i, ra
+ 
+
+6'h10 sub
+    sub rb+i, ra
+    sub i, ra
+
+6'h11 and
+6'h12 add
+6'h13 or
+6'h14 xor
+6'h15 lsr
+6'h16 lsl
+6'h17 asr
+6'h18 asl
+
+
+6'h20 cmp
+6'h21 tst 
+
+

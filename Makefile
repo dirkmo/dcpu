@@ -18,15 +18,23 @@ regfile:
 fetcher:
 	verilator $(VFLAGS) fetcher.v fetchertest.cpp
 	cd fetcher/ && make -j4 -f Vfetcher.mk
-	
+
+load:
+	verilator $(VFLAGS) load.v loadtest.cpp
+	cd load/ && make -j4 -f Vload.mk
+
+
 sim-regfile: regfile
 	regfile/Vregisterfile
 
 sim-fetcher: fetcher
 	fetcher/Vfetcher
 
-wave: sim-fetcher
+sim-load: load
+	load/Vload
+
+wave: sim-load
 	$(GTKWAVE) trace.vcd &
 
 clean:
-	rm -rf regfile/ fetcher/
+	rm -rf regfile/ fetcher/ load/
