@@ -5,3 +5,4 @@ fetcher/
 regfile/
 load/
 store/
+.vscode/
