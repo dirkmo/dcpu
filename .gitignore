@@ -6,3 +6,4 @@ regfile/
 load/
 store/
 .vscode/
+dcpu/

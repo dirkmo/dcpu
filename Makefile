@@ -27,6 +27,10 @@ store:
 	verilator $(VFLAGS) store.v storetest.cpp
 	cd store/ && make -j4 -f Vstore.mk
 
+dcpu:
+	verilator $(VFLAGS) dcpu.v dcputest.cpp
+	cd dcpu/ && make -j4 -f Vdcpu.mk
+
 sim-regfile: regfile
 	regfile/Vregisterfile
 
@@ -39,8 +43,11 @@ sim-load: load
 sim-store: store
 	store/Vstore
 
-wave: sim-store
+sim-dcpu: dcpu
+	dcpu/Vcpu
+
+wave: sim-dcpu
 	$(GTKWAVE) trace.vcd &
 
 clean:
-	rm -rf regfile/ fetcher/ load/ store/
+	rm -rf regfile/ fetcher/ load/ store/ dcpu/
