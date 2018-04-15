@@ -63,8 +63,23 @@ Short instruction:
 6'h06 stb
 
 6'h07 mov
-    mov rb+i, ra
- 
+    
+    special instruction format for mov:
+        Supervisor can access user registers, not vice versa.
+        Meaning of #imm12:
+        [dc] [ra] [rb]
+        0000 0001 0001
+        
+        if nibble ra/rb is 0: own register. 1: user register
+
+    mov rb+11, ra  ; copy user register rb into user register ra, even as supervisor
+    op     cc  ra   am    rb   #imm12
+    000001 000 0000 001 | 0001 0000 0001 0001
+
+    mov rb+10, ra ; if executed as supervisor: copy user register rb into supervisor register ra
+                  ; if executed as user: copy user register rb into user register ra
+    mov rb+1, ra  ; if executed as supervisor: copy supervisor register rb into user register ra
+                  ; if executed as user: copy user register rb into user register ra
 
 6'h10 sub
     sub rb+i, ra
