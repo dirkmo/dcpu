@@ -3,3 +3,5 @@
 trace.vcd
 fetcher/
 regfile/
+load/
+store/

@@ -130,6 +130,21 @@ public:
         }
     }
 
+	uint8_t get8(uint32_t addr) {
+		assert(addr < size);
+		return mem[addr];
+	}
+
+	uint16_t get16(uint32_t addr) {
+		assert(addr+1 < size);
+		return (mem[addr] << 8) | mem[addr+1];
+	}
+
+	uint32_t get32(uint32_t addr) {
+		assert(addr+3 < size);
+		return (mem[addr] << 24) | (mem[addr+1] << 16) | (mem[addr+2] << 8) | mem[addr+3];
+	}
+
     void task(bool sel, Wishbone *bus) {
         if( sel ) {
             if( bus->cyc && bus->stb>0 ) {
@@ -140,14 +155,14 @@ public:
                     if( bus->stb&4 ) mem[addr+1] = (bus->dat >> 16) & 0xFF;
                     if( bus->stb&2 ) mem[addr+2] = (bus->dat >>  8) & 0xFF;
                     if( bus->stb&1 ) mem[addr+3] = (bus->dat >>  0) & 0xFF;
-                    printf("%lu: mem write %08X: %08X\n", tickcount(), addr, bus->dat);
+                    printf("%lu: mem write (%X) %08X: %08X\n", tickcount(), bus->stb, addr, bus->dat);
                 } else {
                     bus->dat = 0;
                     if( bus->stb&8 ) bus->dat |= (mem[addr+0] << 24);
                     if( bus->stb&4 ) bus->dat |= (mem[addr+1] << 16);
                     if( bus->stb&2 ) bus->dat |= (mem[addr+2] <<  8);
                     if( bus->stb&1 ) bus->dat |= (mem[addr+3] <<  0);
-                    printf("%lu: mem read %08X: %08X\n", tickcount(), addr, bus->dat);
+	                    printf("%lu: mem read (%X) %08X: %08X\n", tickcount(), bus->stb, addr, bus->dat);
                 }
                 bus->ack = true;
             }
