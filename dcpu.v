@@ -48,21 +48,29 @@ wire [3:0] wb_stb_fetcher;
 
 reg [31:0] registers[31:0];
 
-assign reg_cc_super = registers[4'd14];
-assign reg_pc_super = registers[4'd15];
+reg reg_wr_a;
+reg reg_wr_b;
+reg [4:0] reg_sel_a;
+reg [4:0] reg_sel_b;
 
-assign reg_cc_user = { registers[4'd14][31:16], registers[4'd30][15:0] };
-assign reg_pc_user = registers[4'd31];
+wire [31:0] bus_a;
+wire [31:0] bus_b;
+
+wire [31:0] reg_cc_super = registers[5'd14];
+wire [31:0] reg_pc_super = registers[5'd15];
+
+wire [31:0] reg_cc_user = { registers[5'd14][31:16], registers[5'd30][15:0] };
+wire [31:0] reg_pc_user = registers[5'd31];
 
 integer i;
 
 always @(posedge i_clk)
 begin
-    if( i_wr_a ) begin
-        registers[i_sel_a] <= i_reg_a;
+    if( reg_wr_a ) begin
+        registers[reg_sel_a] <= bus_a;
     end
-    if( i_wr_b ) begin
-        registers[i_sel_b] <= i_reg_b;
+    if( reg_wr_b ) begin
+        registers[reg_sel_b] <= bus_b;
     end
 
     if( i_reset == 1'b1 ) begin
@@ -143,6 +151,8 @@ fetcher fetcher_inst(
     .o_valid(instruction_valid),
     .o_error(fetcher_error)
 );
+
+
 
 
 endmodule
