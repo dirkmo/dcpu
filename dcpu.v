@@ -31,7 +31,7 @@ output [3:0] o_wb_stb;
 output o_wb_we;
 output o_wb_cyc;
 
-wire [31:0] pc = 0; // inten ? user_pc : super_pc;
+wire [31:0] pc;
 wire [47:0] instruction;
 wire instruction_valid;
 wire fetcher_error;
@@ -47,20 +47,37 @@ wire [3:0] wb_stb_fetcher;
 // Registers
 
 reg [31:0] registers[31:0];
+reg reg_ie = 1'b0; // interrupt enable (=user mode)
+reg [31:0] bus_a;
+reg [31:0] bus_b;
+
+
+wire [4:0] pc_idx = { reg_ie, 4'd15 };
+assign pc = registers[ pc_idx ];
 
 reg reg_wr_a;
-reg reg_wr_b;
+reg reg_wr_b = 0;
 reg [4:0] reg_sel_a;
 reg [4:0] reg_sel_b;
 
-wire [31:0] bus_a;
-wire [31:0] bus_b;
+always @(*)
+begin
+    if( pc_wr_fetcher ) begin
+        reg_wr_a = 1'b1;
+        bus_a = pc_fetcher;
+        reg_sel_a = pc_idx;
+    end else begin
+    end
+end
 
-wire [31:0] reg_cc_super = registers[5'd14];
-wire [31:0] reg_pc_super = registers[5'd15];
 
-wire [31:0] reg_cc_user = { registers[5'd14][31:16], registers[5'd30][15:0] };
-wire [31:0] reg_pc_user = registers[5'd31];
+// reg_ie
+always @(posedge i_clk)
+begin
+    if( i_reset ) begin
+        reg_ie <= 1'b0;
+    end
+end
 
 integer i;
 
@@ -148,6 +165,7 @@ fetcher fetcher_inst(
     .o_pc_wr(pc_wr_fetcher),
     
     .o_instruction(instruction),
+    .o_raw_immediate(),
     .o_valid(instruction_valid),
     .o_error(fetcher_error)
 );

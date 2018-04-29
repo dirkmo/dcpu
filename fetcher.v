@@ -19,6 +19,7 @@ module fetcher(
     o_pc_wr,
     
     o_instruction,
+    o_raw_immediate,
     o_valid,
     o_error
 );
@@ -44,6 +45,7 @@ output reg o_valid;
 output reg o_error;
 
 output [47:0] o_instruction;
+output [31:0] o_raw_immediate;
 
 reg [47:0] r_instruction;
 
@@ -67,6 +69,10 @@ assign o_instruction = amode == AMODE16 ? { r_instruction[47:32], 32'd0 }
                      : r_instruction[47:0];
 
 assign o_wb_addr = { i_pc[31:2], 2'b00 };
+
+assign o_raw_immediate = amode == AMODE16 ? 0
+                   : amode == AMODE32 ? { 16'd0, r_instruction[31:16] }
+                   : r_instruction[31:0];
 
 //------------------------------------------------------------------
 // master state machine
@@ -106,12 +112,12 @@ always @(posedge i_clk) begin
                 if( ~data_avail ) begin
                     // fetch next halfword
                     o_wb_cyc <= 1;
-                    o_wb_stb <= i_pc[1] ? 4'b0011 : 4'b1100;
+                    o_wb_stb <= o_pc[1] ? 4'b0011 : 4'b1100;
                 end else begin
                     // save immediate data
-                    r_instruction[31:16] <= i_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
+                    r_instruction[31:16] <= o_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
                     // increment pc
-                    o_pc <= i_pc + 2;
+                    o_pc <= o_pc + 2;
                     o_pc_wr <= 1;
                     // next state
                     state <= 3;
@@ -128,12 +134,12 @@ always @(posedge i_clk) begin
                 if( ~data_avail ) begin
                     // fetch next halfword
                     o_wb_cyc <= 1;
-                    o_wb_stb <= i_pc[1] ? 4'b0011 : 4'b1100;
+                    o_wb_stb <= o_pc[1] ? 4'b0011 : 4'b1100;
                 end else begin
                     // save immediate data
-                    r_instruction[15:0] <= i_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
+                    r_instruction[15:0] <= o_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
                     // increment pc
-                    o_pc <= i_pc + 2;
+                    o_pc <= o_pc + 2;
                     o_pc_wr <= 1;
                     // next state
                     state <= 4;
