@@ -1,6 +1,9 @@
 /* verilator lint_off UNUSED */
 /* verilator lint_off UNDRIVEN */
 /* verilator lint_off PINCONNECTEMPTY */
+
+`include "defines.v"
+
 module dcpu(
     i_clk,
     i_reset,
@@ -40,6 +43,41 @@ wire wb_cyc_fetcher;
 wire [31:0] wb_addr_fetcher;
 wire [3:0] wb_stb_fetcher;
 
+//-----------------------------------------------
+// Registers
+
+reg [31:0] registers[31:0];
+
+assign reg_cc_super = registers[4'd14];
+assign reg_pc_super = registers[4'd15];
+
+assign reg_cc_user = { registers[4'd14][31:16], registers[4'd30][15:0] };
+assign reg_pc_user = registers[4'd31];
+
+integer i;
+
+always @(posedge i_clk)
+begin
+    if( i_wr_a ) begin
+        registers[i_sel_a] <= i_reg_a;
+    end
+    if( i_wr_b ) begin
+        registers[i_sel_b] <= i_reg_b;
+    end
+
+    if( i_reset == 1'b1 ) begin
+        for( i = 0; i < 16; i = i+1 ) begin
+            registers[i] <= 32'd0;
+        end
+    end
+end
+
+//-----------------------------------------------
+// main state machine
+
+assign o_wb_we = wb_we_fetcher;
+assign o_wb_cyc = wb_cyc_fetcher;
+assign o_wb_stb = wb_stb_fetcher;
 
 reg [3:0] r_state;
 
@@ -51,6 +89,8 @@ localparam
     EXECUTE_WAIT  = 4,
     WRITEBACK     = 5;
 
+
+wire fetch_start = (r_state == FETCH_START);
 
 always @(posedge i_clk)
 begin
@@ -78,6 +118,9 @@ begin
 end
 
 
+//-----------------------------------------------
+// instruction fetcher
+
 fetcher fetcher_inst(
     .i_clk(i_clk),
     .i_reset(i_reset),
@@ -91,7 +134,7 @@ fetcher fetcher_inst(
     .i_wb_ack(i_wb_ack),
     .i_wb_err(i_wb_err),
 
-    .i_fetch(r_state == FETCH_START),
+    .i_fetch( fetch_start ),
     .i_pc(pc),
     .o_pc(pc_fetcher),
     .o_pc_wr(pc_wr_fetcher),

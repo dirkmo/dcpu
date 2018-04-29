@@ -47,11 +47,13 @@ int main(int argc, char **argv, char **env) {
     tb->reset();
     tb->tick();
 
-    tb->updateBusState(bus);
-    bus->ack = false;
-    mem.task( (bus->addr < 1024) && bus->cyc, bus);
-    tb->updateBusState(bus);
-
+    for( int i = 0; i<10; i++) {
+        tb->updateBusState(bus);
+        bus->ack = false;
+        mem.task( (bus->addr < 1024) && bus->cyc, bus);
+        tb->updateBusState(bus);
+        tb->tick();
+    }
 
 
     delete bus;
