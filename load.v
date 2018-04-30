@@ -1,5 +1,5 @@
-/* verilator lint_off UNUSED */
-/* verilator lint_off UNDRIVEN */
+`include "defines.v"
+
 module load(
     i_clk,
     i_reset,
@@ -33,7 +33,7 @@ output [31:0] o_wb_dat;
 input i_wb_ack;
 input i_wb_err;
 
-input [1:0] i_load;
+input [1:0] i_load; // determines size of load also (2'd1 = 8, 2'd2 = 16, 2'd3 = 32)
 input [31:0] i_addr;
 
 output reg[31:0] o_data;

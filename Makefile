@@ -27,8 +27,8 @@ store:
 	verilator $(VFLAGS) store.v storetest.cpp
 	cd store/ && make -j4 -f Vstore.mk
 
-dcpu: dcpu.v dcputest.cpp
-	verilator $(VFLAGS) dcpu.v fetcher.v dcputest.cpp
+dcpu: dcpu.v dcputest.cpp fetcher.v load.v defines.v
+	verilator $(VFLAGS) dcpu.v fetcher.v load.v dcputest.cpp
 	cd dcpu/ && make -j4 -f Vdcpu.mk
 
 sim-regfile: regfile
