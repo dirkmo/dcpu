@@ -18,6 +18,19 @@ Short instruction:
     op(6) cc(3) ra(4) 011 | imm(32)
 
 
+
+
+Condition codes (cc):
+    3'h0: none
+    3'h1: .Z
+    3'h2: .LT
+    3'h3: .C
+    3'h4: .V
+    3'h5: .NZ
+    3'h6: .GE
+    3'h7: .NC
+
+
 (op in hex)
 
  6'h00 nop

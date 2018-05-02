@@ -34,6 +34,7 @@ output o_wb_cyc;
 // fetcher wires
 wire [31:0] pc;
 wire [47:0] instruction;
+wire [2:0] condition = instruction[41:39];
 wire instruction_valid;
 wire fetcher_error;
 wire [31:0] pc_fetcher;
@@ -64,7 +65,7 @@ wire wb_we_store;
 
 wire error_store;
 wire done_store;
-wire [1:0] store_start;
+wire [1:0] store_start; // determines size of store
 wire [31:0] addr_store;
 
 
@@ -76,9 +77,10 @@ reg reg_ie = 1'b0; // interrupt enable (=user mode)
 reg [31:0] bus_a;
 reg [31:0] bus_b;
 
-
 wire [4:0] pc_idx = { reg_ie, 4'd15 };
-assign pc = registers[ pc_idx ];
+wire [4:0] cc_idx = { reg_ie, 4'd14 };
+assign pc = registers[pc_idx];
+wire [3:0] flags = registers[cc_idx][3:0];
 
 reg reg_wr_a;
 reg reg_wr_b = 0;
@@ -123,6 +125,7 @@ begin
     end
 end
 
+
 //-----------------------------------------------
 // main state machine
 
@@ -138,6 +141,8 @@ localparam
 
 
 wire fetch_start = (r_state == FETCH_START);
+wire execute_start = (r_state == EXECUTE_START);
+wire condition_ok;
 
 always @(posedge i_clk)
 begin
@@ -150,7 +155,9 @@ begin
         FETCH_START: begin
             r_state <= FETCH_WAIT;
         end
-        FETCH_WAIT: if( instruction_valid ) r_state <= EXECUTE_START;
+        FETCH_WAIT: if( instruction_valid ) begin
+            r_state <= condition_ok ? EXECUTE_START : FETCH_START;
+        end
         EXECUTE_START: begin
             r_state <= EXECUTE_WAIT;
         end
@@ -161,6 +168,35 @@ begin
 
     if( i_reset ) begin
         r_state <= RESET;
+    end
+end
+
+//-----------------------------------------------
+// instruction decoder
+
+wire [5:0] opcode = instruction[47:42];
+
+assign condition_ok = (condition == `COND_Z)  && flags[`CC_Z]
+                   || (condition == `COND_LT) && flags[`CC_N]
+                   || (condition == `COND_C)  && flags[`CC_C]
+                   || (condition == `COND_V)  && flags[`CC_V]
+                   || (condition == `COND_NZ) && !flags[`CC_Z]
+                   || (condition == `COND_GE) && !flags[`CC_N]
+                   || (condition == `COND_NC) && !flags[`CC_C]
+                   || (condition == `COND_NONE);
+
+always @(posedge i_clk)
+begin
+    if( execute_start ) begin
+
+        //    case (opcode)
+        //        OP_LDB:
+        //        OP_LDH:
+        //        OP_LD:
+        //        default: ; // illegal instruction
+        //    endcase
+    end else begin
+        // skip instruction
     end
 end
 
