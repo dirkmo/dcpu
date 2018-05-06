@@ -47,7 +47,7 @@ sim-dcpu: dcpu
 	dcpu/Vdcpu
 
 wave: sim-dcpu
-	$(GTKWAVE) trace.vcd &
+	$(GTKWAVE) -v < trace.vcd &
 
 clean:
 	rm -rf regfile/ fetcher/ load/ store/ dcpu/

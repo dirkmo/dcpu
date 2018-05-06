@@ -19,7 +19,8 @@ module fetcher(
     o_pc_wr,
     
     o_instruction,
-    o_raw_immediate,
+    o_immediate,
+    o_rb_idx,
     o_valid,
     o_error
 );
@@ -41,11 +42,12 @@ input [31:0] i_pc;
 output reg [31:0] o_pc;
 output reg o_pc_wr;
 
+output [3:0] o_rb_idx;
 output reg o_valid;
 output reg o_error;
 
 output [47:0] o_instruction;
-output [31:0] o_raw_immediate;
+output [31:0] o_immediate;
 
 reg [47:0] r_instruction;
 
@@ -64,15 +66,28 @@ wire [2:0] amode = r_instruction[34:32];
 
 wire data_avail = i_wb_ack && o_wb_cyc;
 
+// instruction and immediate
 assign o_instruction = amode == AMODE16 ? { r_instruction[47:32], 32'd0 }
                      : amode == AMODE32 ? { r_instruction[47:16], 16'd0 }
                      : r_instruction[47:0];
 
 assign o_wb_addr = { i_pc[31:2], 2'b00 };
 
-assign o_raw_immediate = amode == AMODE16 ? 0
-                   : amode == AMODE32 ? { 16'd0, r_instruction[31:16] }
-                   : r_instruction[31:0];
+// immediate (and sign extension)
+wire is = r_instruction[27]; // immediate sign
+assign o_immediate = amode == AMODE16 ? { is ? 20'hFFFFF : 20'h00000, r_instruction[27:16] } // [27:16]
+                   : amode == AMODE32 ? { is ? 4'hF : 4'h0, r_instruction[27:0] } // [27:0]
+                   : r_instruction[31:0]; // [31:0] 
+
+assign o_rb_idx = r_instruction[31:28];
+
+/*
+12 bit immediate:
+    op(6) cc(3) ra(4) 001 | rb(4) imm(12)
+
+28 bit immediate:
+    op(6) cc(3) ra(4) 010 | rb(4) imm(12) imm(16)
+*/
 
 //------------------------------------------------------------------
 // master state machine

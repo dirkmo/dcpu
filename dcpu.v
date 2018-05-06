@@ -39,6 +39,10 @@ wire instruction_valid;
 wire fetcher_error;
 wire [31:0] pc_fetcher;
 wire pc_wr_fetcher;
+wire [31:0] immediate_fetcher;
+wire [3:0] rb_idx_fetcher;
+wire [4:0] ra_idx = { reg_ie, instruction[6:3] };
+wire [4:0] rb_idx = { reg_ie, rb_idx_fetcher };
 
 wire wb_we_fetcher;
 wire wb_cyc_fetcher;
@@ -68,7 +72,6 @@ wire done_store;
 wire [1:0] store_start; // determines size of store
 wire [31:0] addr_store;
 
-
 //-----------------------------------------------
 // Registers
 
@@ -86,6 +89,8 @@ reg reg_wr_a;
 reg reg_wr_b = 0;
 reg [4:0] reg_sel_a;
 reg [4:0] reg_sel_b;
+
+wire [31:0] rb_imm = registers[rb_idx] + immediate_fetcher;
 
 // bus a
 always @(*)
@@ -246,7 +251,8 @@ fetcher fetcher_inst(
     .o_pc_wr(pc_wr_fetcher),
     
     .o_instruction(instruction),
-    .o_raw_immediate(),
+    .o_immediate(immediate_fetcher),
+    .o_rb_idx(rb_idx_fetcher),
     .o_valid(instruction_valid),
     .o_error(fetcher_error)
 );
