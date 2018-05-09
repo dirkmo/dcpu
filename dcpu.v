@@ -33,8 +33,8 @@ output o_wb_cyc;
 
 // fetcher wires
 wire [31:0] pc;
-wire [47:0] instruction;
-wire [2:0] condition = instruction[41:39];
+wire [15:0] instruction;
+wire [2:0] condition = instruction[9:7];
 wire instruction_valid;
 wire fetcher_error;
 wire [31:0] pc_fetcher;
@@ -90,7 +90,7 @@ reg reg_wr_b = 0;
 reg [4:0] reg_sel_a;
 reg [4:0] reg_sel_b;
 
-wire [31:0] rb_imm = registers[rb_idx] + immediate_fetcher;
+//wire [31:0] rb_imm = registers[rb_idx] + immediate_fetcher;
 
 // bus a
 always @(*)
@@ -179,7 +179,7 @@ end
 //-----------------------------------------------
 // instruction decoder
 
-wire [5:0] opcode = instruction[47:42];
+wire [5:0] opcode = instruction[15:10];
 
 assign condition_ok = (condition == `COND_Z)  && flags[`CC_Z]
                    || (condition == `COND_LT) && flags[`CC_N]

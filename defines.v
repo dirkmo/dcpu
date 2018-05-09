@@ -43,9 +43,13 @@
 `define OP_LDH    6'h21
 `define OP_LD     6'h22
 
+// move
+`define OP_MOV    6'h23
+
 // store
 `define OP_STB    6'h24
 `define OP_STH    6'h25
 `define OP_ST     6'h26
+
 
 `endif

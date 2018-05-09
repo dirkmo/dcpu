@@ -33,10 +33,12 @@ int main(int argc, char **argv, char **env) {
     tb->opentrace("trace.vcd");
     
     Wishbone *bus = new Wishbone;
-    uint8_t big_endian_data[256];
-    for( int i=0; i<sizeof(big_endian_data); i++) {
-        big_endian_data[i] = i;
-    }
+    uint8_t big_endian_data[256] = {
+        0x80, 0x01, 0x10, 0x0A, // ld r1+0x10, r0
+        0x80, 0x01, 0x1F, 0xF6, // ld r1-0x10, r0
+    };
+
+
 
     Memory mem(1024);
     mem.set(0, big_endian_data, sizeof(big_endian_data));

@@ -46,48 +46,32 @@ output [3:0] o_rb_idx;
 output reg o_valid;
 output reg o_error;
 
-output [47:0] o_instruction;
+output reg [15:0] o_instruction;
+wire [2:0] amode = o_instruction[2:0];
+
 output [31:0] o_immediate;
 
-reg [47:0] r_instruction;
+reg [31:0] r_immediate;
+wire is = r_immediate[31]; // sign of immediate
 
-// r_instruction bits:
-// 47..42 opcode
-// 41..39 cc
-// 38..35 Ra
-// 34..32 amode
+assign o_immediate = (amode == AMODE_IM12) ? { is ? 20'hFFFFF : 20'h00000, r_immediate[27:16] }
+                   : (amode == AMODE_IM28) ? { is ? 4'hF : 4'h0, r_immediate[27:0] }
+                   : (amode == AMODE_IM32) ? r_immediate[31:0]
+                   : 0;
+
+assign o_rb_idx = r_immediate[31:28];
 
 parameter
-    AMODE16 = 3'b000,
-    AMODE32 = 3'b001,
-    AMODE48 = 3'b010;
+    AMODE_NOIM = 3'b000,
+    AMODE_IM12 = 3'b001,
+    AMODE_IM28 = 3'b010,
+    AMODE_IM32 = 3'b011;
 
-wire [2:0] amode = r_instruction[34:32];
+
 
 wire data_avail = i_wb_ack && o_wb_cyc;
 
-// instruction and immediate
-assign o_instruction = amode == AMODE16 ? { r_instruction[47:32], 32'd0 }
-                     : amode == AMODE32 ? { r_instruction[47:16], 16'd0 }
-                     : r_instruction[47:0];
-
 assign o_wb_addr = { i_pc[31:2], 2'b00 };
-
-// immediate (and sign extension)
-wire is = r_instruction[27]; // immediate sign
-assign o_immediate = amode == AMODE16 ? { is ? 20'hFFFFF : 20'h00000, r_instruction[27:16] } // [27:16]
-                   : amode == AMODE32 ? { is ? 4'hF : 4'h0, r_instruction[27:0] } // [27:0]
-                   : r_instruction[31:0]; // [31:0] 
-
-assign o_rb_idx = r_instruction[31:28];
-
-/*
-12 bit immediate:
-    op(6) cc(3) ra(4) 001 | rb(4) imm(12)
-
-28 bit immediate:
-    op(6) cc(3) ra(4) 010 | rb(4) imm(12) imm(16)
-*/
 
 //------------------------------------------------------------------
 // master state machine
@@ -108,7 +92,7 @@ always @(posedge i_clk) begin
                 o_wb_stb <= i_pc[1] ? 4'b0011 : 4'b1100;
             end else begin
                 // save instruction
-                r_instruction[47:32] <= i_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
+                o_instruction[15:0] <= i_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
                 // increment pc
                 o_pc <= i_pc + 2;
                 o_pc_wr <= 1;
@@ -118,8 +102,8 @@ always @(posedge i_clk) begin
         end
         2: begin
             // decode
-            if( amode == AMODE16 ) begin
-                // 16 bit instruction fetched
+            if( amode == AMODE_NOIM ) begin
+                // 16 bit instruction fetched (only opcode, no immediate data)
                 o_valid <= 1;
                 state <= 0;
             end else begin
@@ -130,7 +114,7 @@ always @(posedge i_clk) begin
                     o_wb_stb <= o_pc[1] ? 4'b0011 : 4'b1100;
                 end else begin
                     // save immediate data
-                    r_instruction[31:16] <= o_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
+                    r_immediate[31:16] <= o_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
                     // increment pc
                     o_pc <= o_pc + 2;
                     o_pc_wr <= 1;
@@ -140,19 +124,19 @@ always @(posedge i_clk) begin
             end
         end
         3: begin
-            if( amode == AMODE32 ) begin
-                // 32 bit instruction fetched
+            if( (amode == AMODE_IM12) ) begin
+                // 32 bit instruction fetched (opcode + 16 bit immediate)
                 o_valid <= 1;
                 state <= 0;
             end else begin
-                // 32 bit or 48 bit instruction
+                // 48 bit instruction (opcode + 32 bit immediate)
                 if( ~data_avail ) begin
                     // fetch next halfword
                     o_wb_cyc <= 1;
                     o_wb_stb <= o_pc[1] ? 4'b0011 : 4'b1100;
                 end else begin
                     // save immediate data
-                    r_instruction[15:0] <= o_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
+                    r_immediate[15:0] <= o_pc[1] ? i_wb_dat[15:0] : i_wb_dat[31:16];
                     // increment pc
                     o_pc <= o_pc + 2;
                     o_pc_wr <= 1;
