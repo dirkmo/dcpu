@@ -34,8 +34,14 @@ int main(int argc, char **argv, char **env) {
     
     Wishbone *bus = new Wishbone;
     uint8_t big_endian_data[256] = {
-        0x80, 0x01, 0x10, 0x0A, // ld r1+0x10, r0
-        0x80, 0x01, 0x1F, 0xF6, // ld r1-0x10, r0
+        // amode12
+        0x80, 0x01, 0x10, 0x0A, // ld r1+10, r0
+        0x80, 0x01, 0x2F, 0xF6, // ld r2-10, r0
+        // amode28
+        0x80, 0x02, 0x30, 0x00, 0x00, 0x0A, // ld r3+10, r0
+        0x80, 0x02, 0x4F, 0xFF, 0xFF, 0xF6, // ld r4-10, r0
+        // amode32
+        0x80, 0x03, 0x10, 0x02, 0x30, 0x04, // ld 10, r0
     };
 
 
@@ -49,7 +55,7 @@ int main(int argc, char **argv, char **env) {
     tb->reset();
     tb->tick();
 
-    for( int i = 0; i<10; i++) {
+    for( int i = 0; i<60; i++) {
         tb->updateBusState(bus);
         bus->ack = false;
         mem.task( (bus->addr < 1024) && bus->cyc, bus);

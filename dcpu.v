@@ -43,6 +43,7 @@ wire [31:0] immediate_fetcher;
 wire [3:0] rb_idx_fetcher;
 wire [4:0] ra_idx = { reg_ie, instruction[6:3] };
 wire [4:0] rb_idx = { reg_ie, rb_idx_fetcher };
+wire rb_idx_valid;
 
 wire wb_we_fetcher;
 wire wb_cyc_fetcher;
@@ -253,6 +254,7 @@ fetcher fetcher_inst(
     .o_instruction(instruction),
     .o_immediate(immediate_fetcher),
     .o_rb_idx(rb_idx_fetcher),
+    .o_rb_idx_valid(rb_idx_valid),
     .o_valid(instruction_valid),
     .o_error(fetcher_error)
 );

@@ -21,6 +21,7 @@ module fetcher(
     o_instruction,
     o_immediate,
     o_rb_idx,
+    o_rb_idx_valid,
     o_valid,
     o_error
 );
@@ -43,6 +44,7 @@ output reg [31:0] o_pc;
 output reg o_pc_wr;
 
 output [3:0] o_rb_idx;
+output o_rb_idx_valid;
 output reg o_valid;
 output reg o_error;
 
@@ -51,13 +53,19 @@ wire [2:0] amode = o_instruction[2:0];
 
 output [31:0] o_immediate;
 
+// r_immediate: Raw bits following the opcode. This can be:
+// - a 32bit number
+// - 4 bit register index + 12 bit number
+// - 4 bit register index + 28 bit number
 reg [31:0] r_immediate;
-wire is = r_immediate[31]; // sign of immediate
+wire is = r_immediate[27]; // sign of immediate
 
 assign o_immediate = (amode == AMODE_IM12) ? { is ? 20'hFFFFF : 20'h00000, r_immediate[27:16] }
                    : (amode == AMODE_IM28) ? { is ? 4'hF : 4'h0, r_immediate[27:0] }
                    : (amode == AMODE_IM32) ? r_immediate[31:0]
                    : 0;
+
+assign o_rb_idx_valid = o_valid && ((amode == AMODE_IM28) || (amode == AMODE_IM12));
 
 assign o_rb_idx = r_immediate[31:28];
 
