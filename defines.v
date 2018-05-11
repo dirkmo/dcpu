@@ -1,4 +1,9 @@
+/* verilator lint_off UNUSED */
+/* verilator lint_off UNDRIVEN */
+/* verilator lint_off PINCONNECTEMPTY */
+
 `ifndef	DEFINES_V
+
 `define	DEFINES_V
 
 `default_nettype none
@@ -58,5 +63,13 @@
 `define LOAD_BYTE 2'b01
 `define LOAD_HALF 2'b10
 `define LOAD_WORD 2'b11
+
+//-----------------------------------------------
+// fetcher defines
+
+`define AMODE_NOIM 3'b000
+`define AMODE_IM12 3'b001
+`define AMODE_IM28 3'b010
+`define AMODE_IM32 3'b011
 
 `endif

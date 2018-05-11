@@ -44,16 +44,16 @@ Condition codes (cc):
 6'h20 ld
     ld (rb+i), ra
 
-    ld r1+10, r0
+    ld (r1+10), r0
 
         op     cc  ra   am    rb   #imm12
         100000 000 0000 001 | 0001 0000 0000 1010
         0x8001_100A
     
-    ld r1-10, r0
+    ld (r0-10), r0
 
         op     cc  ra   am    rb   #imm12
-        100000 000 0000 001 | 0001 1111 1111 0110
+        100000 000 0000 001 | 0000 1111 1111 0110
         0x8001_1FF6
 
 
@@ -70,6 +70,18 @@ Condition codes (cc):
 6'h21 ldh
 
 6'h22 ldb
+
+6'h23 mov
+    
+    amode = AMODE_IM32: mov #imm, ra
+    op     cc  ra   am    #imm32
+    100011 000 0000 011 | 0001 0010 0011 0100 0101 0110 0111 1000
+
+    amode = AMODE_IM12: mov rb, ra
+    op     cc  ra   am    rb                      rau rbu
+    100011 000 0000 001 | 0000 0000  0000 0000 00  0   0
+    rau, rbu: user bit (current user (0) or user(1))
+
 
 6'h24 st
     st ra, (rb+i)

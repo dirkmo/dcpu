@@ -1,5 +1,5 @@
-/* verilator lint_off UNUSED */
-/* verilator lint_off UNDRIVEN */
+`include "defines.v"
+
 module fetcher(
     i_clk,
     i_reset,
@@ -60,22 +60,14 @@ output [31:0] o_immediate;
 reg [31:0] r_immediate;
 wire is = r_immediate[27]; // sign of immediate
 
-assign o_immediate = (amode == AMODE_IM12) ? { is ? 20'hFFFFF : 20'h00000, r_immediate[27:16] }
-                   : (amode == AMODE_IM28) ? { is ? 4'hF : 4'h0, r_immediate[27:0] }
-                   : (amode == AMODE_IM32) ? r_immediate[31:0]
+assign o_immediate = (amode == `AMODE_IM12) ? { is ? 20'hFFFFF : 20'h00000, r_immediate[27:16] }
+                   : (amode == `AMODE_IM28) ? { is ? 4'hF : 4'h0, r_immediate[27:0] }
+                   : (amode == `AMODE_IM32) ? r_immediate[31:0]
                    : 0;
 
-assign o_rb_idx_valid = o_valid && ((amode == AMODE_IM28) || (amode == AMODE_IM12));
+assign o_rb_idx_valid = o_valid && ((amode == `AMODE_IM28) || (amode == `AMODE_IM12));
 
 assign o_rb_idx = r_immediate[31:28];
-
-parameter
-    AMODE_NOIM = 3'b000,
-    AMODE_IM12 = 3'b001,
-    AMODE_IM28 = 3'b010,
-    AMODE_IM32 = 3'b011;
-
-
 
 wire data_avail = i_wb_ack && o_wb_cyc;
 
@@ -110,7 +102,7 @@ always @(posedge i_clk) begin
         end
         2: begin
             // decode
-            if( amode == AMODE_NOIM ) begin
+            if( amode == `AMODE_NOIM ) begin
                 // 16 bit instruction fetched (only opcode, no immediate data)
                 o_valid <= 1;
                 state <= 0;
@@ -132,7 +124,7 @@ always @(posedge i_clk) begin
             end
         end
         3: begin
-            if( (amode == AMODE_IM12) ) begin
+            if( (amode == `AMODE_IM12) ) begin
                 // 32 bit instruction fetched (opcode + 16 bit immediate)
                 o_valid <= 1;
                 state <= 0;

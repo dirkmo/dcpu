@@ -1,7 +1,3 @@
-/* verilator lint_off UNUSED */
-/* verilator lint_off UNDRIVEN */
-/* verilator lint_off PINCONNECTEMPTY */
-
 `include "defines.v"
 
 module dcpu(
@@ -41,9 +37,13 @@ wire [31:0] pc_fetcher;
 wire pc_wr_fetcher;
 wire [31:0] immediate_fetcher;
 wire [3:0] rb_idx_fetcher;
-wire [4:0] ra_idx = { reg_ie, instruction[6:3] };
+wire [3:0] ra_idx = instruction[6:3];
+wire [4:0] ra_idx = { reg_ie, ra_idx };
 wire [4:0] rb_idx = { reg_ie, rb_idx_fetcher };
 wire rb_idx_valid;
+wire [2:0] amode = instruction[2:0];
+reg mov_im32, mov_rbra;
+reg illegal_instruction;
 
 wire wb_we_fetcher;
 wire wb_cyc_fetcher;
@@ -90,7 +90,8 @@ reg reg_wr_b = 0;
 reg [4:0] reg_sel_a;
 reg [4:0] reg_sel_b;
 
-//wire [31:0] rb_imm = registers[rb_idx] + immediate_fetcher;
+wire [31:0] rb_imm = registers[rb_idx] + immediate_fetcher;
+wire [31:0] operant_b = (amode == `AMODE_IM32) ? immediate_fetcher : rb_imm;
 
 // bus a
 always @(*)
@@ -100,10 +101,22 @@ begin
         reg_wr_a = 1'b1;
         bus_a = pc_fetcher;
         reg_sel_a = pc_idx;
-    end else if ( execute_wait && valid_load ) begin
-        reg_wr_a = 1'b1;
-        bus_a = data_load;
-        reg_sel_a = ra_idx;
+    end else if ( execute_wait ) begin
+        if( valid_load ) begin
+            reg_wr_a = 1'b1;
+            bus_a = data_load;
+            reg_sel_a = ra_idx;
+        end else if ( mov_im32 ) begin
+            reg_wr_a = 1'b1;
+            bus_a = immediate_fetcher;
+            reg_sel_a = ra_idx;
+        end else if ( mov_rbra ) begin
+            reg_wr_a = 1'b1;
+            y = immediate_fetcher[0] ? ie : 1'b1;
+            bus_a = registers[{y, rb_idx_fetcher} ];
+            x = immediate_fetcher[1] ? ie : 1'b1;
+            reg_sel_a = { x, ra_idx };
+        end
     end
 end
 
@@ -152,7 +165,7 @@ wire fetch_start = (r_state == FETCH_START);
 wire execute_start = (r_state == EXECUTE_START);
 wire execute_wait = (r_state == EXECUTE_WAIT);
 wire condition_ok;
-wire execute_done = valid_load || done_store;
+wire execute_done = valid_load || done_store || mov_im32 || mov_rbra;
 
 always @(posedge i_clk)
 begin
@@ -200,13 +213,28 @@ assign condition_ok = (condition == `COND_Z)  && flags[`CC_Z]
 always @(posedge i_clk)
 begin
     load_start <= `LOAD_NONE;
+    mov_im32 <= 1'b0;
+    mov_rbra <= 1'b0;
+    illegal_instruction <= 1;
     if( execute_start ) begin
-        addr_loadstore <= immediate_fetcher;
+        addr_loadstore <= operant_b;
         case (opcode)
             `OP_LDB: load_start <= `LOAD_BYTE;
             `OP_LDH: load_start <= `LOAD_HALF;
             `OP_LD: load_start <= `LOAD_WORD;
-            default: ; // illegal instruction
+            `OP_MOV: begin
+                if( amode == `AMODE_IM12 ) begin
+                    // mov rb, ra
+                    mov_rbra <= 1'b1;
+                end else if( amode == `AMODE_IM32 ) begin
+                    // mov #imm, ra
+                    mov_im32 <= 1'b1;
+                end else begin
+                    // malformed instruction
+                end
+            end // OP_MOV
+
+            default: illegal_instruction <= 1; // illegal instruction
         endcase
     end else if(execute_wait) begin
         if( valid_load ) begin
