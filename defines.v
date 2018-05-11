@@ -51,5 +51,12 @@
 `define OP_STH    6'h25
 `define OP_ST     6'h26
 
+//-----------------------------------------------
+// load defines
+
+`define LOAD_NONE 2'b00
+`define LOAD_BYTE 2'b01
+`define LOAD_HALF 2'b10
+`define LOAD_WORD 2'b11
 
 `endif

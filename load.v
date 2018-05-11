@@ -45,13 +45,16 @@ assign o_wb_addr = { i_addr[31:2], 2'b00 };
 assign o_wb_we = 1'b0;
 
 reg [1:0] r_load;
+reg [1:0] r_load_input;
+
+always @(posedge i_clk)
+    r_load_input <= i_load;
 
 assign o_wb_cyc = r_load != 0;
 
 always @(posedge i_clk)
 begin
-    r_load <= 0;
-    if( i_load != 0 ) begin
+    if( r_load_input != i_load && i_load != `LOAD_NONE ) begin
         r_load <= i_load;
     end
     if( i_reset || i_wb_ack || i_wb_err ) begin
@@ -74,10 +77,10 @@ begin
     o_valid <= 0;
     if( i_wb_ack && o_wb_cyc && ~o_valid ) begin
         case( r_load )
-            2'b01: o_data[7:0] <= i_addr[1:0] == 2'b00 ? i_wb_dat[31:24] : // 8 bit load
+            `LOAD_BYTE: o_data[7:0] <= i_addr[1:0] == 2'b00 ? i_wb_dat[31:24] : // 8 bit load
                                   i_addr[1:0] == 2'b01 ? i_wb_dat[23:16] :
                                   i_addr[1:0] == 2'b10 ? i_wb_dat[15:8] : i_wb_dat[7:0];
-            2'b10: o_data[15:0] <= i_addr[1] ? i_wb_dat[15:0] : i_wb_dat[31:16]; // 16 bit load
+            `LOAD_HALF: o_data[15:0] <= i_addr[1] ? i_wb_dat[15:0] : i_wb_dat[31:16]; // 16 bit load
             default: o_data <= i_wb_dat;
         endcase
         o_valid <= 1;
@@ -87,11 +90,11 @@ end
 always @(posedge i_clk)
 begin
     case( r_load )
-        2'b01: o_wb_stb <= i_addr[1:0] == 2'b00 ? 4'b1000 : // 8 bit load
+        `LOAD_BYTE: o_wb_stb <= i_addr[1:0] == 2'b00 ? 4'b1000 : // 8 bit load
                            i_addr[1:0] == 2'b01 ? 4'b0100 :
                            i_addr[1:0] == 2'b10 ? 4'b0010 : 4'b0001;
-        2'b10: o_wb_stb <= i_addr[1] ? 4'b0011 : 4'b1100; // 16 bit load
-        2'b11: o_wb_stb <= 4'b1111; // 32 bit load
+        `LOAD_HALF: o_wb_stb <= i_addr[1] ? 4'b0011 : 4'b1100; // 16 bit load
+        `LOAD_WORD: o_wb_stb <= 4'b1111; // 32 bit load
         default: o_wb_stb <= 0;
     endcase
     if( i_reset ) begin

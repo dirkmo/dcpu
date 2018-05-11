@@ -53,11 +53,11 @@ wire [3:0] wb_stb_fetcher;
 // load wires
 wire wb_cyc_load;
 wire wb_we_load;
-wire [1:0] load_start; // determines size of load
+reg [1:0] load_start; // determines size of load
 wire valid_load;
 wire error_load;
 wire [31:0] wb_addr_load;
-wire [31:0] addr_load;
+reg  [31:0] addr_loadstore;
 wire [31:0] data_load;
 wire [3:0] wb_stb_load;
 
@@ -71,7 +71,6 @@ wire wb_we_store;
 wire error_store;
 wire done_store;
 wire [1:0] store_start; // determines size of store
-wire [31:0] addr_store;
 
 //-----------------------------------------------
 // Registers
@@ -96,11 +95,15 @@ reg [4:0] reg_sel_b;
 // bus a
 always @(*)
 begin
+    reg_wr_a = 1'b0;
     if( pc_wr_fetcher ) begin
         reg_wr_a = 1'b1;
         bus_a = pc_fetcher;
         reg_sel_a = pc_idx;
-    end else begin
+    end else if ( execute_wait && valid_load ) begin
+        reg_wr_a = 1'b1;
+        bus_a = data_load;
+        reg_sel_a = ra_idx;
     end
 end
 
@@ -135,20 +138,21 @@ end
 //-----------------------------------------------
 // main state machine
 
-reg [3:0] r_state;
+reg [2:0] r_state;
 
 localparam
-    RESET         = 0,
-    FETCH_START   = 1,
-    FETCH_WAIT    = 2,
-    EXECUTE_START = 3,
-    EXECUTE_WAIT  = 4,
-    WRITEBACK     = 5;
+    RESET         = 3'd0,
+    FETCH_START   = 3'd1,
+    FETCH_WAIT    = 3'd2,
+    EXECUTE_START = 3'd3,
+    EXECUTE_WAIT  = 3'd4;
 
 
 wire fetch_start = (r_state == FETCH_START);
 wire execute_start = (r_state == EXECUTE_START);
+wire execute_wait = (r_state == EXECUTE_WAIT);
 wire condition_ok;
+wire execute_done = valid_load || done_store;
 
 always @(posedge i_clk)
 begin
@@ -167,8 +171,9 @@ begin
         EXECUTE_START: begin
             r_state <= EXECUTE_WAIT;
         end
-        EXECUTE_WAIT: r_state <= WRITEBACK;
-        WRITEBACK: r_state <= FETCH_START;
+        EXECUTE_WAIT: if( execute_done ) begin
+            r_state <= FETCH_START;
+        end
         default: r_state <= RESET;
     endcase
 
@@ -176,6 +181,7 @@ begin
         r_state <= RESET;
     end
 end
+
 
 //-----------------------------------------------
 // instruction decoder
@@ -193,16 +199,19 @@ assign condition_ok = (condition == `COND_Z)  && flags[`CC_Z]
 
 always @(posedge i_clk)
 begin
+    load_start <= `LOAD_NONE;
     if( execute_start ) begin
-
-        //    case (opcode)
-        //        OP_LDB:
-        //        OP_LDH:
-        //        OP_LD:
-        //        default: ; // illegal instruction
-        //    endcase
+        addr_loadstore <= immediate_fetcher;
+        case (opcode)
+            `OP_LDB: load_start <= `LOAD_BYTE;
+            `OP_LDH: load_start <= `LOAD_HALF;
+            `OP_LD: load_start <= `LOAD_WORD;
+            default: ; // illegal instruction
+        endcase
+    end else if(execute_wait) begin
+        if( valid_load ) begin
+        end
     end else begin
-        // skip instruction
     end
 end
 
@@ -276,7 +285,7 @@ load Loader(
     .i_wb_err(i_wb_err),
 
     .i_load( load_start ),
-    .i_addr( addr_load ),
+    .i_addr( addr_loadstore ),
 
     .o_data( data_load ),
     .o_valid( valid_load ),
@@ -301,7 +310,7 @@ store Storer(
 
     .i_store( store_start ),
     .i_data( 32'd0 ),
-    .i_addr( addr_store ),
+    .i_addr( addr_loadstore ),
 
     .o_done( done_store ),
     .o_error( error_store )
