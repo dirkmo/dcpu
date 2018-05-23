@@ -9,11 +9,11 @@
 `default_nettype none
 
 
-`define REG_CC_SUPER 4'd14
-`define REG_PC_SUPER 4'd15
+`define REG_CC_SUPER 5'd14
+`define REG_PC_SUPER 5'd15
 
-`define REG_CC_USER 4'd30
-`define REG_PC_USER 4'd31
+`define REG_CC_USER 5'd30
+`define REG_PC_USER 5'd31
 
 `define CC_Z 0 // Zero flag
 `define CC_C 1 // Carry flag
@@ -63,6 +63,14 @@
 `define LOAD_BYTE 2'b01
 `define LOAD_HALF 2'b10
 `define LOAD_WORD 2'b11
+
+//-----------------------------------------------
+// store defines
+
+`define STORE_NONE 2'b00
+`define STORE_BYTE 2'b01
+`define STORE_HALF 2'b10
+`define STORE_WORD 2'b11
 
 //-----------------------------------------------
 // fetcher defines

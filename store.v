@@ -42,9 +42,9 @@ output reg o_error;
 
 assign o_wb_addr = { i_addr[31:2], 2'b00 };
 
-assign o_wb_dat[31:0] = r_store == 2'b01 ? { i_data[7:0], i_data[7:0], i_data[7:0], i_data[7:0] } :
-                        r_store == 2'b10 ? { i_data[15:0], i_data[15:0] } :
-                                             i_data[31:0];
+assign o_wb_dat[31:0] = r_store == `STORE_BYTE ? { i_data[7:0], i_data[7:0], i_data[7:0], i_data[7:0] } :
+                        r_store == `STORE_HALF ? { i_data[15:0], i_data[15:0] } :
+                                                 i_data[31:0];
 
 // r_store: data size to store.
 // 2'b00: nothing to store
@@ -52,11 +52,15 @@ assign o_wb_dat[31:0] = r_store == 2'b01 ? { i_data[7:0], i_data[7:0], i_data[7:
 // 2'b10: store a halfword (16 bits)
 // 2'b11: store a word (32 bits)
 reg [1:0] r_store;
+reg [1:0] r_store_input;
+
+always @(posedge i_clk)
+    r_store_input <= i_store;
 
 always @(posedge i_clk)
 begin
     r_store <= 0;
-    if( i_store != 0 ) begin
+    if( r_store_input != i_store && i_store != `STORE_NONE) begin
         r_store <= i_store;
     end
     if( i_reset || i_wb_ack || i_wb_err ) begin
@@ -106,11 +110,11 @@ end
 always @(posedge i_clk)
 begin
     case( r_store )
-        2'b01: o_wb_stb <= i_addr[1:0] == 2'b00 ? 4'b1000 : // 8 bit store
-                            i_addr[1:0] == 2'b01 ? 4'b0100 :
-                            i_addr[1:0] == 2'b10 ? 4'b0010 : 4'b0001;
-        2'b10: o_wb_stb <= i_addr[1] ? 4'b0011 : 4'b1100; // 16 bit store
-        2'b11: o_wb_stb <= 4'b1111; // 32 bit store
+        `STORE_BYTE: o_wb_stb <= i_addr[1:0] == 2'b00 ? 4'b1000 : // 8 bit store
+                                 i_addr[1:0] == 2'b01 ? 4'b0100 :
+                                 i_addr[1:0] == 2'b10 ? 4'b0010 : 4'b0001;
+        `STORE_HALF: o_wb_stb <= i_addr[1] ? 4'b0011 : 4'b1100; // 16 bit store
+        `STORE_WORD: o_wb_stb <= 4'b1111; // 32 bit store
         default: o_wb_stb <= 0;
     endcase
     if( i_reset ) begin

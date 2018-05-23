@@ -37,8 +37,7 @@ wire [31:0] pc_fetcher;
 wire pc_wr_fetcher;
 wire [31:0] immediate_fetcher;
 wire [3:0] rb_idx_fetcher;
-wire [3:0] ra_idx = instruction[6:3];
-wire [4:0] ra_idx = { reg_ie, ra_idx };
+wire [4:0] ra_idx = { reg_ie, instruction[6:3] };
 wire [4:0] rb_idx = { reg_ie, rb_idx_fetcher };
 wire rb_idx_valid;
 wire [2:0] amode = instruction[2:0];
@@ -93,7 +92,10 @@ reg [4:0] reg_sel_b;
 wire [31:0] rb_imm = registers[rb_idx] + immediate_fetcher;
 wire [31:0] operant_b = (amode == `AMODE_IM32) ? immediate_fetcher : rb_imm;
 
+
 // bus a
+reg x, y; // helper
+
 always @(*)
 begin
     reg_wr_a = 1'b0;
@@ -112,10 +114,10 @@ begin
             reg_sel_a = ra_idx;
         end else if ( mov_rbra ) begin
             reg_wr_a = 1'b1;
-            y = immediate_fetcher[0] ? ie : 1'b1;
+            y = immediate_fetcher[0] ? reg_ie : 1'b1;
             bus_a = registers[{y, rb_idx_fetcher} ];
-            x = immediate_fetcher[1] ? ie : 1'b1;
-            reg_sel_a = { x, ra_idx };
+            x = immediate_fetcher[1] ? reg_ie : 1'b1;
+            reg_sel_a = { x, ra_idx[3:0] };
         end
     end
 end
@@ -221,7 +223,7 @@ begin
         case (opcode)
             `OP_LDB: load_start <= `LOAD_BYTE;
             `OP_LDH: load_start <= `LOAD_HALF;
-            `OP_LD: load_start <= `LOAD_WORD;
+            `OP_LD:  load_start <= `LOAD_WORD;
             `OP_MOV: begin
                 if( amode == `AMODE_IM12 ) begin
                     // mov rb, ra
@@ -233,7 +235,9 @@ begin
                     // malformed instruction
                 end
             end // OP_MOV
-
+            `OP_STB: store_start <= `STORE_BYTE;
+            `OP_STH: store_start <= `STORE_HALF;
+            `OP_ST:  store_start <= `STORE_WORD;
             default: illegal_instruction <= 1; // illegal instruction
         endcase
     end else if(execute_wait) begin
