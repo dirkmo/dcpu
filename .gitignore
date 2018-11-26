@@ -1,9 +1,3 @@
 *.o
 *.mk
 trace.vcd
-fetcher/
-regfile/
-load/
-store/
-.vscode/
-dcpu/
