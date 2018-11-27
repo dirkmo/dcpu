@@ -14,11 +14,11 @@ module dcpu(
 input i_clk;
 input i_reset;
 input i_ack;
-input [31:0] i_dat;
+input [15:0] i_dat;
 input i_int;
 output o_cyc;
-output [3:0] o_stb;
-output [31:0] o_dat;
+output [1:0] o_stb;
+output [15:0] o_dat;
 output reg [31:0] o_addr;
 output o_we;
 
@@ -53,22 +53,27 @@ begin
         RESET: state <= FETCH1;
         FETCH1: begin
             if( i_ack ) begin
-                ir <= pc[1] ? i_dat[15:0] : i_dat[31:16];
-                if(~pc[1]) immediate[15:0] <= i_dat[31:16];
+                ir <= i_dat[15:0];
                 r_pc_inc2 <= 1;
                 state <= ir[15:13] == 3'b111 ? FETCH2 : EXECUTE;
             end
         end
         FETCH2: begin
             if( i_ack ) begin
-                immediate[15:0] <= pc[1] ? i_dat[15:0] : i_dat[31:16];
+                immediate[15:0] <= i_dat[15:0];
                 r_pc_inc2 <= 1;
-                state <= ir[15:13] == 3'b111 ? FETCH2 : EXECUTE;
+                state <= ir[12:11] == 2'b11 ? FETCH3 : EXECUTE;
             end
         end
         FETCH3: begin
+            if( i_ack ) begin
+                immediate[31:16] <= i_dat[15:0];
+                r_pc_inc2 <= 1;
+                state <= EXECUTE;
+            end    
         end
         EXECUTE: begin
+            state <= FETCH1;
         end
     endcase
     if( i_reset ) begin
@@ -103,6 +108,14 @@ begin
         registers[15] <= 0;
     end
 end
+
+//---------------------------------------------------------------
+// Alu
+
+always @()
+begin
+end
+
 
 endmodule
 
