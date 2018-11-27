@@ -54,11 +54,17 @@ begin
         FETCH1: begin
             if( i_ack ) begin
                 ir <= pc[1] ? i_dat[15:0] : i_dat[31:16];
+                if(~pc[1]) immediate[15:0] <= i_dat[31:16];
                 r_pc_inc2 <= 1;
-                state <= FETCH2;
+                state <= ir[15:13] == 3'b111 ? FETCH2 : EXECUTE;
             end
         end
         FETCH2: begin
+            if( i_ack ) begin
+                immediate[15:0] <= pc[1] ? i_dat[15:0] : i_dat[31:16];
+                r_pc_inc2 <= 1;
+                state <= ir[15:13] == 3'b111 ? FETCH2 : EXECUTE;
+            end
         end
         FETCH3: begin
         end
