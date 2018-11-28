@@ -16,7 +16,6 @@ public:
 		m_core = new MODULE();
 		m_trace = NULL;
 		m_tickcount = 0l;
-		//tickcounter = &m_tickcount;
 	}
 
 	virtual ~TESTBENCH() {
@@ -24,7 +23,6 @@ public:
 		m_core = NULL;
 	}
 
-		// Open/create a trace file
 	virtual	void opentrace(const char *vcdname) {
 		if (!m_trace) {
 			m_trace = new VerilatedVcdC;
@@ -33,7 +31,6 @@ public:
 		}
 	}
 
-	// Close a trace file
 	virtual void close(void) {
 		if (m_trace) {
 			m_trace->close();
@@ -43,6 +40,7 @@ public:
 
 	virtual void reset() {
 		m_core->i_reset = 1;
+		this->tick();
 		this->tick();
 		m_core->i_reset = 0;
 	}
