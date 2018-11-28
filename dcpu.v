@@ -1,3 +1,5 @@
+/* verilator lint_off UNUSED */
+/* verilator lint_off UNDRIVEN */
 module dcpu(
     i_clk,
     i_reset,
@@ -24,10 +26,10 @@ output o_we;
 
 reg r_inten; // interrupts enable
 wire ub = r_inten; // User Bit
-reg [15:0] registers[0:31]; // 0..15 supervisor regs, 16..31 user regs
-wire [15:0] pc = r_inten ? registers[31] : registers[15];
+reg [31:0] registers[0:31]; // 0..15 supervisor regs, 16..31 user regs
+wire [31:0] pc = r_inten ? registers[31] : registers[15];
 
-wire pc_idx = { ub, 4'hF }; // index of pc
+wire [4:0] pc_idx = { ub, 4'hF }; // index of pc
 
 reg [15:0] ir;
 reg [31:0] immediate;
@@ -102,7 +104,7 @@ end
 
 always @(posedge i_clk)
 begin
-    if( r_pc_inc2 ) registers[pc_idx] <= registers[pc_idx] + 1'b2;
+    if( r_pc_inc2 ) registers[pc_idx] <= registers[pc_idx] + 'd2;
     
     if( i_reset ) begin
         registers[15] <= 0;
@@ -112,9 +114,6 @@ end
 //---------------------------------------------------------------
 // Alu
 
-always @()
-begin
-end
 
 
 endmodule

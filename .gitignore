@@ -1,3 +1,4 @@
 *.o
 *.mk
 trace.vcd
+verilator/
