@@ -1,5 +1,7 @@
 #include <iostream>
 #include <fstream>
+#include <vector>
+#include <string>
 #include "sim.h"
 
 using namespace std;
@@ -41,7 +43,13 @@ int main(int argc, char **argv, char **env) {
     sim tb;
     
     parseCommandLine(&tb, argc, argv);
-    
+
+    vector<uint16_t> prog {
+        0xE000, 0x0102, 0xF800, 0x0304, 0x0506, 0x0000
+    };
+    for( int i = 0; i < prog.size(); i++ ) {
+        tb.setMem(i, prog[i]);
+    }
     tb.opentrace("trace.vcd");
 
     tb.reset();

@@ -34,7 +34,8 @@ wire [4:0] pc_idx = { ub, 4'hF }; // index of pc
 reg [15:0] ir;
 reg [31:0] immediate;
 
-reg r_pc_inc2;
+//reg r_pc_inc2;
+wire pc_inc2 = i_ack && (state==FETCH1 || state==FETCH2 || state==FETCH3);
 
 //---------------------------------------------------------------
 // main state machine
@@ -50,27 +51,27 @@ reg [3:0] state;
 
 always @(posedge i_clk)
 begin
-    r_pc_inc2 <= 0;
+    //r_pc_inc2 <= 0;
     case( state )
         RESET: state <= FETCH1;
         FETCH1: begin
             if( i_ack ) begin
                 ir <= i_dat[15:0];
-                r_pc_inc2 <= 1;
-                state <= ir[15:13] == 3'b111 ? FETCH2 : EXECUTE;
+                //r_pc_inc2 <= 1;
+                state <= i_dat[15:13] == 3'b111 ? FETCH2 : EXECUTE;
             end
         end
         FETCH2: begin
             if( i_ack ) begin
                 immediate[15:0] <= i_dat[15:0];
-                r_pc_inc2 <= 1;
+                //r_pc_inc2 <= 1;
                 state <= ir[12:11] == 2'b11 ? FETCH3 : EXECUTE;
             end
         end
         FETCH3: begin
             if( i_ack ) begin
                 immediate[31:16] <= i_dat[15:0];
-                r_pc_inc2 <= 1;
+                //r_pc_inc2 <= 1;
                 state <= EXECUTE;
             end    
         end
@@ -90,12 +91,22 @@ always @(state)
 begin
     if( state == FETCH1 ) begin
         o_addr = pc;
+        o_cyc = 1;
+        o_stb = 2'b11;
     end else if( state == FETCH2 ) begin
         o_addr = pc;
+        o_cyc = 1;
+        o_stb = 2'b11;
     end else if( state == FETCH3 ) begin
         o_addr = pc;
+        o_cyc = 1;
+        o_stb = 2'b11;
     end else if( state == EXECUTE ) begin
-
+        o_cyc = 0;
+        o_stb = 2'b00;
+    end else begin
+        o_cyc = 0;
+        o_stb = 2'b00;
     end
 end
 
@@ -104,7 +115,7 @@ end
 
 always @(posedge i_clk)
 begin
-    if( r_pc_inc2 ) registers[pc_idx] <= registers[pc_idx] + 'd2;
+    if( pc_inc2 ) registers[pc_idx] <= registers[pc_idx] + 'd2;
     
     if( i_reset ) begin
         registers[15] <= 0;
