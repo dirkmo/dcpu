@@ -34,11 +34,11 @@ syscon #(.NSLAVES(`NSLAVES)) syscon0 (
     .o_slaveselect(slaveselect)
 );
 
-blkmem #(.AW(`MEMAW)) blkmem0 (
+blkmem #(.AW(`MEMAW-1)) blkmem0 (
     .i_clk(i_clk),
     .i_dat(o_cpu_dat),
     .o_dat(blkmem0_dat),
-    .i_addr(addr[`MEMAW-1:0]),
+    .i_addr(addr[`MEMAW-1:1]),
     .i_we(we),
     .i_cyc( blkmem0_cyc ),
     .i_stb( stb ),

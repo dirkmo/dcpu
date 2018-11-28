@@ -16,7 +16,7 @@ module blkmem(
 
 //`define ROM
 
-parameter AW = 16;
+parameter AW = 15;
 
 input i_clk;
 
