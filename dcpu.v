@@ -40,6 +40,7 @@ wire [4:0] pc_idx = { ub, 4'hF }; // index of pc
 reg [15:0] ir;
 reg [31:0] immediate;
 
+wire [4:0] opcode = ir[15:11];
 wire [4:0] imm_Rd = { ub, ir[10:7] };
 wire [4:0] imm_Rs = { ub, ir[6:3] };
 wire [2:0] imm3 = ir[2:0];
@@ -55,16 +56,24 @@ wire pc_inc2 = i_ack && (state==FETCH1 || state==FETCH2 || state==FETCH3);
 
 reg [31:0] alu_result;
 
+localparam
+    OP__ST_RD_IMM3_RS  = 5'b10010,
+    OP__LDB_RD_RS_IMM3 = 5'b11000,
+    OP__LDH_RD_RS_IMM3 = 5'b11001,
+    OP__LD_RD_RS_IMM3  = 5'b11010,
+    OP__LD_RD_IMM7     = 5'b11011;
+
 
 //---------------------------------------------------------------
 // main state machine
 
 localparam
-    RESET = 'h0,
-    FETCH1 = 'h1,
-    FETCH2 = 'h2,
-    FETCH3 = 'h3,
-    EXECUTE = 'h4;
+    RESET    = 'h0,
+    FETCH1   = 'h1,
+    FETCH2   = 'h2,
+    FETCH3   = 'h3,
+    EXECUTE1 = 'h4,
+    EXECUTE2 = 'h5;
 
 reg [3:0] state;
 
@@ -75,22 +84,28 @@ begin
         FETCH1: begin
             if( i_ack ) begin
                 ir <= i_dat[15:0];
-                state <= i_dat[15:13] == 3'b111 ? FETCH2 : EXECUTE;
+                state <= i_dat[15:13] == 3'b111 ? FETCH2 : EXECUTE1;
             end
         end
         FETCH2: begin
             if( i_ack ) begin
                 immediate[15:0] <= i_dat[15:0];
-                state <= ir[12:11] == 2'b11 ? FETCH3 : EXECUTE;
+                state <= ir[12:11] == 2'b11 ? FETCH3 : EXECUTE1;
             end
         end
         FETCH3: begin
             if( i_ack ) begin
                 immediate[31:16] <= i_dat[15:0];
-                state <= EXECUTE;
+                state <= EXECUTE1;
             end    
         end
-        EXECUTE: begin
+        EXECUTE1: begin
+            if( opcode == OP__LD_RD_RS_IMM3 || opcode == OP__ST_RD_IMM3_RS )
+                state <= EXECUTE2;
+            else
+                state <= FETCH1;
+        end
+        EXECUTE2: begin
             state <= FETCH1;
         end
     endcase
@@ -116,9 +131,13 @@ begin
         o_addr = pc;
         o_cyc = 1;
         o_stb = 2'b11;
-    end else if( state == EXECUTE ) begin
+    end else if( state == EXECUTE1 ) begin
         o_cyc = 0;
         o_stb = 2'b00;
+    end else if( state == EXECUTE2 ) begin
+        // EXECUTE2 is always 32-bit load or store
+        o_cyc = 1;
+        o_stb = 2'b11;
     end else begin
         o_cyc = 0;
         o_stb = 2'b00;
@@ -131,7 +150,21 @@ end
 always @(posedge i_clk)
 begin
     if( pc_inc2 ) registers[pc_idx] <= registers[pc_idx] + 'd2;
-    
+    if( state == EXECUTE1 ) begin
+        if( ir[15:11] == OP__LD_RD_IMM7 ) begin
+            // LD Rd, #imm(7)
+            // Format: 11011 Rd(4) imm(7)
+            registers[imm_Rd] <= { 25'd0, imm7 };
+        end else if( ir[15:13] == 3'b110 ) begin
+            // LDB Rd, (Rs+#imm(3))    11000 Rd(4) Rs(4) imm(3)
+            // LDH Rd, (Rs+#imm(3))    11001 Rd(4) Rs(4) imm(3)
+            // LD  Rd, (Rs+#imm(3))    11010 Rd(4) Rs(4) imm(3)
+        end else if( ir[15:13] == 3'b111 ) begin
+            // LDB (Rd+#imm(19)), Rs   11100 Rd(4) Rs(4) imm(3) | imm(19..16)
+            // LDH (Rd+#imm(19)), Rs   11101 Rd(4) Rs(4) imm(3) | imm(19..16)
+            // LD  (Rd+#imm(19)), Rs   11110 Rd(4) Rs(4) imm(3) | imm(19..16)
+        end
+    end
     if( i_reset ) begin
         registers[15] <= 0;
     end
