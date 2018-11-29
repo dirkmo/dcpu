@@ -120,31 +120,66 @@ begin
 end
 
 //---------------------------------------------------------------
-// o_addr
+// o_addr, o_cyc, o_stb
+
+assign o_cyc = |o_stb;
+
+// LDB Rd, (Rs+#imm(3))     11000 Rd(4) Rs(4) imm(3)
+// LDH Rd, (Rs+#imm(3))     11001 Rd(4) Rs(4) imm(3)
+// LD  Rd, (Rs+#imm(3))     11010 Rd(4) Rs(4) imm(3)
+// STB (Rd+#imm(3)), Rs     10000 Rd(4) Rs(4) imm(3)
+// STH (Rd+#imm(3)), Rs     10001 Rd(4) Rs(4) imm(3)
+// ST  (Rd+#imm(3)), Rs     10010 Rd(4) Rs(4) imm(3)
+
+// LDB Rd, (Rs+#imm(19))    11100 Rd(4) Rs(4) imm(3) | imm(19..16)
+// LDH Rd, (Rs+#imm(19))    11101 Rd(4) Rs(4) imm(3) | imm(19..16)
+// LD  Rd, (Rs+#imm(19))    11110 Rd(4) Rs(4) imm(3) | imm(19..16)
+// STB (Rd+#imm(19)), Rs    10100 Rd(4) Rs(4) imm(3) | imm(19..16)
+// STH (Rd+#imm(19)), Rs    10101 Rd(4) Rs(4) imm(3) | imm(19..16)
+// ST  (Rd+#imm(19)), Rs    10110 Rd(4) Rs(4) imm(3) | imm(19..16)
+
+reg [31:0] ldst_addr;
+
+wire [31:0] addr_Rd_imm3  = registers[imm_Rd] + { 29'h0, imm3 };
+wire [31:0] addr_Rd_imm19 = registers[imm_Rd] + { 13'h0, imm18_3, imm3 };
+
+always @( opcode )
+begin
+    if( opcode[4] && opcode[2] ) ldst_addr = addr_Rd_imm19;
+    else if( opcode[4] == 1'b1 ) ldst_addr = addr_Rd_imm3;
+end
+
+reg [1:0] ldst_stb;
+always @(state,opcode)
+begin
+    if( (state == EXECUTE1) && opcode[4] ) begin
+        // LD, ST instruction
+LDB muss beachten, low oder high byte, ansonsten immer 2'b11
+        ldst_stb = 2'b11;
+    end
+end
 
 always @(state)
 begin
     if( state == FETCH1 ) begin
         o_addr = pc;
-        o_cyc = 1;
         o_stb = 2'b11;
     end else if( state == FETCH2 ) begin
         o_addr = pc;
-        o_cyc = 1;
         o_stb = 2'b11;
     end else if( state == FETCH3 ) begin
         o_addr = pc;
-        o_cyc = 1;
         o_stb = 2'b11;
     end else if( state == EXECUTE1 ) begin
-        o_cyc = 0;
-        o_stb = 2'b00;
+        o_cyc = opcode[4];
+        o_stb = opcode[4] ? ldst_stb
+                          : 2'b00;
+        o_addr = opcode[4] ? ldst_addr // ld/st address
+                           : 32'hx;
     end else if( state == EXECUTE2 ) begin
         // EXECUTE2 needed for 32-bit load or store
-        o_cyc = 1;
         o_stb = 2'b11;
     end else begin
-        o_cyc = 0;
         o_stb = 2'b00;
     end
 end
@@ -166,7 +201,9 @@ begin
             // LDB Rd, (Rs+#imm(19))   11100 Rd(4) Rs(4) imm(3) | imm(19..16)
             // LDH Rd, (Rs+#imm(19))   11101 Rd(4) Rs(4) imm(3) | imm(19..16)
             // LD  Rd, (Rs+#imm(19))   11110 Rd(4) Rs(4) imm(3) | imm(19..16)
-            registers[imm_Rd][7:0] <= i_dat[7:0]; // LDB, LDH, LD
+            registers[imm_Rd][7:0] <= i_dat[7:0];                      //<--- FALSCH LDB kann auch oberes Byte laden
+registers[imm_Rd][31:0] <= { 24'h0, i_dat[15:8] };
+
             if( ir[12:11] == 2'b00 ) registers[imm_Rd][15:8] <= 8'd0; // LDB
             else registers[imm_Rd][15:8] <= i_dat[15:8]; // LDH or LD
         end else if( ir[15:11] == 5'b00000 ) begin
