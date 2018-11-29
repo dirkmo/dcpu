@@ -38,6 +38,6 @@ wave: sim
 
 clean:
 	rm -f $(OBJFILES)
-	rm -f $(VERILATOR_OUTPUTDIR)/*
+	-rm -f $(VERILATOR_OUTPUTDIR)/*
 	-rm -r $(VERILATOR_OUTPUTDIR)
 	rm -f trace.vcd

@@ -51,8 +51,13 @@ wire [15:0] imm18_3 = immediate[15:0];
 wire [31:0] imm32 = immediate[31:0];
 wire [2:0] imm_cc = ir[10:8];
 wire [3:0] alu_op = { ir[11], ir[2:0] };
+wire [4:0] mov_imm_Rd = { ir[2], ir[10:7] };
+wire [4:0] mov_imm_Rs = { ir[1], ir[10:7] };
 
 wire pc_inc2 = i_ack && (state==FETCH1 || state==FETCH2 || state==FETCH3);
+
+wire op_len32 = ir[15:13] == 3'b111;   // instruction is at least 32-bit
+wire op_len48 = ir[15:11] == 5'b11111; // instruction is 48-bit
 
 reg [31:0] alu_result;
 
@@ -84,7 +89,7 @@ begin
         FETCH1: begin
             if( i_ack ) begin
                 ir <= i_dat[15:0];
-                state <= i_dat[15:13] == 3'b111 ? FETCH2 : EXECUTE1;
+                state <= i_dat[15:13] == 3'b111 ? FETCH2 : EXECUTE1; // use i_dat because ir is not updated yet
             end
         end
         FETCH2: begin
@@ -135,7 +140,7 @@ begin
         o_cyc = 0;
         o_stb = 2'b00;
     end else if( state == EXECUTE2 ) begin
-        // EXECUTE2 is always 32-bit load or store
+        // EXECUTE2 needed for 32-bit load or store
         o_cyc = 1;
         o_stb = 2'b11;
     end else begin
@@ -152,17 +157,27 @@ begin
     if( pc_inc2 ) registers[pc_idx] <= registers[pc_idx] + 'd2;
     if( state == EXECUTE1 ) begin
         if( ir[15:11] == OP__LD_RD_IMM7 ) begin
-            // LD Rd, #imm(7)
-            // Format: 11011 Rd(4) imm(7)
+            // LD Rd, #imm(7)   11011 Rd(4) imm(7)
             registers[imm_Rd] <= { 25'd0, imm7 };
-        end else if( ir[15:13] == 3'b110 ) begin
+        end else if( ir[15:14] == 2'b11 ) begin
             // LDB Rd, (Rs+#imm(3))    11000 Rd(4) Rs(4) imm(3)
             // LDH Rd, (Rs+#imm(3))    11001 Rd(4) Rs(4) imm(3)
             // LD  Rd, (Rs+#imm(3))    11010 Rd(4) Rs(4) imm(3)
-        end else if( ir[15:13] == 3'b111 ) begin
-            // LDB (Rd+#imm(19)), Rs   11100 Rd(4) Rs(4) imm(3) | imm(19..16)
-            // LDH (Rd+#imm(19)), Rs   11101 Rd(4) Rs(4) imm(3) | imm(19..16)
-            // LD  (Rd+#imm(19)), Rs   11110 Rd(4) Rs(4) imm(3) | imm(19..16)
+            // LDB Rd, (Rs+#imm(19))   11100 Rd(4) Rs(4) imm(3) | imm(19..16)
+            // LDH Rd, (Rs+#imm(19))   11101 Rd(4) Rs(4) imm(3) | imm(19..16)
+            // LD  Rd, (Rs+#imm(19))   11110 Rd(4) Rs(4) imm(3) | imm(19..16)
+            registers[imm_Rd][7:0] <= i_dat[7:0]; // LDB, LDH, LD
+            if( ir[12:11] == 2'b00 ) registers[imm_Rd][15:8] <= 8'd0; // LDB
+            else registers[imm_Rd][15:8] <= i_dat[15:8]; // LDH or LD
+        end else if( ir[15:11] == 5'b00000 ) begin
+            // MOV Rd, Rs    00000 Rd(4) Rs(4) d s 0
+            registers[mov_imm_Rd] <= registers[mov_imm_Rs];
+        end
+    end else if( state == EXECUTE2 ) begin
+        if( ir[15:14] == 2'b11 ) begin
+            // LD  Rd, (Rs+#imm(3))    11010 Rd(4) Rs(4) imm(3)
+            // LD  Rd, (Rs+#imm(19))   11110 Rd(4) Rs(4) imm(3) | imm(19..16)
+            registers[imm_Rd][31:16] <= i_dat[15:0];
         end
     end
     if( i_reset ) begin
