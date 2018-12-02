@@ -95,7 +95,7 @@ begin
         FETCH2: begin
             if( i_ack ) begin
                 immediate[15:0] <= i_dat[15:0];
-                state <= ir[12:11] == 2'b11 ? FETCH3 : EXECUTE1;
+                state <= opcode[1:0] == 2'b11 ? FETCH3 : EXECUTE1;
             end
         end
         FETCH3: begin
@@ -138,7 +138,7 @@ assign o_cyc = |o_stb;
 // STH (Rd+#imm(19)), Rs    10101 Rd(4) Rs(4) imm(3) | imm(19..16)
 // ST  (Rd+#imm(19)), Rs    10110 Rd(4) Rs(4) imm(3) | imm(19..16)
 
-reg [31:0] ldst_addr;
+reg [31:0] ldst_addr; // calculated load/store address
 
 wire [31:0] addr_Rd_imm3  = registers[imm_Rd] + { 29'h0, imm3 };
 wire [31:0] addr_Rd_imm19 = registers[imm_Rd] + { 13'h0, imm18_3, imm3 };
@@ -154,8 +154,10 @@ always @(state,opcode)
 begin
     if( (state == EXECUTE1) && opcode[4] ) begin
         // LD, ST instruction
-LDB muss beachten, low oder high byte, ansonsten immer 2'b11
         ldst_stb = 2'b11;
+        if( opcode[1:0] == 2'b00 ) begin
+            ldst_stb = ldst_addr[0] ? 2'b10 : 2'b01;
+        end
     end
 end
 
@@ -187,31 +189,32 @@ end
 //---------------------------------------------------------------
 // Register file
 
+wire [7:0] ldb_dat = o_addr[0] ? i_dat[7:0] : i_dat[15:8];
+
 always @(posedge i_clk)
 begin
     if( pc_inc2 ) registers[pc_idx] <= registers[pc_idx] + 'd2;
     if( state == EXECUTE1 ) begin
-        if( ir[15:11] == OP__LD_RD_IMM7 ) begin
+        if( opcode == OP__LD_RD_IMM7 ) begin
             // LD Rd, #imm(7)   11011 Rd(4) imm(7)
             registers[imm_Rd] <= { 25'd0, imm7 };
-        end else if( ir[15:14] == 2'b11 ) begin
+        end else if( opcode[4:3] == 2'b11 ) begin
             // LDB Rd, (Rs+#imm(3))    11000 Rd(4) Rs(4) imm(3)
             // LDH Rd, (Rs+#imm(3))    11001 Rd(4) Rs(4) imm(3)
             // LD  Rd, (Rs+#imm(3))    11010 Rd(4) Rs(4) imm(3)
             // LDB Rd, (Rs+#imm(19))   11100 Rd(4) Rs(4) imm(3) | imm(19..16)
             // LDH Rd, (Rs+#imm(19))   11101 Rd(4) Rs(4) imm(3) | imm(19..16)
             // LD  Rd, (Rs+#imm(19))   11110 Rd(4) Rs(4) imm(3) | imm(19..16)
-            registers[imm_Rd][7:0] <= i_dat[7:0];                      //<--- FALSCH LDB kann auch oberes Byte laden
-registers[imm_Rd][31:0] <= { 24'h0, i_dat[15:8] };
-
-            if( ir[12:11] == 2'b00 ) registers[imm_Rd][15:8] <= 8'd0; // LDB
-            else registers[imm_Rd][15:8] <= i_dat[15:8]; // LDH or LD
-        end else if( ir[15:11] == 5'b00000 ) begin
+            registers[imm_Rd][15:0] <= { 8'd0, o_stb[0] ? i_dat[7:0] : i_dat[15:8] };
+            if( opcode[1:0] != 2'b00 ) begin
+                registers[imm_Rd][15:7] <= i_dat[15:7]; // LDH or LD
+            end
+        end else if( opcode == 5'b00000 ) begin
             // MOV Rd, Rs    00000 Rd(4) Rs(4) d s 0
             registers[mov_imm_Rd] <= registers[mov_imm_Rs];
         end
     end else if( state == EXECUTE2 ) begin
-        if( ir[15:14] == 2'b11 ) begin
+        if( opcode[4:3] == 2'b11 ) begin
             // LD  Rd, (Rs+#imm(3))    11010 Rd(4) Rs(4) imm(3)
             // LD  Rd, (Rs+#imm(19))   11110 Rd(4) Rs(4) imm(3) | imm(19..16)
             registers[imm_Rd][31:16] <= i_dat[15:0];
