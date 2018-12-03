@@ -56,9 +56,6 @@ wire [4:0] mov_imm_Rs = { ir[1], ir[10:7] };
 
 wire pc_inc2 = i_ack && (state==FETCH1 || state==FETCH2 || state==FETCH3);
 
-wire op_len32 = ir[15:13] == 3'b111;   // instruction is at least 32-bit
-wire op_len48 = ir[15:11] == 5'b11111; // instruction is 48-bit
-
 reg [31:0] alu_result;
 
 localparam
@@ -66,7 +63,8 @@ localparam
     OP__LDB_RD_RS_IMM3 = 5'b11000,
     OP__LDH_RD_RS_IMM3 = 5'b11001,
     OP__LD_RD_RS_IMM3  = 5'b11010,
-    OP__LD_RD_IMM7     = 5'b11011;
+    OP__LD_RD_IMM7     = 5'b11011,
+    OP__LD_RD_IMM32    = 5'b11111;
 
 
 //---------------------------------------------------------------
@@ -105,6 +103,9 @@ begin
             end    
         end
         EXECUTE1: begin
+            if( ir[15:0] == 16'd0 ) begin
+                $finish;
+            end
             if( opcode == OP__LD_RD_RS_IMM3 || opcode == OP__ST_RD_IMM3_RS )
                 state <= EXECUTE2;
             else
@@ -153,13 +154,15 @@ reg [1:0] ldst_stb;
 always @(state,opcode)
 begin
     if( (state == EXECUTE1) && opcode[4] ) begin
-        // LD, ST instruction
+        // LD, ST instruction on memory
         ldst_stb = 2'b11;
         if( opcode[1:0] == 2'b00 ) begin
             ldst_stb = ldst_addr[0] ? 2'b10 : 2'b01;
         end
     end
 end
+
+wire isMemOp = opcode[4] && (opcode[1:0] != 2'b11);
 
 always @(state)
 begin
@@ -173,11 +176,11 @@ begin
         o_addr = pc;
         o_stb = 2'b11;
     end else if( state == EXECUTE1 ) begin
-        o_cyc = opcode[4];
-        o_stb = opcode[4] ? ldst_stb
-                          : 2'b00;
-        o_addr = opcode[4] ? ldst_addr // ld/st address
-                           : 32'hx;
+        o_cyc = isMemOp;
+        o_stb = isMemOp ? ldst_stb
+                        : 2'b00;
+        o_addr = isMemOp ? ldst_addr // ld/st address
+                         : 32'hx;
     end else if( state == EXECUTE2 ) begin
         // EXECUTE2 needed for 32-bit load or store
         o_stb = 2'b11;
@@ -198,6 +201,8 @@ begin
         if( opcode == OP__LD_RD_IMM7 ) begin
             // LD Rd, #imm(7)   11011 Rd(4) imm(7)
             registers[imm_Rd] <= { 25'd0, imm7 };
+        end else if( opcode == OP__LD_RD_IMM32 ) begin
+            registers[imm_Rd] <= imm32;
         end else if( opcode[4:3] == 2'b11 ) begin
             // LDB Rd, (Rs+#imm(3))    11000 Rd(4) Rs(4) imm(3)
             // LDH Rd, (Rs+#imm(3))    11001 Rd(4) Rs(4) imm(3)

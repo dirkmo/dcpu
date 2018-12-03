@@ -44,8 +44,17 @@ int main(int argc, char **argv, char **env) {
     
     parseCommandLine(&tb, argc, argv);
 
+    /*
+    LD r0, #imm(32)  F800 | Rd << 7
+    
+    LD r1, 0x12345678
+    F880 5678 1234
+
+
+    */
+
     vector<uint16_t> prog {
-        0xE000, 0x0102, 0xF800, 0x0304, 0x0506, 0x0000
+        0xF880, 0x5678, 0x1234, 0x0000
     };
     for( int i = 0; i < prog.size(); i++ ) {
         tb.setMem(i, prog[i]);
@@ -58,7 +67,7 @@ int main(int argc, char **argv, char **env) {
 
     uint32_t icount = 0;
 
-    while(icount++ < 10) {
+    while(!tb.done() && icount++ < 10) {
         tb.tick();
     }
     return 0;

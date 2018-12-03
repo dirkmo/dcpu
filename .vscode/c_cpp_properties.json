@@ -26,13 +26,16 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceRoot}"
+                "${workspaceRoot}",
+                "/usr/share/verilator/include",
+                "${workspaceFolder}/verilator"
             ],
             "defines": [],
             "intelliSenseMode": "clang-x64",
             "browse": {
                 "path": [
-                    "${workspaceRoot}"
+                    "${workspaceRoot}",
+                    "/usr/share/verilator/include"
                 ],
                 "limitSymbolsToIncludedHeaders": true,
                 "databaseFilename": ""
