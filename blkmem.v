@@ -29,8 +29,8 @@ input [1:0] i_stb;
 output o_ack;
 
 reg [15:0] memout;
-assign o_dat[15:8] = i_stb[1] ? memout[15:8] : 8'hZ;
-assign o_dat[7:0]  = i_stb[0] ? memout[7:0]  : 8'hZ;
+assign o_dat[15:8] = i_stb[1] && i_cyc ? memout[15:8] : 8'hZ;
+assign o_dat[7:0]  = i_stb[0] && i_cyc ? memout[7:0]  : 8'hZ;
 assign o_ack = i_cyc;
 
 reg [15:0] mem[2**AW-1:0];
