@@ -1,12 +1,15 @@
-.PHONY: all clean sim wave
+.PHONY: all clean test wave verilator
 
 UNAME := $(shell uname -s)
 
 VERILATOR_OUTPUTDIR = verilator
 
-INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include
+PWD=$(shell pwd)
+INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include -I$(PWD)/../include
 
-VFLAGS = -CFLAGS -std=c++11 -Wall -trace -cc --exe $(INCDIR) --Mdir $(VERILATOR_OUTPUTDIR)
+VSRCS=../verilog/top.v ../verilog/syscon.v ../verilog/dcpu.v ../verilog/blkmem.v
+
+VFLAGS = -CFLAGS "-std=c++11 $(INCDIR)" --public -Wall -trace -cc --exe --Mdir $(VERILATOR_OUTPUTDIR) -y ../verilog
 GTKWAVE := gtkwave
 ifeq ($(UNAME),Darwin)
 VFLAGS += --compiler clang
@@ -18,22 +21,22 @@ CFLAGS=-Wall -std=c++11
 CPPFILES=
 OBJFILES=$(CPPFILES:.cpp=.o)
 
-all: dcpusim
+all: dcputest
 
 .cpp.o:
 	g++ $(CFLAGS) $(INCDIR) -c $< -o $@
 
-verilator: top.v sim.cpp
-	verilator $(VFLAGS) top.v sim.cpp
+verilator: $(VSRCS) test.cpp
+	verilator $(VFLAGS) top.v test.cpp
 
 
-dcpusim: verilator $(OBJFILES)
+dcputest: verilator $(OBJFILES)
 	make -C $(VERILATOR_OUTPUTDIR) -j4 -f Vtop.mk
 
-sim: dcpusim
+test: dcputest
 	$(VERILATOR_OUTPUTDIR)/Vtop -d -t
 
-wave: sim
+wave: test
 	gtkwave trace.vcd &
 
 clean:
