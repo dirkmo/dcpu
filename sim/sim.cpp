@@ -56,7 +56,8 @@ int main(int argc, char **argv, char **env) {
     LDB r3, (r0+7)          C000 | 180 | 0 | 6
     C187
     
-    LDH Rd, (Rs+#imm(3))     11001 Rd(4) Rs(4) imm(3)
+    LDH Rd, (Rs+#imm(3))    11001 Rd(4) Rs(4) imm(3)
+                            C900 | Rd << 7 | Rs << 3 | imm
     LD  Rd, (Rs+#imm(3))     11010 Rd(4) Rs(4) imm(3)
 
 
@@ -64,7 +65,8 @@ int main(int argc, char **argv, char **env) {
 
     vector<uint16_t> prog {
         // 0xF880, 0x5678, 0x1234, 0x0000 // LD r1, 0x12345678
-        0xC106, 0xC187, 0x0000, 0x1234, 0x5678 // LDB r2, (r0+4)
+        // 0xC106, 0xC187, 0x0000, 0x1234, 0x5678 // LDB r2, (r0+6); LDB r3, (r0+7)
+
     };
     for( int i = 0; i < prog.size(); i++ ) {
         tb.setMem(i, prog[i]);
