@@ -1,4 +1,4 @@
-module Regfile(
+module regfile(
     i_clk,
     i_dat,
 
