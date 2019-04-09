@@ -4,50 +4,94 @@
 #include "Vregfile.h"
 #include "verilated.h"
 
-VerilatedVcdC *m_trace;
-Vregfile *m_core;
+VerilatedVcdC *pTrace;
+Vregfile *pCore;
+uint64_t tickcount;
 
 void opentrace(const char *vcdname) {
-    if (!m_trace) {
-        m_trace = new VerilatedVcdC;
-        m_core->trace(m_trace, 99);
-        m_trace->open(vcdname);
+    if (!pTrace) {
+        pTrace = new VerilatedVcdC;
+        pCore->trace(pTrace, 99);
+        pTrace->open(vcdname);
     }
-}
-
-void reset() {
-    m_core->i_reset = 1;
-    tick();
-    m_core->i_reset = 0;
 }
 
 void tick() {
-    m_tickcount++;
+    tickcount++;
 
-    m_core->i_clk = 0;
-    m_core->eval();
+    pCore->i_clk = 0;
+    pCore->eval();
     
-    if(m_trace) m_trace->dump(static_cast<vluint64_t>(10*m_tickcount-2));
+    if(pTrace) pTrace->dump(static_cast<vluint64_t>(10*tickcount-2));
 
-    m_core->i_clk = 1;
-    m_core->eval();
-    if(m_trace) m_trace->dump(static_cast<vluint64_t>(10*m_tickcount));
+    pCore->i_clk = 1;
+    pCore->eval();
+    if(pTrace) pTrace->dump(static_cast<vluint64_t>(10*tickcount));
 
-    m_core->i_clk = 0;
-    m_core->eval();
-    if (m_trace) {
-        m_trace->dump(static_cast<vluint64_t>(10*m_tickcount+5));
-        m_trace->flush();
+    pCore->i_clk = 0;
+    pCore->eval();
+    if (pTrace) {
+        pTrace->dump(static_cast<vluint64_t>(10*tickcount+5));
+        pTrace->flush();
     }
+}
+
+void loadreg(int reg, uint8_t val) {
+    pCore->i_dat = val;
+    pCore->i_load_reg_sel = reg;
+    pCore->i_load = 1;
+    tick();
+    pCore->i_load = 0;
+    tick();
+}
+
+void alul(int reg) {
+    pCore->i_alu_l_sel = reg;
+    tick();
+}
+
+void alur(int reg) {
+    pCore->i_alu_r_sel = reg;
+    tick();
+}
+
+void addr(int reg) {
+    pCore->i_addr_sel = reg;
+    tick();
 }
 
 int main(int argc, char *argv[]) {
     Verilated::traceEverOn(true);
-    m_core = new Vregfile();
+    pCore = new Vregfile();
+    opentrace("trace.vcd");
 
-    if (m_trace) {
-        m_trace->close();
-        m_trace = NULL;
+    pCore->i_dat = 0;
+    pCore->i_load_reg_sel = 0;
+    pCore->i_load = 0;
+    pCore->i_alu_l_sel = 0;
+    pCore->i_alu_r_sel = 0;
+    pCore->i_addr_sel = 0;
+    tick();
+
+    for( int i = 0; i < 12; i++ ) {
+        loadreg(i, i);
+        alul(i);
+        assert(pCore->o_alu_l == i);
+    }
+    for( int i = 0; i < 12; i++ ) {
+        loadreg(i,i*2);
+        alur(i);
+        assert(pCore->o_alu_r == i*2);
+    }
+
+    for( int i = 0; i < 6; i++ ) {
+        addr(i*2);
+        assert( pCore->o_addr == (i*2 << 8) | (i*2));
+    }
+
+    if (pTrace) {
+        pTrace->close();
+        pTrace = NULL;
     }
     return 0;
 }

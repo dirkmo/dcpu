@@ -25,7 +25,7 @@ regfile: verilator
 	make -C $(VERILATOR_OUTPUTDIR) -j4 -f Vregfile.mk
 
 sim: regfile
-	$(VERILATOR_OUTPUTDIR)/Vtop -d -t
+	$(VERILATOR_OUTPUTDIR)/Vregfile -d -t
 
 wave: sim
 	gtkwave trace.vcd &
