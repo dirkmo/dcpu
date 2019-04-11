@@ -17,7 +17,7 @@ CFLAGS=-Wall -std=c++11
 
 all: regfile
 
-verilator: regfile
+verilator: regfile.cpp ../regfile.v
 	verilator $(VFLAGS) ../regfile.v regfile.cpp
 
 
