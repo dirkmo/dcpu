@@ -31,6 +31,6 @@ wave: sim
 	gtkwave trace.vcd &
 
 clean:
-	rm $(OBJFILES)
+	rm -f trace.vcd
 	rm -f $(VERILATOR_OUTPUTDIR)/*
 	-rm -r $(VERILATOR_OUTPUTDIR)

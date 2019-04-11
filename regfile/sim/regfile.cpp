@@ -74,19 +74,21 @@ int main(int argc, char *argv[]) {
     tick();
 
     for( int i = 0; i < 12; i++ ) {
-        loadreg(i, i);
-        alul(i);
-        assert(pCore->o_alu_l == i);
-    }
-    for( int i = 0; i < 12; i++ ) {
         loadreg(i,i*2);
         alur(i);
         assert(pCore->o_alu_r == i*2);
     }
 
-    for( int i = 0; i < 6; i++ ) {
-        addr(i*2);
-        assert( pCore->o_addr == (i*2 << 8) | (i*2));
+    for( int i = 0; i < 12; i++ ) {
+        loadreg(i, i);
+        alul(i);
+        assert(pCore->o_alu_l == i);
+    }
+
+    for( int i = 0; i < 12; i += 2 ) {
+        addr(i/2);
+        printf("%d: %d\n", (i | (i+1)), pCore->o_addr);
+        assert( pCore->o_addr == (i | (i+1) << 8) );
     }
 
     if (pTrace) {

@@ -34,7 +34,7 @@ reg [7:0] registers[0:`REGCOUNT-1]; // AB(0,1) CD(2,3) EF(4,5) GH(6,7) SP(8,9) P
 
 assign o_alu_l = i_alu_l_sel < `REGCOUNT ? registers[i_alu_l_sel] : i_dat;
 assign o_alu_r = i_alu_r_sel < `REGCOUNT ? registers[i_alu_r_sel] : i_dat;
-assign o_addr  = { registers[{i_addr_sel,1}], registers[{i_addr_sel,0}] };
+assign o_addr  = { registers[{i_addr_sel, 1'b1}], registers[{i_addr_sel, 1'b0}] };
 
 always @(posedge i_clk)
 begin
