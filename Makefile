@@ -1,32 +1,18 @@
-.PHONY: all sim-regfile sim-fetcher fetcher
+.PHONY: all clean
 
-UNAME := $(shell uname -s)
+CFLAGS=-Wall -g -Wno-unused-function -Wfatal-errors
+INC=
 
-VFLAGS = -Wall -trace -cc --exe --Mdir $@
-GTKWAVE := gtkwave
-ifeq ($(UNAME),Darwin)
-VFLAGS += --compiler clang
-GTKWAVE := /Applications/gtkwave.app/Contents/MacOS/gtkwave-bin
-endif
+SRCS=$(wildcard *.c)
+OBJS=$(SRCS:.c=.o)
 
-all: regfile fetcher
+BIN=dcpu
 
-regfile:
-	verilator $(VFLAGS) regfile.v regfiletest.cpp
-	cd regfile/ && make -j4 -f Vregfile.mk
+all: $(OBJS)
+	gcc $(OBJS) -o $(BIN)
 
-fetcher:
-	verilator $(VFLAGS) fetcher.v fetchertest.cpp
-	cd fetcher/ && make -j4 -f Vfetcher.mk
-	
-sim-regfile: regfile
-	regfile/Vregisterfile
-
-sim-fetcher: fetcher
-	fetcher/Vfetcher
-
-wave: sim-fetcher
-	$(GTKWAVE) trace.vcd &
+%.o: %.c
+	gcc $(CFLAGS) $(INC) -c $< -o $@
 
 clean:
-	rm -rf regfile/ fetcher/
+	rm -f $(OBJS) $(BIN)
