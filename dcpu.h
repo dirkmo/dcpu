@@ -113,13 +113,16 @@ typedef enum {
     OP_POPGROUP     = 0xE0,
     OP_POP          = OP_POPGROUP | 0x0, // 1110 0000 pop       ; t <- n, n <- mem[dsp-1], dsp--
     // OP_POPx      = OP_POPGROUP | 0x1, // 1110 0001 
-    OP_POPA         = OP_POPGROUP | 0x2, // 1110 0010 popa      ; a <- mem[asp-1], asp--
+    OP_APOP         = OP_POPGROUP | 0x2, // 1110 0010 popa      ; a <- mem[asp-1], asp--
     OP_RET          = OP_POPGROUP | 0x3, // 1110 0011 ret       ; pc <- a, a <- mem[asp-1], asp--
 
     // # Misc
     OP_MISCGROUP    = 0xF0,
-    OP_SETSTATUS    = OP_MISCGROUP | 0x0, // 1111 0000 status                ; status <- t
-
+    OP_SETSTATUS    = OP_MISCGROUP | 0x0, // 1111 0000 status       ; status <- t
+    OP_SETDSP       = OP_MISCGROUP | 0x1, // 1111 0001 dsp          ; dsp <- t
+    OP_SETASP       = OP_MISCGROUP | 0x2, // 1111 0010 asp          ; asp <- t
+    OP_SETUSP       = OP_MISCGROUP | 0x3, // 1111 0011 usp          ; usp <- t
+    OP_APUSH        = OP_MISCGROUP | 0x4, // 1111 0100 apush        ; mem[asp] <- a, a <- t, asp++
 
 
     OP_END = 0xFF
