@@ -122,7 +122,9 @@ typedef enum {
     OP_SETDSP       = OP_MISCGROUP | 0x1, // 1111 0001 dsp          ; dsp <- t
     OP_SETASP       = OP_MISCGROUP | 0x2, // 1111 0010 asp          ; asp <- t
     OP_SETUSP       = OP_MISCGROUP | 0x3, // 1111 0011 usp          ; usp <- t
-    OP_APUSH        = OP_MISCGROUP | 0x4, // 1111 0100 apush        ; mem[asp] <- a, a <- t, asp++
+    OP_SETA         = OP_MISCGROUP | 0x4, // 1111 0100 a            ; a <- t
+
+    OP_APUSH        = OP_MISCGROUP | 0x5, // 1111 0100 apush        ; mem[asp] <- a, a <- t, asp++
 
 
     OP_END = 0xFF

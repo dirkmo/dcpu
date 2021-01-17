@@ -133,6 +133,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_SETDSP] = "SETDSP",
         [OP_SETASP] = "SETASP",
         [OP_SETUSP] = "SETUSP",
+        [OP_SETA] = "SETA",
         [OP_APUSH] = "APUSH",
     };
     uint16_t imm(cpu_t *cpu);
@@ -334,6 +335,8 @@ void execute(cpu_t *cpu) {
                 cpu->asp = cpu->t;
             } else if (op == OP_SETUSP) {
                 cpu->usp = cpu->t;
+            } else if (op == OP_SETA) {
+                cpu->a = cpu->t;
             } else if (op == OP_APUSH) {
                 // save a to as
                 cpu->busaddr = cpu->asp;
@@ -358,10 +361,11 @@ void statemachine(cpu_t *cpu) {
             cpu->ir[1] = cpu->ir[0];
             cpu->ir[0] = (cpu->pc&1) ? (*cpu->bus(cpu) >> 8 ): *cpu->bus(cpu);
             cpu->state = (cpu->ir[0] & OP_IMM_MASK) ? ST_EXECUTE : ST_FETCH;
+            printf("fetch %04X: %02X\n", cpu->pc, cpu->ir[0]);
             cpu->pc++; // first increase pc. pc might again be overwritten by jumps
             break;
         case ST_EXECUTE:
-            printf("%s\n",disassemble(cpu));
+            printf("decode: %s\n",disassemble(cpu));
             execute(cpu);
             // finally clear ir[]
             cpu->ir[1] = cpu->ir[0] = 0;
@@ -371,7 +375,7 @@ void statemachine(cpu_t *cpu) {
     }
 }
 
-static uint8_t mem[0x1000];
+static uint8_t mem[0x10000];
 
 uint16_t *bus(cpu_t *cpu) {
     assert(cpu->busaddr < sizeof(mem));
@@ -548,19 +552,108 @@ int main(int argc, char *argv[]) {
         }
     }
 
-        {
+    {
         // 10
         printf("\nTest %d\n", testnr++);
-        uint8_t prog[] = { 0x33, 0x44, OP_PUSHI, // T <- 0x3344, dsp=1
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+            0x70, OP_STOREABS, // mem[0x70] <- T
+            0x70, OP_PUSHI, // T <- 0x70, dsp=2
+            OP_JMPT,
+            0xfe, // invalid op
             OP_END
         };
         reset(&res);
-        res.t = 0;
-        res.n = 0;
-        res.dsp = 0;
+        res.t = 0x70;
+        res.n = 0xff;
+        res.dsp = 2;
+        res.pc = 0x71;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
         }
     }
+
+    {
+        // 11
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+            0x70, OP_STOREABS, // mem[0x70] <- T
+            0x70, OP_PUSHI, // T <- 0x70, dsp=2
+            OP_SETA, // a <- t
+            OP_JMPA,
+            0xfe, // invalid op
+            OP_END
+        };
+        reset(&res);
+        res.t = 0x70;
+        res.n = 0xff;
+        res.dsp = 2;
+        res.a = 0x70;
+        res.pc = 0x71;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+        }
+    }
+
+    {
+        // 12
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+            0x70, OP_STOREABS, // mem[0x70] <- T
+            0x70, OP_JMPABS,
+            0xfe, // invalid op
+            OP_END
+        };
+        reset(&res);
+        res.t = 0xff;
+        res.n = 0x0;
+        res.dsp = 1;
+        res.pc = 0x71;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+        }
+    }
+
+    {
+        // 13
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = { 
+            0x01, 0x06, OP_BRAABS, // branch 0x106
+            0x14, OP_PUSHI, // push 0x14
+            OP_END,
+            0x13, OP_PUSHI, // push 0x13
+            OP_RET
+        };
+        reset(&res);
+        res.t = 0x14;
+        res.n = 0x13;
+        res.dsp = 2;
+        res.pc = 6;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+        }
+    }
+
+    {
+        // 14
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = { 
+            0x7f, OP_PUSHI | 1, // t < ff
+            (ADDR_INT >> 8) & 0x7f, ADDR_INT & 0x7f, OP_STOREABS|3, // mem[addr_int] = ff
+            OP_INT
+        };
+        reset(&res);
+        res.t = 0xff;
+        res.n = 0;
+        res.dsp = 1;
+        res.pc = ADDR_INT+1;
+        res.a = 0x106;
+        res.asp = 1;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+        }
+    }
+
+
+
     return 0;
 }
