@@ -1,9 +1,8 @@
 #ifndef _DCPU_H
 #define _DCPU_H
 
-#define FLAG_ZERO  0
 #define FLAG_CARRY 1
-#define FLAG_INTEN 2
+#define FLAG_INTEN 2 // interrupt enable
 
 #define ADDR_RESET 0x0100
 #define ADDR_INT   0xFFF0
@@ -115,17 +114,17 @@ typedef enum {
     // OP_POPx      = OP_POPGROUP | 0x1, // 1110 0001 
     OP_APOP         = OP_POPGROUP | 0x2, // 1110 0010 popa      ; a <- mem[asp-1], asp--
     OP_RET          = OP_POPGROUP | 0x3, // 1110 0011 ret       ; pc <- a, a <- mem[asp-1], asp--
+        
+    // Registers
+    OP_SETREGISTERGROUP = 0xF0,
+    OP_SETSTATUS    = OP_SETREGISTERGROUP | 0x0, // 1111 0000 status       ; status <- t
+    OP_SETDSP       = OP_SETREGISTERGROUP | 0x1, // 1111 0001 dsp          ; dsp <- t
+    OP_SETASP       = OP_SETREGISTERGROUP | 0x2, // 1111 0010 asp          ; asp <- t
+    OP_SETUSP       = OP_SETREGISTERGROUP | 0x3, // 1111 0011 usp          ; usp <- t
+    OP_SETA         = OP_SETREGISTERGROUP | 0x4, // 1111 0100 a            ; a <- t
 
-    // # Misc
-    OP_MISCGROUP    = 0xF0,
-    OP_SETSTATUS    = OP_MISCGROUP | 0x0, // 1111 0000 status       ; status <- t
-    OP_SETDSP       = OP_MISCGROUP | 0x1, // 1111 0001 dsp          ; dsp <- t
-    OP_SETASP       = OP_MISCGROUP | 0x2, // 1111 0010 asp          ; asp <- t
-    OP_SETUSP       = OP_MISCGROUP | 0x3, // 1111 0011 usp          ; usp <- t
-    OP_SETA         = OP_MISCGROUP | 0x4, // 1111 0100 a            ; a <- t
-
-    OP_APUSH        = OP_MISCGROUP | 0x5, // 1111 0100 apush        ; mem[asp] <- a, a <- t, asp++
-
+    OP_MISC         = 0xF8,
+    OP_APUSH        = OP_MISC | 0x0, // 1111 1000 apush        ; mem[asp] <- a, a <- t, asp++
 
     OP_END = 0xFF
 } opcode_t;

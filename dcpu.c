@@ -36,8 +36,6 @@ struct cpu_t {
     // user stack pointer
     uint16_t usp; // byte address
 
-    // alu
-    uint16_t alu_output;
     uint16_t status; // incl. carry
 
     // memory access
@@ -156,17 +154,17 @@ void alu(cpu_t *cpu) {
             printf("undefined alu op (%02X)\n", op);
             assert(0);
     }
-    cpu->alu_output = r & 0xFFFF;
+    cpu->t = r & 0xFFFF;
     cpu->status = (cpu->status & ~FLAG_CARRY) | ((r > 0xFFFF) ? FLAG_CARRY : 0);
-    cpu->status = (cpu->status & ~FLAG_ZERO) | ((cpu->alu_output == 0) ? FLAG_ZERO : 0);
 }
 
 void reset(cpu_t *cpu) {
     cpu->ir[0] = cpu->ir[1] = cpu->ir[2] = 0;
     cpu->pc = ADDR_RESET;
     cpu->a = cpu->t = cpu->n = 0;
-    cpu->usp = cpu->asp = cpu->dsp = 0;
-    cpu->alu_output = 0;
+    cpu->usp = 0;
+    cpu->dsp = 0;
+    cpu->asp = 0x40;
     cpu->status = 0;
     cpu->busaddr = 0;
     cpu->state = ST_RESET;
@@ -196,7 +194,7 @@ void execute_stackop(cpu_t *cpu) {
     cpu->busaddr = cpu->dsp;
     *cpu->bus(cpu) = cpu->n;
     // inc dsp
-    cpu->dsp++;
+    cpu->dsp+=2;
     // put t to n
     cpu->n = cpu->t;
     // set t to new value from src
@@ -254,7 +252,7 @@ void execute_branch(cpu_t *cpu) {
     // save a to as
     cpu->busaddr = cpu->asp;
     *cpu->bus(cpu) = cpu->a;
-    cpu->asp++;
+    cpu->asp+=2;
     // save pc+1 to a
     cpu->a = cpu->pc; // pc is already incremented
     cpu->pc = jmpaddr(cpu);
@@ -264,7 +262,7 @@ void execute_pop(cpu_t *cpu) {
     const uint8_t op = cpu->ir[0];
     switch(op) {
         case OP_POP:
-            cpu->dsp--;
+            cpu->dsp-=2;
             cpu->t = cpu->n;
             cpu->busaddr = cpu->dsp;
             cpu->n = *cpu->bus(cpu);
@@ -273,7 +271,7 @@ void execute_pop(cpu_t *cpu) {
             cpu->pc = cpu->a;
             // intended fallthrough
         case OP_APOP:
-            cpu->asp--;
+            cpu->asp-=2;
             cpu->busaddr = cpu->asp;
             cpu->a = *cpu->bus(cpu);
             break;
@@ -283,10 +281,23 @@ void execute_pop(cpu_t *cpu) {
     }
 }
 
+void execute_setregister(cpu_t *cpu) {
+    int idx = cpu->ir[0] & 0x7;
+    uint16_t *dst[] = { &cpu->status, &cpu->dsp, &cpu->asp, &cpu->usp, &cpu->a  };
+    if (idx >= ARRCOUNT(dst)) {
+        printf("setregister: invalid index (%d)\n", idx);
+        assert(0);
+    }
+    *dst[idx] = cpu->t;
+}
+
 void execute(cpu_t *cpu) {
     const uint8_t op = cpu->ir[0];
     const uint8_t opgroup = cpu->ir[0] & OP_MASK;
     switch(opgroup) {
+        case OP_ALU:
+            alu(cpu);
+            break;
         case OP_STACKGROUP1:
         case OP_STACKGROUP2:
             execute_stackop(cpu);
@@ -326,22 +337,15 @@ void execute(cpu_t *cpu) {
         case OP_POPGROUP:
             execute_pop(cpu);
             break;
-        case OP_MISCGROUP:
-            if (op == OP_SETSTATUS) {
-                cpu->status = cpu->t;
-            } else if (op == OP_SETDSP) {
-                cpu->dsp = cpu->t;
-            } else if (op == OP_SETASP) {
-                cpu->asp = cpu->t;
-            } else if (op == OP_SETUSP) {
-                cpu->usp = cpu->t;
-            } else if (op == OP_SETA) {
-                cpu->a = cpu->t;
-            } else if (op == OP_APUSH) {
+        case OP_SETREGISTERGROUP:
+            execute_setregister(cpu);
+            break;
+        case OP_MISC:
+            if (op == OP_APUSH) {
                 // save a to as
                 cpu->busaddr = cpu->asp;
                 *cpu->bus(cpu) = cpu->a;
-                cpu->asp++;
+                cpu->asp+=2;
                 cpu->a = cpu->t;
             }
             break;
@@ -415,90 +419,97 @@ int main(int argc, char *argv[]) {
     cpu_t cpu, res;
     cpu.bus = bus;
 
+    int fail = 0;
     reset(&cpu);
     int testnr = 1;
     {
-        // 1
+        // 1 PUSHI
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 0x7e, 0x7f, OP_PUSHI, OP_END };
         reset(&res);
         res.t = 0x7f | (0x7e << 8);
-        res.dsp = 1;
+        res.dsp = 2;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 2
+        // 2 PUSHT
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x7f, 0x7e, OP_PUSHI, OP_PUSHT, OP_END};
         reset(&res);
         res.t = 0x7e | (0x7f << 8);
         res.n = res.t;
-        res.dsp = 2;
+        res.dsp = 4;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 3
+        // 3 APUSH
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x12, 0x34, OP_PUSHI, OP_APUSH, OP_END};
         reset(&res);
         res.t = 0x34 | (0x12 << 8);
         res.a = res.t;
-        res.dsp = 1;
-        res.asp = 1;
+        res.dsp = 2;
+        res.asp = 0x42;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 4
+        // 4 PUSHN
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x12, 0x34, OP_PUSHI, OP_PUSHN, OP_END};
         reset(&res);
         res.n = 0x34 | (0x12 << 8);
         res.t = 0;
-        res.dsp = 2;
+        res.dsp = 4;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 5
+        // 5 SETUSP, PUSHUSP
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x34, OP_PUSHI, OP_SETUSP, OP_PUSHUSP, OP_END};
         reset(&res);
         res.t = 0x34;
         res.n = 0x34;
-        res.dsp = 2;
+        res.dsp = 4;
         res.usp = 0x34;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 6
+        // 6 FETCHT
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x34, OP_PUSHI, OP_FETCHT, OP_END};
         reset(&res);
         res.t = 0x99;
         res.n = 0;
-        res.dsp = 1;
+        res.dsp = 2;
         mem[0x34] = 0x99;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
      {
-        // 7
+        // 7 APUSH, FETACHA
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x23, OP_PUSHI|0x1, OP_APUSH, OP_FETCHA, OP_END};
         // push 0xa3, a <- 0xa3
@@ -506,16 +517,17 @@ int main(int argc, char *argv[]) {
         res.t = 0xcc00; // not 16-bit unaligned --> 0xcc on MSB
         res.n = 0;
         res.a = 0xa3;
-        res.dsp = 1;
-        res.asp = 1;
+        res.dsp = 2;
+        res.asp = 0x42;
         mem[0xa3] = 0xcc;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
    
     {
-        // 8
+        // 8 SETUSP, FETCHU
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 1, OP_PUSHI, // T <- 1, dsp++
             OP_SETUSP, // usp <- T
@@ -525,17 +537,18 @@ int main(int argc, char *argv[]) {
         reset(&res);
         res.t = 0xb4ea;
         res.n = 0;
-        res.dsp = 1;
+        res.dsp = 2;
         res.usp = 1;
         mem[0x6] = 0xea;
         mem[0x7] = 0xb4;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 9
+        // 9 STOREABS, FETCHABS
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 0x33, 0x44, OP_PUSHI, // T <- 0x3344, dsp=1
             0x05, 0x16, OP_STOREABS, // mem[0x1516] <- T
@@ -546,16 +559,17 @@ int main(int argc, char *argv[]) {
         reset(&res);
         res.t = 0x3344;
         res.n = 0x3344;
-        res.dsp = 2;
+        res.dsp = 4;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 10
+        // 10 JMPT
         printf("\nTest %d\n", testnr++);
-        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=2
             0x70, OP_STOREABS, // mem[0x70] <- T
             0x70, OP_PUSHI, // T <- 0x70, dsp=2
             OP_JMPT,
@@ -565,19 +579,20 @@ int main(int argc, char *argv[]) {
         reset(&res);
         res.t = 0x70;
         res.n = 0xff;
-        res.dsp = 2;
+        res.dsp = 4;
         res.pc = 0x71;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 11
+        // 11  SETA, JMPA
         printf("\nTest %d\n", testnr++);
-        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=2
             0x70, OP_STOREABS, // mem[0x70] <- T
-            0x70, OP_PUSHI, // T <- 0x70, dsp=2
+            0x70, OP_PUSHI, // T <- 0x70, dsp=4
             OP_SETA, // a <- t
             OP_JMPA,
             0xfe, // invalid op
@@ -586,18 +601,19 @@ int main(int argc, char *argv[]) {
         reset(&res);
         res.t = 0x70;
         res.n = 0xff;
-        res.dsp = 2;
+        res.dsp = 4;
         res.a = 0x70;
         res.pc = 0x71;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 12
+        // 12 JMPABS
         printf("\nTest %d\n", testnr++);
-        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=2
             0x70, OP_STOREABS, // mem[0x70] <- T
             0x70, OP_JMPABS,
             0xfe, // invalid op
@@ -606,15 +622,16 @@ int main(int argc, char *argv[]) {
         reset(&res);
         res.t = 0xff;
         res.n = 0x0;
-        res.dsp = 1;
+        res.dsp = 2;
         res.pc = 0x71;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 13
+        // 13 BRAABS, RET
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 
             0x01, 0x06, OP_BRAABS, // branch 0x106
@@ -626,15 +643,16 @@ int main(int argc, char *argv[]) {
         reset(&res);
         res.t = 0x14;
         res.n = 0x13;
-        res.dsp = 2;
+        res.dsp = 4;
         res.pc = 6;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
     {
-        // 14
+        // 14 INT
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 
             0x7f, OP_PUSHI | 1, // t < ff
@@ -644,16 +662,114 @@ int main(int argc, char *argv[]) {
         reset(&res);
         res.t = 0xff;
         res.n = 0;
-        res.dsp = 1;
+        res.dsp = 2;
         res.pc = ADDR_INT+1;
         res.a = 0x106;
-        res.asp = 1;
+        res.asp = 0x42;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
+            fail++;
         }
     }
 
+    {
+        // 15 JMPZ
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+            0x70, OP_STOREABS, // mem[0x70] <- T
+            0x01, 0x00, OP_JMPZABS, // jmpz 0x100
+            OP_PUSHI,
+            0x70, OP_JMPZABS,
+            0xfe, // invalid op
+            OP_END
+        };
+        reset(&res);
+        res.t = 0x0;
+        res.n = 0xff;
+        res.dsp = 4;
+        res.pc = 0x71;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+            fail++;
+        }
+    }
 
+    {
+        // 16 JMPNZ
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+            0x70, OP_STOREABS, // mem[0x70] <- T
+            OP_PUSHI, // T <- 0
+            0x01, 0x00, OP_JMPNZABS, // jmpz 0x100
+            0x1, OP_PUSHI, // T <- 1
+            0x70, OP_JMPNZABS,
+            0xfe, // invalid op
+            OP_END
+        };
+        reset(&res);
+        res.t = 0x1;
+        res.n = 0x0;
+        res.dsp = 6;
+        res.pc = 0x71;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+            fail++;
+        }
+    }
+
+    {
+        // 17 JMPC, JMPNC
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = { 0x7f, OP_PUSHI | 1, // T <- 0xff, dsp=1
+            0x70, OP_STOREABS, // mem[0x70] <- T
+            0x7f, 0x7f, OP_PUSHI|3, // T <- 65535
+            0x1, OP_PUSHI, // T <- 1
+            OP_ADD, // T <- 1 + 65535 = 0 -> carry = 1
+            0x01, 0x00, OP_JMPNCABS, // jmpz 0x100
+            OP_PUSHI, // T <- 0
+            0x70, OP_JMPCABS,
+            0xfe, // invalid op
+            OP_END
+        };
+        reset(&res);
+        res.t = 0x0;
+        res.n = 0x0;
+        res.dsp = 8;
+        res.pc = 0x71;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+            fail++;
+        }
+    }
+
+    {
+        // 18 OP_POP, OP_APOP, 
+        printf("\nTest %d\n", testnr++);
+        uint8_t prog[] = {
+            0, OP_PUSHI, OP_APUSH,
+            1, OP_PUSHI, OP_APUSH,
+            2, OP_PUSHI, OP_APUSH,
+            3, OP_PUSHI, OP_APUSH,
+            OP_POP,
+            OP_APOP,
+            OP_POP,
+            OP_APOP, 
+            OP_END
+        };
+        reset(&res);
+        res.t = 0x1;
+        res.n = 0x0;
+        res.a = 1;
+        res.dsp = 4;
+        res.asp = 0x44;
+        res.pc = 0x111;
+        if (!test(&cpu, prog, sizeof(prog), &res)) {
+            printf("fail\n");
+             fail++;
+       }
+    }
+
+    printf("\nTests failed: %d\n", fail);
 
     return 0;
 }
