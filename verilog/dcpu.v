@@ -21,19 +21,21 @@ input i_int;
 
 output reg [15:0] o_addr;
 input [15:0] i_dat;
-output [15:0] o_dat;
+output reg [15:0] o_dat;
 output reg o_rw;
 
+reg r_int;
 
 reg [15:0] pc;
 reg [15:0] t, n, a;
 reg [14:0] dsp, asp, usp; // stack pointers are word aligned
 reg [ 1:0] status;
+/* verilator lint_off UNUSED */
 reg [23:0] ir;
+/* verilator lint_on UNUSED */
 
 wire [15:0] wdsp    = { dsp, 1'b0 };
 wire [15:0] wdsp_m1 = { dsp-1'b1, 1'b0 };
-wire [15:0] wdsp_p1 = { dsp+1'b1, 1'b0 };
 wire [15:0] wasp    = { asp, 1'b0 };
 wire [15:0] wasp_m1 = { asp-1'b1, 1'b0 };
 wire [15:0] wusp    = { usp, 1'b0 };
@@ -47,6 +49,7 @@ wire [13:0] ir_offs13 = { ir[22:16], ir[14:8]};
 reg  [15:0] stackgroup_src;
 reg  [15:0] fetch_store_group_addr;
 reg  [15:0] jumpgroup_addr;
+reg  [16:0] alu_output;
 
 localparam 
     OP_MASK         = 5'b11111,
@@ -66,15 +69,29 @@ localparam
     OP_MISC         = 5'b11111;
 
 localparam 
-    OP_SETASP = { OP_SETREGISTERGROUP, 3'b010 },
-    OP_SETUSP = { OP_SETREGISTERGROUP, 3'b011 };
+    OP_SETSTATUS = { OP_SETREGISTERGROUP, 3'b000 },
+    OP_SETASP    = { OP_SETREGISTERGROUP, 3'b010 },
+    OP_SETUSP    = { OP_SETREGISTERGROUP, 3'b011 };
+    
 
 localparam 
-    RESET = 0,
-    FETCH = 1,
-    EXECUTE = 2;
+    RESET     = 0,
+    FETCH     = 1,
+    EXECUTE   = 2,
+    INTERRUPT = 3;
 
 reg [1:0] state;
+
+// r_int
+always @(posedge i_clk)
+begin
+    if (i_int && status[`STATUS_INTEN]) begin
+        r_int <= 1'b1;
+    end
+    if (i_reset || state == INTERRUPT || ~status[`STATUS_INTEN]) begin
+        r_int <= 1'b0;
+    end
+end
 
 // state
 always @(posedge i_clk)
@@ -86,8 +103,9 @@ begin
             state <= op[7] ? EXECUTE : FETCH;
         end
         EXECUTE: begin
-            state <= FETCH;
+            state <= r_int ? INTERRUPT : FETCH;
         end
+        INTERRUPT: state <= EXECUTE;
     endcase
     if( i_reset ) begin
         state <= RESET;
@@ -96,7 +114,7 @@ end
 
 always @(state)
 begin
-    case (op[3:0])
+    casez (op[3:0])
         4'b0000: stackgroup_src = t;
         4'b0001: stackgroup_src = a;
         4'b0010: stackgroup_src = n;
@@ -106,27 +124,30 @@ begin
         4'b1001: stackgroup_src = wdsp;
         4'b1010: stackgroup_src = wasp;
         4'b1011: stackgroup_src = pc;
+        default: stackgroup_src = 0;
     endcase
 end
 
 always @(state)
 begin
-    case (op[2:0])
-        3'b000: fetch_store_group_addr = t;
-        3'b001: fetch_store_group_addr = a;
-        3'b010: fetch_store_group_addr = wusp + {2'b00, ir_offs13};
-        3'b011: fetch_store_group_addr = wusp;
-        3'b1??: fetch_store_group_addr = ir_abs16;
+    casez (op[2:0])
+        3'b000:  fetch_store_group_addr = t;
+        3'b001:  fetch_store_group_addr = a;
+        3'b010:  fetch_store_group_addr = wusp + {2'b00, ir_offs13};
+        3'b011:  fetch_store_group_addr = wusp;
+        3'b1??:  fetch_store_group_addr = ir_abs16;
+        default: fetch_store_group_addr = t;
     endcase
 end
 
 always @(state)
 begin
-    case (op[2:0])
-        3'b000: jumpgroup_addr = t;
-        3'b001: jumpgroup_addr = a;
-        3'b010: jumpgroup_addr = `INT_ADDR;
-        3'b1??: jumpgroup_addr = ir_abs16;
+    casez (op[2:0])
+        3'b000:  jumpgroup_addr = t;
+        3'b001:  jumpgroup_addr = a;
+        3'b010:  jumpgroup_addr = `INT_ADDR;
+        3'b1??:  jumpgroup_addr = ir_abs16;
+        default: jumpgroup_addr = t;
     endcase
 end
 
@@ -136,13 +157,14 @@ begin
     o_addr = pc;
     if (state == EXECUTE) begin
         case(op[7:3])
-            OP_STACKGROUP1: o_addr = dsp;
-            OP_STACKGROUP2: o_addr = dsp;
+            OP_STACKGROUP1: o_addr = wdsp;
+            OP_STACKGROUP2: o_addr = wdsp;
             OP_FETCHGROUP:  o_addr = fetch_store_group_addr;
             OP_STOREGROUP:  o_addr = fetch_store_group_addr;
             OP_BRANCHGROUP: o_addr = wasp_m1;
             OP_POPGROUP:    o_addr = |op[1:0] ? wasp_m1 : wdsp_m1;
-            OP_MISC:        o_addr = asp;
+            OP_MISC:        o_addr = wasp;
+            default:        o_addr = 0;
         endcase
     end
 end
@@ -153,13 +175,27 @@ begin
     o_rw = 1'b1;
     if (state == EXECUTE) begin
         case(op[7:3])
-            // OP_STACKGROUP1: o_addr = dsp;
-            // OP_STACKGROUP2: o_addr = dsp;
-            // OP_FETCHGROUP:  o_addr = fetch_store_group_addr;
+            OP_STACKGROUP1: o_rw = 1'b0;
+            OP_STACKGROUP2: o_rw = 1'b0;
             OP_STOREGROUP:  o_rw = 1'b0;
             OP_BRANCHGROUP: o_rw = 1'b0;
-            // OP_POPGROUP:    o_addr = |op[1:0] ? wasp_m1 : wdsp_m1;
             OP_MISC: o_rw = ~(|op[2:0] == 0); // OP_APUSH
+            default: o_rw = 1'b1;
+        endcase
+    end
+end
+
+// o_dat
+always @(state)
+begin
+    if (state == EXECUTE) begin
+        case(op[7:3])
+            OP_STACKGROUP1: o_dat = n;
+            OP_STACKGROUP2: o_dat = n;
+            OP_STOREGROUP:  o_dat = |op[2:0] ? t : n;
+            OP_BRANCHGROUP: o_dat = a;
+            OP_MISC: if (op[2:0] == 3'b000) o_dat = a; // OP_APUSH
+            default: o_dat = 0;
         endcase
     end
 end
@@ -177,6 +213,7 @@ begin
             OP_JMPNZGROUP:  dojump = t != 16'd0;
             OP_JMPCGROUP:   dojump = status[`STATUS_CARRY];
             OP_JMPNCGROUP:  dojump = ~status[`STATUS_CARRY];
+            default: dojump = 0;
         endcase
     end
 end
@@ -191,31 +228,17 @@ begin
     endcase
 end
 
-reg [15:0] t_sources;
-always @(state)
-begin
-    t_sources = t;
-    case (op[3:0])
-        4'b0001: t_sources = a;
-        4'b0010: t_sources = n;
-        4'b0011: t_sources = wusp;
-        4'b0100: t_sources = ir_abs16;
-        4'b0101: t_sources = { 14'd0, status };
-        4'b0011: t_sources = wdsp;
-        4'b0011: t_sources = wasp;
-        4'b0011: t_sources = pc; // oder pc+1 ?
-    endcase
-end
-
 // t
 always @(posedge i_clk)
 begin
     if (state == EXECUTE) begin
         case (op[7:3])
-            OP_STACKGROUP1: t <= t_sources;
-            OP_STACKGROUP2: t <= t_sources;
+            OP_ALU: t <= alu_output[15:0];
+            OP_STACKGROUP1: t <= stackgroup_src;
+            OP_STACKGROUP2: t <= stackgroup_src;
             OP_FETCHGROUP: t <= i_dat;
-            OP_POPGROUP: if (|op[2:0] == 3'd0) t <= n; // OP_POP
+            OP_POPGROUP: if (op[2:0] == 3'd0) t <= n; // OP_POP
+            default: t <= t;
         endcase
     end
     if (state == RESET) begin
@@ -230,6 +253,7 @@ begin
         case (op[7:3])
             OP_STACKGROUP1: n <= t;
             OP_STACKGROUP2: n <= t;
+            default: n <= n;
         endcase
     end
     if (state == RESET) begin
@@ -246,6 +270,7 @@ begin
             OP_POPGROUP:         if (op[1]) a <= i_dat; // OP_APOP, OP_RET
             OP_SETREGISTERGROUP: if (op[2]) a <= t; // OP_SETA
             OP_MISC:             a <= t; // OP_APUSH
+            default: a <= a;
         endcase
     end
     if (state == RESET) begin
@@ -258,6 +283,13 @@ end
 always @(posedge i_clk)
 begin
     if (state == EXECUTE) begin
+        case (op[7:3])
+            OP_STACKGROUP1: dsp <= dsp + 1;
+            OP_STACKGROUP2: dsp <= dsp + 1;
+            OP_POPGROUP: if (op[2:0] == 3'b000) dsp <= dsp - 1; // OP_POP
+            OP_SETREGISTERGROUP: if (op[2:0] == 3'b001) dsp <= t[15:1]; // OP_SETDSP
+            default: dsp <= dsp;
+        endcase
     end
     if (state == RESET) begin
         dsp <= 15'd0;
@@ -271,7 +303,8 @@ begin
         case (op[7:3])
             OP_BRANCHGROUP: asp <= asp + 1;
             OP_POPGROUP: if (op[2:1] == 2'b01) asp <= asp - 1; // OP_APOP, OP_RET
-            OP_SETREGISTERGROUP: if (op[2:0]) asp <= t; // OP_SETASP
+            OP_SETREGISTERGROUP: if (op[2:0] == 3'b010) asp <= t[15:1]; // OP_SETASP
+            default: asp <= asp;
         endcase
     end
     if (state == RESET) begin
@@ -284,11 +317,37 @@ always @(posedge i_clk)
 begin
     if (state == EXECUTE) begin
         if (op[7:0] == OP_SETUSP)
-            usp <= t;
+            usp <= t[15:1];
     end
     if (state == RESET) begin
         usp <= 15'd0;
     end
+end
+
+// alu_output
+always @(state)
+begin
+    alu_output = 0;
+    case (op[3:0])
+        4'b0000: alu_output = { 1'b0, n } + { 1'b0, t };
+        4'b0001: alu_output = { 1'b0, n } - { 1'b0, t };
+        4'b0010: alu_output = { 1'b0, n & t };
+        4'b0011: alu_output = { 1'b0, n | t };
+        4'b0100: alu_output = { 1'b0, n ^ t };
+        4'b0101: alu_output = { 1'b0, n } << t[3:0];
+        default: alu_output = 0;
+    endcase
+end
+
+// status
+always @(posedge i_clk)
+begin
+    if (op[7:3] == OP_ALU) begin
+        status[`STATUS_CARRY] <= alu_output[16];
+    end else if (op[7:0] == OP_SETSTATUS) begin
+        status[1:0] <= t[1:0];
+    end
+    
 end
 
 endmodule

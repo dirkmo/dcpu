@@ -75,25 +75,25 @@ typedef enum {
     OP_JMPABS       = OP_JMPGROUP | 0x4, // 1011 01xy jmp #im           ; pc <- #im mit #im =  {x, ir[22:16], y, ir[14:8]}
 
     OP_BRANCHGROUP  = 0xB8,
-    OP_BRAT         = OP_BRANCHGROUP | 0x0, // 1011 1000 bra t
-    OP_BRAA         = OP_BRANCHGROUP | 0x1, // 1011 1001 bra a
+    OP_BRAT         = OP_BRANCHGROUP | 0x0, // 1011 1000 bra t             ; mem[asp] <- a, a <- pc+1, asp++, pc <- t
+    OP_BRAA         = OP_BRANCHGROUP | 0x1, // 1011 1001 bra a             ; mem[asp] <- a, a <- pc+1, asp++, pc <- t
     OP_INT          = OP_BRANCHGROUP | 0x2, // 1011 1010 int               ; mem[asp] <- a, a <- pc+1, asp++, pc <- int-vec
     // OP_BRAx      = OP_BRANCHGROUP | 0x3, // 1011 1011
-    OP_BRAABS       = OP_BRANCHGROUP | 0x4, // 1011 11xy bra #im           ; #im =  {x, ir[22:16], y, ir[14:8]}
+    OP_BRAABS       = OP_BRANCHGROUP | 0x4, // 1011 11xy bra #im           ; mem[asp] <- a, a <- pc+1, asp++, pc <- {x, ir[22:16], y, ir[14:8]}
 
     OP_JMPZGROUP    = 0xC0,
-    OP_JMPZT        = OP_JMPZGROUP | 0x0, // 1100 0000 jz t
-    OP_JMPZA        = OP_JMPZGROUP | 0x1, // 1100 0001 jz a
+    OP_JMPZT        = OP_JMPZGROUP | 0x0, // 1100 0000 jz t                ; pc <- t
+    OP_JMPZA        = OP_JMPZGROUP | 0x1, // 1100 0001 jz a                ; pc <- a
     // OP_JMPZ      = OP_JMPZGROUP | 0x2, // 1100 0010
     // OP_JMPZ      = OP_JMPZGROUP | 0x3, // 1100 0011
-    OP_JMPZABS      = OP_JMPZGROUP | 0x4, // 1100 01xy jz #im
+    OP_JMPZABS      = OP_JMPZGROUP | 0x4, // 1100 01xy jz #im              ; pc <- {x, ir[22:16], y, ir[14:8]}
 
     OP_JMPNZGROUP   = 0xC8,
-    OP_JMPNZT       = OP_JMPNZGROUP | 000, // 1100 1000 jnz t
-    OP_JMPNZA       = OP_JMPNZGROUP | 001, // 1100 1001 jnz a
+    OP_JMPNZT       = OP_JMPNZGROUP | 000, // 1100 1000 jnz t              ; pc <- t or pc+1
+    OP_JMPNZA       = OP_JMPNZGROUP | 001, // 1100 1001 jnz a              ; pc <- a or pc+1
     // OP_JMPNZ     = OP_JMPNZGROUP | 002, // 1100 1010
     // OP_JMPNZ     = OP_JMPNZGROUP | 003, // 1100 1011
-    OP_JMPNZABS     = OP_JMPNZGROUP | 004, // 1100 11xy jnz #im
+    OP_JMPNZABS     = OP_JMPNZGROUP | 004, // 1100 11xy jnz #im            ; pc <- #im or pc+1
 
     OP_JMPCGROUP    = 0xD0,
     OP_JMPCT        = OP_JMPCGROUP | 0x0, // 1101 0000 jc t
