@@ -30,6 +30,7 @@ typedef enum {
     OP_OR       = OP_ALU | 0x3,    // 1000 0011 or
     OP_XOR      = OP_ALU | 0x4,    // 1000 0100 xor
     OP_LSR      = OP_ALU | 0x5,    // 1000 0101 lsr
+    OP_CPR      = OP_ALU | 0x6,    // 1000 0110 cpr  ; t <- { n[7:0], t[7:0] } (compress 2 chars into one word)
     // = OP_ALU | 0x06, // 1000 0110
     // = OP_ALU | 0x07, // 1000 0111
 

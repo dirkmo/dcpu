@@ -325,6 +325,7 @@ begin
 end
 
 // alu_output
+wire [16:0] lsr = { {n, 1'b0} >> t[3:0] };
 always @(state)
 begin
     alu_output = 0;
@@ -334,7 +335,8 @@ begin
         4'b0010: alu_output = { 1'b0, n & t };
         4'b0011: alu_output = { 1'b0, n | t };
         4'b0100: alu_output = { 1'b0, n ^ t };
-        4'b0101: alu_output = { 1'b0, n } << t[3:0];
+        4'b0101: alu_output = { lsr[0], lsr[16:1] };
+        4'b0110: alu_output = { 1'b0, n[7:0], t[7:0]};
         default: alu_output = 0;
     endcase
 end

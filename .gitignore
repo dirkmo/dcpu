@@ -2,3 +2,4 @@
 *.mk
 trace.vcd
 dcpu
+verilog/a.out

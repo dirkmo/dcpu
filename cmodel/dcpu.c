@@ -133,6 +133,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_SETUSP] = "SETUSP",
         [OP_SETA] = "SETA",
         [OP_APUSH] = "APUSH",
+        [OP_CPR] = "CPR",
     };
     uint16_t imm(cpu_t *cpu);
     sprintf(buf, "%s", mnemonics[op]);
@@ -150,6 +151,7 @@ void alu(cpu_t *cpu) {
         case OP_OR:  r = cpu->n  | cpu->t; break;
         case OP_XOR: r = cpu->n  ^ cpu->t; break;
         case OP_LSR: r = cpu->n >> cpu->t; break;
+        case OP_CPR: r = (cpu->n << 8) | (cpu->t & 0xff); break;
         default:
             printf("undefined alu op (%02X)\n", op);
             assert(0);
