@@ -1,36 +1,41 @@
 [*]
 [*] GTKWave Analyzer v3.3.108 (w)1999-2020 BSI
-[*] Thu Jan 21 19:17:47 2021
+[*] Thu Jan 21 20:18:48 2021
 [*]
 [dumpfile] "/home/dirk/dev/dcpu/sim/trace.vcd"
-[dumpfile_mtime] "Thu Jan 21 19:10:07 2021"
-[dumpfile_size] 5167
+[dumpfile_mtime] "Thu Jan 21 20:16:50 2021"
+[dumpfile_size] 6539
 [savefile] "/home/dirk/dev/dcpu/sim/dcpu.gtkw"
 [timestart] 9
 [size] 1680 1009
 [pos] -1 -1
-*-6.004817 50 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-6.000000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [treeopen] TOP.
+[treeopen] TOP.top.
 [sst_width] 270
-[signals_width] 162
+[signals_width] 228
 [sst_expanded] 1
 [sst_vpaned_height] 276
 @28
-TOP.dcpu.i_clk
+TOP.top.i_reset
+TOP.top.i_clk
+TOP.top.rw
 @22
-TOP.dcpu.ir[23:0]
-TOP.dcpu.o_addr[15:0]
-TOP.dcpu.o_dat[15:0]
-TOP.dcpu.i_dat[15:0]
-@28
-TOP.dcpu.o_rw
-@22
-TOP.dcpu.op[7:0]
+TOP.top.cpu.o_addr[15:0]
+TOP.top.cpu.o_dat[15:0]
 @23
-TOP.dcpu.pc[15:0]
-@24
-TOP.dcpu.state[1:0]
+TOP.top.cpu.i_dat[15:0]
 @22
-TOP.dcpu.t[15:0]
+TOP.top.cpu.ir[23:0]
+TOP.top.cpu.n[15:0]
+@28
+TOP.top.cpu.o_rw
+@22
+TOP.top.cpu.op[7:0]
+TOP.top.cpu.pc[15:0]
+@28
+TOP.top.cpu.state[1:0]
+@22
+TOP.top.cpu.t[15:0]
 [pattern_trace] 1
 [pattern_trace] 0

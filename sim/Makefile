@@ -17,8 +17,8 @@ CFLAGS=-Wall -std=c++11
 
 all: dcpu
 
-verilator: dcpusim.cpp ../verilog/dcpu.v
-	verilator $(VFLAGS) ../verilog/dcpu.v dcpusim.cpp
+verilator: dcpusim.cpp ../verilog/dcpu.v ../verilog/ram64k_16.v ../verilog/top.v
+	verilator $(VFLAGS) ../verilog/dcpu.v ../verilog/ram64k_16.v ../verilog/top.v dcpusim.cpp
 
 dcpu: verilator
 	make -C $(VERILATOR_OUTPUTDIR) -j -f Vdcpu.mk
