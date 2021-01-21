@@ -71,7 +71,8 @@ localparam
 localparam 
     OP_SETSTATUS = { OP_SETREGISTERGROUP, 3'b000 },
     OP_SETASP    = { OP_SETREGISTERGROUP, 3'b010 },
-    OP_SETUSP    = { OP_SETREGISTERGROUP, 3'b011 };
+    OP_SETUSP    = { OP_SETREGISTERGROUP, 3'b011 },
+    OP_END       = 8'hff;
     
 
 localparam 
@@ -104,6 +105,8 @@ begin
         end
         EXECUTE: begin
             state <= r_int ? INTERRUPT : FETCH;
+            ir [15:0] <= 16'd0;
+            if( op == OP_END) $finish;
         end
         INTERRUPT: state <= EXECUTE;
     endcase
@@ -112,7 +115,7 @@ begin
     end
 end
 
-always @(state)
+always @(*)
 begin
     casez (op[3:0])
         4'b0000: stackgroup_src = t;
@@ -128,7 +131,7 @@ begin
     endcase
 end
 
-always @(state)
+always @(*)
 begin
     casez (op[2:0])
         3'b000:  fetch_store_group_addr = t;
@@ -140,7 +143,7 @@ begin
     endcase
 end
 
-always @(state)
+always @(*)
 begin
     casez (op[2:0])
         3'b000:  jumpgroup_addr = t;
@@ -152,7 +155,7 @@ begin
 end
 
 // o_addr
-always @(state)
+always @(*)
 begin
     o_addr = pc;
     if (state == EXECUTE) begin
@@ -170,7 +173,7 @@ begin
 end
 
 // o_rw
-always @(state)
+always @(*)
 begin
     o_rw = 1'b1;
     if (state == EXECUTE) begin
@@ -186,7 +189,7 @@ begin
 end
 
 // o_dat
-always @(state)
+always @(*)
 begin
     if (state == EXECUTE) begin
         case(op[7:3])
@@ -202,7 +205,7 @@ end
 
 // dojump (=1 if should jump)
 reg dojump;
-always @(state)
+always @(*)
 begin
     dojump = 0;
     if (state == EXECUTE) begin
@@ -326,7 +329,7 @@ end
 
 // alu_output
 wire [16:0] lsr = { {n, 1'b0} >> t[3:0] };
-always @(state)
+always @(*)
 begin
     alu_output = 0;
     case (op[3:0])

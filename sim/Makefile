@@ -23,11 +23,11 @@ verilator: dcpusim.cpp ../verilog/dcpu.v
 dcpu: verilator
 	make -C $(VERILATOR_OUTPUTDIR) -j -f Vdcpu.mk
 
-sim: 
-	$(VERILATOR_OUTPUTDIR)/Vcpu -d -t
+sim: dcpu
+	$(VERILATOR_OUTPUTDIR)/Vdcpu -d -t
 
 wave: sim
-	gtkwave trace.vcd &
+	gtkwave dcpu.gtkw &
 
 clean:
 	rm -f trace.vcd
