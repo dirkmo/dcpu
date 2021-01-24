@@ -1,10 +1,10 @@
 .org $100
-.byte 100, 200, "c"
+.byte 100, 200, "Hallo", <ziel
 .word 1000
 .res $100
 .equ UART_TX $F000
 
-label:
+ziel:
 
 add
 sub
@@ -23,49 +23,49 @@ push status
 push dsp
 push asp
 push pc
-push label
+push ziel
 
 fetch t
 fetch a
 fetch u+$100
 fetch $ffff
-fetch label
+fetch ziel
 
 store t
 store a
 store u+$f00
 store $423a
-store label
+store ziel
 
 jmp t
 jmp a
 jmp $1000
-jmp label
+jmp ziel
 
 bra t
 bra a
 bra $1000
-bra label
+bra ziel
 
 jpc t
 jpc a
 jpc $1000
-jpc label
+jpc ziel
 
 jpnc t
 jpnc a
 jpnc $1000
-jpnc label
+jpnc ziel
 
 jpz t
 jpz a
 jpz $1000
-jpz label
+jpz ziel
 
 jpnz t
 jpnz a
 jpnz $1000
-jpnz label
+jpnz ziel
 
 pop
 apop
@@ -79,3 +79,4 @@ seta
 
 apush
 
+push (ziel+5)*4

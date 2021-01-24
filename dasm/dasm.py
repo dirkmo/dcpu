@@ -52,7 +52,7 @@ class dcpuTransformer(lark.Transformer):
                 return Instruction(Instruction.OP_PUSHI, num)
         if s == ".ORG":
             pass
-        print(f"{s} {op[1]}")
+        #print(f"{s} {op[1]}")
         return op
 
     def org(self, dir):
@@ -62,7 +62,7 @@ class dcpuTransformer(lark.Transformer):
 
 
 def main():
-    l = lark.Lark(grammar.grammar)
+    l = lark.Lark(grammar.grammar, start = "start")
 
     try:
         fn = sys.argv[1]
@@ -75,8 +75,9 @@ def main():
     prog = "".join(lines)
     t = l.parse(prog)
 
-    n = dcpuTransformer().transform(t)
-
-    # print(n.pretty())
+    print(t.pretty())
+    
+    #n = dcpuTransformer().transform(t)
+    #print(n.pretty())
 
 main()

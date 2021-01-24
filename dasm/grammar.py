@@ -1,32 +1,44 @@
 grammar = '''
-start: line*
+start: _line*
 
-line: op [SH_COMMENT]
+_line: op [SH_COMMENT]
     | opa [SH_COMMENT]
     | label [SH_COMMENT]
-    | dir [SH_COMMENT]
+    | _dir [SH_COMMENT]
 
 label: CNAME ":"
 
-dir: equ
+_dir: equ
    | res
    | byte
    | word
    | org
 
 equ: ".equ"i CNAME expr NEWLINE
-res: ".res"i expr NEWLINE
-byte: ".byte"i expr ["," expr]* NEWLINE
+res: ".res"i NUMBER NEWLINE
+byte: ".byte"i (expr|ESCAPED_STRING) ["," (expr|ESCAPED_STRING)]* NEWLINE
 word: ".word"i expr ["," expr]* NEWLINE
 org: ".org"i NUMBER NEWLINE
 
 op: OP
 
-opa: OPA [ NUMBER | REG | REL | CNAME ] NEWLINE
+opa: OPA [ expr | REG | REL | CNAME ] NEWLINE
 
-expr: NUMBER -> number
-    | CNAME  -> cname
-    | ESCAPED_STRING   -> string
+expr: "(" expr ")"
+    | plus
+    | minus
+    | mul
+    | div
+    | NUMBER | id | idlo | idhi
+
+mul: expr "*" expr
+div: expr "/" expr
+plus: expr "+" expr
+minus: expr "-" expr
+
+id: CNAME
+idlo: "<" CNAME
+idhi: ">" CNAME
 
 OP: "ADD"i | "SUB"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
