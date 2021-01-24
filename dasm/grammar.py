@@ -2,25 +2,27 @@ grammar = '''
 start: line*
 
 line: op [SH_COMMENT]
+    | opa [SH_COMMENT]
     | label [SH_COMMENT]
     | dir [SH_COMMENT]
 
 label: CNAME ":"
 
-dir: equ  -> dir_equ
-   | res  -> dir_res
-   | byte -> dir_byte
-   | word -> dir_word
-   | org  -> dir_org
+dir: equ
+   | res
+   | byte
+   | word
+   | org
 
 equ: ".equ"i CNAME expr NEWLINE
 res: ".res"i expr NEWLINE
-byte: ".byte" expr ["," expr]* NEWLINE
-word: ".word" expr ["," expr]* NEWLINE
-org: ".org" NUMBER NEWLINE
+byte: ".byte"i expr ["," expr]* NEWLINE
+word: ".word"i expr ["," expr]* NEWLINE
+org: ".org"i NUMBER NEWLINE
 
-op: OPA [ NUMBER | REG | CNAME | REL ]
-  | OP
+op: OP
+
+opa: OPA [ NUMBER | REG | REL | CNAME ] NEWLINE
 
 expr: NUMBER -> number
     | CNAME  -> cname
@@ -30,11 +32,10 @@ OP: "ADD"i | "SUB"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
   | "setusp"i | "seta"i | "apush"i
 
-OPA: "push"i | "fetch"i | "store"i | "jmp"i | "bra"i | "jpc"
+OPA: "push"i | "fetch"i | "store"i | "jmp"i | "bra"i | "jpc"i
    | "jpnc"i | "jpz"i | "jpnz"i
 
-REG: "t"i | "a"i | "n"i | "usp"i | "status"i | "dsp"i
-   | "asp"i | "pc"i
+REG: "asp"i | "t"i | "a"i | "n"i | "usp"i | "status"i | "dsp"i | "pc"i
 
 REL: "u+"i NUMBER
 
