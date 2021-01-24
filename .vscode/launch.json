@@ -9,13 +9,14 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
+            "args": ["${fileDirname}/test.asm"],
             "console": "integratedTerminal"
         },
         {
-            "name": "gcc - Aktive Datei erstellen und debuggen",
+            "name": "gcc - Aktive Datei debuggen",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${fileDirname}/${fileBasenameNoExtension}",
+            "program": "${fileDirname}/verilator/Vdcpu",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
@@ -29,7 +30,6 @@
                     "ignoreFailures": true
                 }
             ],
-            "preLaunchTask": "C/C++: gcc build active file",
             "miDebuggerPath": "/usr/bin/gdb"
         }
     ]

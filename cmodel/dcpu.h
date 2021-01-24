@@ -90,11 +90,11 @@ typedef enum {
     OP_JMPZABS      = OP_JMPZGROUP | 0x4, // 1100 01xy jz #im              ; pc <- {x, ir[22:16], y, ir[14:8]}
 
     OP_JMPNZGROUP   = 0xC8,
-    OP_JMPNZT       = OP_JMPNZGROUP | 000, // 1100 1000 jnz t              ; pc <- t or pc+1
-    OP_JMPNZA       = OP_JMPNZGROUP | 001, // 1100 1001 jnz a              ; pc <- a or pc+1
-    // OP_JMPNZ     = OP_JMPNZGROUP | 002, // 1100 1010
-    // OP_JMPNZ     = OP_JMPNZGROUP | 003, // 1100 1011
-    OP_JMPNZABS     = OP_JMPNZGROUP | 004, // 1100 11xy jnz #im            ; pc <- #im or pc+1
+    OP_JMPNZT       = OP_JMPNZGROUP | 0x0, // 1100 1000 jnz t              ; pc <- t or pc+1
+    OP_JMPNZA       = OP_JMPNZGROUP | 0x1, // 1100 1001 jnz a              ; pc <- a or pc+1
+    // OP_JMPNZ     = OP_JMPNZGROUP | 0x2, // 1100 1010
+    // OP_JMPNZ     = OP_JMPNZGROUP | 0x3, // 1100 1011
+    OP_JMPNZABS     = OP_JMPNZGROUP | 0x4, // 1100 11xy jnz #im            ; pc <- #im or pc+1
 
     OP_JMPCGROUP    = 0xD0,
     OP_JMPCT        = OP_JMPCGROUP | 0x0, // 1101 0000 jc t
