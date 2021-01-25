@@ -23,6 +23,8 @@ push status
 push dsp
 push asp
 push pc
+push <ziel
+push >ziel
 push ziel
 
 fetch t

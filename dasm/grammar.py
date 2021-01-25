@@ -1,8 +1,8 @@
 grammar = '''
 start: _line*
 
-_line: op [SH_COMMENT]
-    | opa [SH_COMMENT]
+_line: op+ [SH_COMMENT] NEWLINE
+    | opa [SH_COMMENT] NEWLINE
     | label [SH_COMMENT]
     | _dir [SH_COMMENT]
 
@@ -14,33 +14,33 @@ _dir: equ
    | word
    | org
 
-equ: ".equ"i CNAME expr NEWLINE
+equ: ".equ"i ID _expr NEWLINE
 res: ".res"i NUMBER NEWLINE
-byte: ".byte"i (expr|ESCAPED_STRING) ["," (expr|ESCAPED_STRING)]* NEWLINE
-word: ".word"i expr ["," expr]* NEWLINE
+byte: ".byte"i (_expr|ESCAPED_STRING) ["," (_expr|ESCAPED_STRING)]* NEWLINE
+word: ".word"i _expr ["," _expr]* NEWLINE
 org: ".org"i NUMBER NEWLINE
 
 op: OP
 
-opa: OPA [ expr | REG | REL | CNAME ] NEWLINE
+opa: OPA [ REG | REL | _expr ]
 
-expr: "(" expr ")"
+_expr: "(" _expr ")"
     | plus
     | minus
     | mul
     | div
-    | NUMBER | id | idlo | idhi
+    | NUMBER | ID | IDLO | IDHI
 
-mul: expr "*" expr
-div: expr "/" expr
-plus: expr "+" expr
-minus: expr "-" expr
+mul: _expr "*" _expr
+div: _expr "/" _expr
+plus: _expr "+" _expr
+minus: _expr "-" _expr
 
-id: CNAME
-idlo: "<" CNAME
-idhi: ">" CNAME
+ID: CNAME
+IDLO: "<" CNAME
+IDHI: ">" CNAME
 
-OP: "ADD"i | "SUB"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i
+OP: "add"i | "sub"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
   | "setusp"i | "seta"i | "apush"i
 

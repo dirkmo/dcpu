@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import sys
 import os
 import lark
@@ -7,51 +8,93 @@ from instructions import *
 
 class dcpuTransformer(lark.Transformer):
     
+    _ops = {
+        "ADD": Instruction(Instruction.OP_ADD),
+        "SUB": Instruction(Instruction.OP_SUB),
+        "AND": Instruction(Instruction.OP_AND),
+        "OR": Instruction(Instruction.OP_OR),
+        "XOR": Instruction(Instruction.OP_XOR),
+        "LSR": Instruction(Instruction.OP_LSR),
+        "CPR": Instruction(Instruction.OP_CPR),
+        "POP": Instruction(Instruction.OP_POP),
+        "APOP": Instruction(Instruction.OP_APOP),
+        "RET": Instruction(Instruction.OP_RET),
+        "SETSTATUS": Instruction(Instruction.OP_SETSTATUS),
+        "SETDSP": Instruction(Instruction.OP_SETDSP),
+        "SETASP": Instruction(Instruction.OP_SETASP),
+        "SETUSP": Instruction(Instruction.OP_SETUSP),
+        "SETA": Instruction(Instruction.OP_SETA),
+        "APUSH": Instruction(Instruction.OP_APUSH)
+    }
+
+    _opa_push_regs = {
+        "T": Instruction(Instruction.OP_PUSHT),
+        "A": Instruction(Instruction.OP_PUSHA),
+        "N": Instruction(Instruction.OP_PUSHN),
+        "USP": Instruction(Instruction.OP_PUSHUSP),
+        "STATUS": Instruction(Instruction.OP_PUSHS),
+        "DSP": Instruction(Instruction.OP_PUSHDSP),
+        "ASP": Instruction(Instruction.OP_PUSHASP),
+        "PC": Instruction(Instruction.OP_PUSHPC)
+    }
+
     @staticmethod
     def convert_to_number(s):
         if s[0] == '$': num = int(s[1:],16)
         else: num = int(s)
         return num
+    
+    @staticmethod
+    def convert_rel_to_number(s):
+        s = s[s.find('+')+1:]
+        return dcpuTransformer.convert_to_number(s)
 
     def op(self, op): # op without immediate
-        s = str.upper(op[0])
-        if   s == "ADD": return Instruction(Instruction.OP_ADD)
-        elif s == "SUB": return Instruction(Instruction.OP_SUB)
-        elif s == "AND": return Instruction(Instruction.OP_AND)
-        elif s == "OR": return Instruction(Instruction.OP_OR)
-        elif s == "XOR": return Instruction(Instruction.OP_XOR)
-        elif s == "LSR": return Instruction(Instruction.OP_LSR)
-        elif s == "CPR": return Instruction(Instruction.OP_CPR)
-        elif s == "POP": return Instruction(Instruction.OP_POP)
-        elif s == "APOP": return Instruction(Instruction.OP_APOP)
-        elif s == "RET": return Instruction(Instruction.OP_RET)
-        elif s == "SETSTATUS": return Instruction(Instruction.OP_SETSTATUS)
-        elif s == "SETDSP": return Instruction(Instruction.OP_SETDSP)
-        elif s == "SETASP": return Instruction(Instruction.OP_SETASP)
-        elif s == "SETUSP": return Instruction(Instruction.OP_SETUSP)
-        elif s == "SETA": return Instruction(Instruction.OP_SETA)
-        elif s == "APUSH": return Instruction(Instruction.OP_APUSH)
+        return self._ops[op[0].upper()]
     
     def opa(self, op): # op with immediate data
+        print(op)
         s = str.upper(op[0])
         if s == "PUSH":
-            if op[1].type == "REG":
-                if   str.upper(op[1]) == "T": return Instruction(Instruction.OP_PUSHT)
-                elif str.upper(op[1]) == "A": return Instruction(Instruction.OP_PUSHA)
-                elif str.upper(op[1]) == "N": return Instruction(Instruction.OP_PUSHN)
-                elif str.upper(op[1]) == "USP": return Instruction(Instruction.OP_PUSHUSP)
-                elif str.upper(op[1]) == "STATUS": return Instruction(Instruction.OP_PUSHS)
-                elif str.upper(op[1]) == "DSP": return Instruction(Instruction.OP_PUSHDSP)
-                elif str.upper(op[1]) == "ASP": return Instruction(Instruction.OP_PUSHASP)
-                elif str.upper(op[1]) == "PC": return Instruction(Instruction.OP_PUSHPC)
-                else:
-                    print(f"Invald PUSH register: {op[1]}")
-                    exit(1)
-            elif op[1].type == "NUMBER":
-                num = self.convert_to_number(op[1])
-                return Instruction(Instruction.OP_PUSHI, num)
-        if s == ".ORG":
-            pass
+            if isinstance(op[1], lark.Token):
+                if op[1].type == "REG":
+                    return self._opa_push_regs[str.upper(op[1])]
+                elif op[1].type == "NUMBER":
+                    num = self.convert_to_number(op[1])
+                    return Instruction(Instruction.OP_PUSHI, num)
+                elif op[1].type == "ID":
+                    pass # TODO
+            else:
+                print("not handled yet")
+        if s == "FETCH":
+            if isinstance(op[1], lark.Token):
+                if op[1].type == "REG":
+                    if   op[1].upper() == "T": return Instruction(Instruction.OP_FETCHT)
+                    elif op[1].upper() == "A": return Instruction(Instruction.OP_FETCHA)
+                elif op[1].type == "REL":
+                    return Instruction(Instruction.OP_FETCHU, self.convert_rel_to_number(op[1]))
+                elif op[1].type == "NUMBER":
+                    num = self.convert_to_number(op[1])
+                    return Instruction(Instruction.OP_FETCHABS, num)
+                elif op[1].type == "ID":
+                    pass # TODO
+            else:
+                print("not handled yet")
+                
+        if s == "STORE":
+            if isinstance(op[1], lark.Token):
+                if op[1].type == "REG":
+                    if   op[1].upper() == "T": return Instruction(Instruction.OP_STORET)
+                    elif op[1].upper() == "A": return Instruction(Instruction.OP_STOREA)
+                elif op[1].type == "REL":
+                    return Instruction(Instruction.OP_STOREU, self.convert_rel_to_number(op[1]))
+                elif op[1].type == "NUMBER":
+                    num = self.convert_to_number(op[1])
+                    return Instruction(Instruction.OP_STOREABS, num)
+                elif op[1].type == "ID":
+                    pass # TODO
+            else:
+                print("not handled yet")
         #print(f"{s} {op[1]}")
         return op
 
@@ -77,7 +120,12 @@ def main():
 
     print(t.pretty())
     
-    #n = dcpuTransformer().transform(t)
-    #print(n.pretty())
+    print("---------------")
+    print("Transformer:")
+    n = dcpuTransformer().transform(t)
+
+    print("---------------")
+
+    print(n.pretty())
 
 main()
