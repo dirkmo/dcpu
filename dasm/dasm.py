@@ -52,6 +52,21 @@ class dcpuTransformer(lark.Transformer):
     def op(self, op): # op without immediate
         return self._ops[op[0].upper()]
     
+    def op_store_fetch(self, OP_GROUP, op):
+        if isinstance(op, lark.Token):
+            if op.type == "REG":
+                if   op.upper() == "T": return Instruction(OP_GROUP | 0x0) # fetch/store t
+                elif op.upper() == "A": return Instruction(OP_GROUP | 0x1) # fetch/store a
+            elif op.type == "REL":
+                return Instruction(OP_GROUP | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
+            elif op.type == "NUMBER":
+                num = self.convert_to_number(op)
+                return Instruction(OP_GROUP | 0x04, num) # fetch/store #imm
+            elif op.type == "ID":
+                pass # TODO
+        else:
+            print("not handled yet")
+
     def opa(self, op): # op with immediate data
         print(op)
         s = str.upper(op[0])
@@ -68,34 +83,16 @@ class dcpuTransformer(lark.Transformer):
                 print("not handled yet")
         if s == "FETCH":
             if isinstance(op[1], lark.Token):
-                if op[1].type == "REG":
-                    if   op[1].upper() == "T": return Instruction(Instruction.OP_FETCHT)
-                    elif op[1].upper() == "A": return Instruction(Instruction.OP_FETCHA)
-                elif op[1].type == "REL":
-                    return Instruction(Instruction.OP_FETCHU, self.convert_rel_to_number(op[1]))
-                elif op[1].type == "NUMBER":
-                    num = self.convert_to_number(op[1])
-                    return Instruction(Instruction.OP_FETCHABS, num)
-                elif op[1].type == "ID":
-                    pass # TODO
+                return self.op_store_fetch(Instruction.OP_FETCHGROUP, op[1])
             else:
-                print("not handled yet")
+                print("###not handled yet")
                 
         if s == "STORE":
             if isinstance(op[1], lark.Token):
-                if op[1].type == "REG":
-                    if   op[1].upper() == "T": return Instruction(Instruction.OP_STORET)
-                    elif op[1].upper() == "A": return Instruction(Instruction.OP_STOREA)
-                elif op[1].type == "REL":
-                    return Instruction(Instruction.OP_STOREU, self.convert_rel_to_number(op[1]))
-                elif op[1].type == "NUMBER":
-                    num = self.convert_to_number(op[1])
-                    return Instruction(Instruction.OP_STOREABS, num)
-                elif op[1].type == "ID":
-                    pass # TODO
+                return self.op_store_fetch(Instruction.OP_STOREGROUP, op[1])
             else:
-                print("not handled yet")
-        #print(f"{s} {op[1]}")
+                print("###not handled yet")
+        
         return op
 
     def org(self, dir):
