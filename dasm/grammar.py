@@ -42,7 +42,7 @@ IDHI: ">" CNAME
 
 OP: "add"i | "sub"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
-  | "setusp"i | "seta"i | "apush"i
+  | "setusp"i | "seta"i | "apush"i | "int"i
 
 OPA: "push"i | "fetch"i | "store"i | "jmp"i | "bra"i | "jpc"i
    | "jpnc"i | "jpz"i | "jpnz"i

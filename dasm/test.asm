@@ -48,6 +48,7 @@ bra t
 bra a
 bra $1000
 bra ziel
+int
 
 jpc t
 jpc a

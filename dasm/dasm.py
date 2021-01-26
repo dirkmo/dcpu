@@ -24,7 +24,8 @@ class dcpuTransformer(lark.Transformer):
         "SETASP": Instruction(Instruction.OP_SETASP),
         "SETUSP": Instruction(Instruction.OP_SETUSP),
         "SETA": Instruction(Instruction.OP_SETA),
-        "APUSH": Instruction(Instruction.OP_APUSH)
+        "APUSH": Instruction(Instruction.OP_APUSH),
+        "INT": Instruction(Instruction.OP_INT)
     }
 
     _opa_push_regs = {
@@ -52,20 +53,36 @@ class dcpuTransformer(lark.Transformer):
     def op(self, op): # op without immediate
         return self._ops[op[0].upper()]
     
-    def op_store_fetch(self, OP_GROUP, op):
+    def op_store_fetch(self, op_group, op):
         if isinstance(op, lark.Token):
             if op.type == "REG":
-                if   op.upper() == "T": return Instruction(OP_GROUP | 0x0) # fetch/store t
-                elif op.upper() == "A": return Instruction(OP_GROUP | 0x1) # fetch/store a
+                if   op.upper() == "T": return Instruction(op_group | 0x0) # fetch/store t
+                elif op.upper() == "A": return Instruction(op_group | 0x1) # fetch/store a
             elif op.type == "REL":
-                return Instruction(OP_GROUP | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
+                return Instruction(op_group | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
-                return Instruction(OP_GROUP | 0x04, num) # fetch/store #imm
+                return Instruction(op_group | 0x04, num) # fetch/store #imm
             elif op.type == "ID":
                 pass # TODO
         else:
             print("not handled yet")
+        return op
+
+    def op_jmp(self, op_group, op):
+        if isinstance(op, lark.Token):
+            if op.type == "REG":
+                if   op.upper() == "T": return Instruction(op_group | 0x0) # jmp t
+                elif op.upper() == "A": return Instruction(op_group | 0x1) # jmp a
+            elif op.type == "NUMBER":
+                num = self.convert_to_number(op)
+                return Instruction(op_group | 0x04, num) # jmp #imm
+            elif op.type == "ID":
+                pass # TODO
+        else:
+            print("not handled yet")
+        return op
+
 
     def opa(self, op): # op with immediate data
         print(op)
@@ -81,18 +98,48 @@ class dcpuTransformer(lark.Transformer):
                     pass # TODO
             else:
                 print("not handled yet")
-        if s == "FETCH":
+        elif s == "FETCH":
             if isinstance(op[1], lark.Token):
                 return self.op_store_fetch(Instruction.OP_FETCHGROUP, op[1])
             else:
                 print("###not handled yet")
                 
-        if s == "STORE":
+        elif s == "STORE":
             if isinstance(op[1], lark.Token):
                 return self.op_store_fetch(Instruction.OP_STOREGROUP, op[1])
             else:
                 print("###not handled yet")
-        
+        elif s == "JMP":
+            if isinstance(op[1], lark.Token):
+                return self.op_jmp(Instruction.OP_JMPGROUP, op[1])
+            else:
+                print("###not handled yet")
+        elif s == "BRA":
+            if isinstance(op[1], lark.Token):
+                return self.op_jmp(Instruction.OP_BRANCHGROUP, op[1])
+            else:
+                print("###not handled yet")
+        elif s == "JPC":
+            if isinstance(op[1], lark.Token):
+                return self.op_jmp(Instruction.OP_JMPCGROUP, op[1])
+            else:
+                print("###not handled yet")
+        elif s == "JPNC":
+            if isinstance(op[1], lark.Token):
+                return self.op_jmp(Instruction.OP_JMPNCGROUP, op[1])
+            else:
+                print("###not handled yet")
+        elif s == "JPZ":
+            if isinstance(op[1], lark.Token):
+                return self.op_jmp(Instruction.OP_JMPZGROUP, op[1])
+            else:
+                print("###not handled yet")
+        elif s == "JPNZ":
+            if isinstance(op[1], lark.Token):
+                return self.op_jmp(Instruction.OP_JMPNZGROUP, op[1])
+            else:
+                print("###not handled yet")
+
         return op
 
     def org(self, dir):
