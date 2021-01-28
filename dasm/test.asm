@@ -1,6 +1,8 @@
 .org $100
-.byte 100, 200, "Hallo", <ziel
-.word 1000
+.byte 1, 2, "Hallo"
+.byte 100, <ziel, $ff
+.word 1000+1, 100
+.word 1000+1, ziel
 .res $100
 .equ UART_TX $F000
 

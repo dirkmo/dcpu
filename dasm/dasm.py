@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
+from instructions import Instruction
 import sys
 import os
 import lark
 import grammar
 from instructions import *
 
+variables = {}
+
+def newToken(name, value):
+    t = lark.Token()
+    t.type = name
+    t.value = value
 
 class dcpuTransformer(lark.Transformer):
     
@@ -50,6 +57,19 @@ class dcpuTransformer(lark.Transformer):
         s = s[s.find('+')+1:]
         return dcpuTransformer.convert_to_number(s)
 
+    @staticmethod
+    def isID(id):
+        t = id in ["ID", "IDLO", "IDHI" ]
+        return t
+
+    @staticmethod
+    def hasUndefined(op):
+        for o in op:
+            isid = dcpuTransformer.isID(o.type)
+            if isid and not o.value in variables:
+                return True
+        return False
+
     def op(self, op): # op without immediate
         return self._ops[op[0].upper()]
     
@@ -87,6 +107,7 @@ class dcpuTransformer(lark.Transformer):
     def opa(self, op): # op with immediate data
         print(op)
         s = str.upper(op[0])
+        ret = None
         if s == "PUSH":
             if isinstance(op[1], lark.Token):
                 if op[1].type == "REG":
@@ -100,53 +121,125 @@ class dcpuTransformer(lark.Transformer):
                 print("not handled yet")
         elif s == "FETCH":
             if isinstance(op[1], lark.Token):
-                return self.op_store_fetch(Instruction.OP_FETCHGROUP, op[1])
+                ret = self.op_store_fetch(Instruction.OP_FETCHGROUP, op[1])
             else:
                 print("###not handled yet")
-                
         elif s == "STORE":
             if isinstance(op[1], lark.Token):
-                return self.op_store_fetch(Instruction.OP_STOREGROUP, op[1])
+                ret = self.op_store_fetch(Instruction.OP_STOREGROUP, op[1])
             else:
                 print("###not handled yet")
         elif s == "JMP":
             if isinstance(op[1], lark.Token):
-                return self.op_jmp(Instruction.OP_JMPGROUP, op[1])
+                ret = self.op_jmp(Instruction.OP_JMPGROUP, op[1])
             else:
                 print("###not handled yet")
         elif s == "BRA":
             if isinstance(op[1], lark.Token):
-                return self.op_jmp(Instruction.OP_BRANCHGROUP, op[1])
+                ret = self.op_jmp(Instruction.OP_BRANCHGROUP, op[1])
             else:
                 print("###not handled yet")
         elif s == "JPC":
             if isinstance(op[1], lark.Token):
-                return self.op_jmp(Instruction.OP_JMPCGROUP, op[1])
+                ret = self.op_jmp(Instruction.OP_JMPCGROUP, op[1])
             else:
                 print("###not handled yet")
         elif s == "JPNC":
             if isinstance(op[1], lark.Token):
-                return self.op_jmp(Instruction.OP_JMPNCGROUP, op[1])
+                ret = self.op_jmp(Instruction.OP_JMPNCGROUP, op[1])
             else:
                 print("###not handled yet")
         elif s == "JPZ":
             if isinstance(op[1], lark.Token):
-                return self.op_jmp(Instruction.OP_JMPZGROUP, op[1])
+                ret = self.op_jmp(Instruction.OP_JMPZGROUP, op[1])
             else:
                 print("###not handled yet")
         elif s == "JPNZ":
             if isinstance(op[1], lark.Token):
-                return self.op_jmp(Instruction.OP_JMPNZGROUP, op[1])
+                ret = self.op_jmp(Instruction.OP_JMPNZGROUP, op[1])
             else:
                 print("###not handled yet")
-
+        if ret != None:
+            return ret
         return op
 
     def org(self, dir):
+        print(dir)
         if dir[0].type == "NUMBER":
             num = self.convert_to_number(dir[0])
             dir[0].value = num
+            Instruction._current = num
+    
+    def equ(self, op):
+        print(op)
+        if op[0].type == "ID":
+            variables[op[0].value] = self.convert_to_number(op[1])
+    
+    def byte(self, op):
+        print(op)
+        data = []
+        for o in op:
+            if o.type == "NUMBER":
+                data.append(self.convert_to_number(o))
+            elif dcpuTransformer.isID(o.type):
+                if o.value in variables:
+                    data.append(variables[o.value])
+                else: return op # undefined ID
+            elif o.type == "ESCAPED_STRING":
+                for c in o.value[1:-1]:
+                    data.append(c)
+        return Instruction(None, None, data)
+        pass
 
+    def word(self, op):
+        print(op)
+        pass
+
+    def res(self, op):
+        size = self.convert_to_number(op.value)
+        Instruction._current = Instruction._current + size
+        pass
+
+    def label(self, op):
+        print(dir)
+        if op[0].type == "CNAME":
+            if op[0] in variables:
+                print(f"Error in line {op[0].line}: {op[0]} already defined.")
+                exit(1)
+            variables[op[0].value] = current
+        pass
+
+    def mul(self, op):
+        print(op)
+        try:
+            value = int(op[0].children[0]) * int(op[1].children[0])
+            return lark.Token(type_="NUMBER",value=str(value))
+        except:
+            return op
+
+    def div(self, op):
+        print(op)
+        try:
+            value = int(op[0].children[0]) // int(op[1].children[0])
+            return lark.Token(type_="NUMBER",value=str(value))
+        except:
+            return op
+
+    def plus(self, op):
+        print(op)
+        try:
+            value = int(op[0]) + int(op[1])
+            return lark.Token(type_="NUMBER",value=str(value))
+        except:
+            return op
+
+    def minus(self, op):
+        print(op)
+        try:
+            value = int(op[0].children[0]) - int(op[1].children[0])
+            return lark.Token(type_="NUMBER",value=str(value))
+        except:
+            return op
 
 def main():
     l = lark.Lark(grammar.grammar, start = "start")

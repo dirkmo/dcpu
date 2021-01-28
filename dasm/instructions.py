@@ -103,7 +103,8 @@ class Instruction:
     OP_END = 0xFF # simulator only
 
     _instructions = ["INV"] * 256
-    
+    _current = 0
+
     @classmethod
     def define_disassembly(cls):
         for i in range(0,0x7f):
@@ -188,11 +189,14 @@ class Instruction:
         cls._instructions[cls.OP_SETA] = "SETA"
         cls._instructions[cls.OP_APUSH] = "APUSH"
 
-    def __init__(self, op, immediate = None):
+    def __init__(self, op, immediate = None, data = None):
         self.op = op
         self.immediate = immediate
+        self.databytes = data
+        self.address = Instruction._current
+        Instruction._current = Instruction._current + len(self.data())
     
-    def a__str__(self):
+    def __str__(self):
         return f"{self.disassemble()}"
 
     def __repr__(self):
@@ -203,24 +207,27 @@ class Instruction:
         return code
     
     def data(self):
-        num = self.immediate
-        extra = 0
-        b = []
-        if num != None:
-            if self.op == self.OP_FETCHU or self.op == self.OP_STOREU:
-                num = num & 0x3fff
-            else:
-                if num & 0x8000:
-                    extra = 2
-                if num & 0x0080:
-                    extra = extra | 1
-                num = num & 0x7f7f
-        if num > 0xff:
-            b.append((num >> 8) & 0xff)
-        if num > 0:
-            b.append(num & 0xff)
-        b.append(self.op | extra)
-        return b
+        if self.databytes == None:
+            extra = 0
+            b = []
+            if self.immediate != None:
+                num = self.immediate
+                if num != None:
+                    if self.op == self.OP_FETCHU or self.op == self.OP_STOREU:
+                        num = num & 0x3fff
+                    else:
+                        if num & 0x8000:
+                            extra = 2
+                        if num & 0x0080:
+                            extra = extra | 1
+                        num = num & 0x7f7f
+                if num > 0xff:
+                    b.append((num >> 8) & 0xff)
+                if num > 0:
+                    b.append(num & 0xff)
+            b.append(self.op | extra)
+            return b
+        return self.databytes
             
 
         

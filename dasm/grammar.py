@@ -14,11 +14,11 @@ _dir: equ
    | word
    | org
 
-equ: ".equ"i ID _expr NEWLINE
-res: ".res"i NUMBER NEWLINE
-byte: ".byte"i (_expr|ESCAPED_STRING) ["," (_expr|ESCAPED_STRING)]* NEWLINE
-word: ".word"i _expr ["," _expr]* NEWLINE
-org: ".org"i NUMBER NEWLINE
+equ: ".equ"i ID _expr
+res: ".res"i NUMBER
+byte: ".byte"i (_expr|ESCAPED_STRING) ["," (_expr|ESCAPED_STRING)]*
+word: ".word"i _expr ["," _expr]*
+org: ".org"i NUMBER
 
 op: OP
 
