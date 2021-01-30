@@ -84,7 +84,9 @@ class dcpuTransformer(lark.Transformer):
                 num = self.convert_to_number(op)
                 return Instruction(op_group | 0x04, num) # fetch/store #imm
             elif op.type == "ID":
-                pass # TODO
+                if op.value in variables:
+                    num = variables[op.value]
+                    return Instruction(op_group | 0x4, num)
         else:
             print("not handled yet")
         return op
@@ -98,7 +100,9 @@ class dcpuTransformer(lark.Transformer):
                 num = self.convert_to_number(op)
                 return Instruction(op_group | 0x04, num) # jmp #imm
             elif op.type == "ID":
-                pass # TODO
+                if op.value in variables:
+                    num = variables[op.value]
+                    return Instruction(op_group | 0x04, num)
         else:
             print("not handled yet")
         return op
@@ -116,7 +120,9 @@ class dcpuTransformer(lark.Transformer):
                     num = self.convert_to_number(op[1])
                     return Instruction(Instruction.OP_PUSHI, num)
                 elif op[1].type == "ID":
-                    pass # TODO
+                    if op[1].value in variables:
+                        num = variables[op[1].value]
+                        return Instruction(Instruction.OP_PUSHI, num)
             else:
                 print("not handled yet")
         elif s == "FETCH":
@@ -167,13 +173,15 @@ class dcpuTransformer(lark.Transformer):
         print(dir)
         if dir[0].type == "NUMBER":
             num = self.convert_to_number(dir[0])
-            dir[0].value = num
             Instruction._current = num
+            return Instruction(Instruction.OP_ORG)
     
     def equ(self, op):
         print(op)
         if op[0].type == "ID":
             variables[op[0].value] = self.convert_to_number(op[1])
+        else:
+            return op
     
     def byte(self, op):
         print(op)
@@ -188,25 +196,37 @@ class dcpuTransformer(lark.Transformer):
             elif o.type == "ESCAPED_STRING":
                 for c in o.value[1:-1]:
                     data.append(c)
-        return Instruction(None, None, data)
-        pass
+            else:
+                return op
+        return Instruction(Instruction.OP_BYTE, data)
 
     def word(self, op):
         print(op)
-        pass
+        data = []
+        for o in op:
+            if o.type == "NUMBER":
+                data.append(self.convert_to_number(o))
+            elif dcpuTransformer.isID(o.type):
+                if o.value in variables:
+                    data.append(variables[o.value])
+                else: return op # undefined ID
+            else:
+                return op
+        return Instruction(Instruction.OP_WORD, data)
 
     def res(self, op):
-        size = self.convert_to_number(op.value)
-        Instruction._current = Instruction._current + size
-        pass
+        print(op)
+        size = self.convert_to_number(op[0].value)
+        return Instruction(Instruction.OP_RES, size)
+
 
     def label(self, op):
-        print(dir)
+        print(op)
         if op[0].type == "CNAME":
             if op[0] in variables:
                 print(f"Error in line {op[0].line}: {op[0]} already defined.")
                 exit(1)
-            variables[op[0].value] = current
+            variables[op[0].value] = Instruction._current
         pass
 
     def mul(self, op):

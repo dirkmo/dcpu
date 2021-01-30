@@ -44,7 +44,7 @@ wire [15:0] pc_p1   =   pc + 1'b1;
 wire [7:0] op = (state == FETCH) ? pc[0] ? i_dat[15:8] : i_dat[7:0]
                                  : ir[7:0];
 
-wire [15:0] ir_abs16 = { op[1], ir[22:16], op[0], ir[14:8]};
+wire [15:0] ir_abs16 = {ir[22:16], op[1:0], ir[14:8]};
 wire [13:0] ir_offs13 = { ir[22:16], ir[14:8]};
 reg  [15:0] stackgroup_src;
 reg  [15:0] fetch_store_group_addr;

@@ -102,7 +102,13 @@ class Instruction:
 
     OP_END = 0xFF # simulator only
 
-    _instructions = ["INV"] * 256
+    # not instructions actually
+    OP_ORG   = 0x100
+    OP_BYTE  = 0x101
+    OP_WORD  = 0x102
+    OP_RES   = 0x103
+
+    _instructions = ["INV"] * 0x104
     _current = 0
 
     @classmethod
@@ -189,11 +195,21 @@ class Instruction:
         cls._instructions[cls.OP_SETA] = "SETA"
         cls._instructions[cls.OP_APUSH] = "APUSH"
 
-    def __init__(self, op, immediate = None, data = None):
+        cls._instructions[cls.OP_ORG] = ".ORG {0:04x}"
+        cls._instructions[cls.OP_BYTE] = ".BYTE {0}"
+        cls._instructions[cls.OP_WORD] = ".WORD {0} "
+        cls._instructions[cls.OP_RES] = ".RES {0}"
+
+    def __init__(self, op, data = None):
         self.op = op
-        self.immediate = immediate
-        self.databytes = data
+        if data == None:
+            self.databytes = []
+        elif type(data) is list:
+            self.databytes = data
+        else:
+            self.databytes = [data]
         self.address = Instruction._current
+        # increment code position
         Instruction._current = Instruction._current + len(self.data())
     
     def __str__(self):
@@ -203,10 +219,12 @@ class Instruction:
         return f"op: {self.op:02X} asm: '{self.disassemble()}'"
 
     def disassemble(self):
-        code = str.format(self._instructions[self.op], self.immediate)
+        # code = str.format(self._instructions[self.op])
+        # todo
+        code = self._instructions[self.op]
         return code
     
-    def data(self):
+    def dataa(self):
         if self.databytes == None:
             extra = 0
             b = []
@@ -228,9 +246,44 @@ class Instruction:
             b.append(self.op | extra)
             return b
         return self.databytes
-            
-
+    
+    def data(self):
+        d = []
+        if self.op > 0xff: # not op-code, but plain data
+            if self.op == self.OP_BYTE:
+                d = self.databytes
+            elif self.op == self.OP_WORD:
+                for w in self.databytes:
+                    d.append(w & 0xff)
+                    d.append((w >> 8) & 0xff)
+            return d
         
+        # op-code
+        if len(self.databytes) == 0:
+            # opcode has no data
+            return [self.op]
+        
+        # op-code with data
+        num = self.databytes[0]
+        extra = 0
+        if self.op == self.OP_FETCHU or self.op == self.OP_STOREU:
+            # can use up to two immediates with each 7 bits
+            if num > 0:
+                if num > 0x7f:
+                    d.append((num >> 7) & 0x7f)
+                d.append(num & 0x7f)
+        else:
+            if num & 0x8000:
+                extra = 2
+            if num & 0x0080:
+                extra = extra | 1
+            if num > 0xff:
+                d.append((num >> 8) & 0x7f)
+            if num > 0:
+                d.append(num & 0x7f)
+        
+        d.append(self.op | extra)
+        return d
 
 
 Instruction.define_disassembly()

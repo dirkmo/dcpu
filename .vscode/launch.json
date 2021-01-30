@@ -9,17 +9,38 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
+            "cwd": "${workspaceFolder}/dasm",
             "args": ["${fileDirname}/test.asm"],
             "console": "integratedTerminal"
         },
         {
-            "name": "gcc - Aktive Datei debuggen",
+            "name": "Vdcpu",
             "type": "cppdbg",
             "request": "launch",
             "program": "${fileDirname}/verilator/Vdcpu",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Automatische Strukturierung und Einrückung für \"gdb\" aktivieren",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "miDebuggerPath": "/usr/bin/gdb"
+        },
+        {
+            "name": "cmodel",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${fileDirname}/dcpu",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/cmodel",
             "environment": [],
             "externalConsole": false,
             "MIMode": "gdb",

@@ -174,9 +174,12 @@ void reset(cpu_t *cpu) {
 }
 
 uint16_t imm(cpu_t *cpu) {
-    const uint16_t hi = cpu->ir[2] | ((cpu->ir[0] & 2) << 6);
-    const uint16_t lo = cpu->ir[1] | ((cpu->ir[0] & 1) << 7);
-    return lo | (hi << 8);;
+    // ir2[6:0] ir1[6:0] {op[7:2], x, y} --> imm = {ir2[6:0], x, y, ir1[6:0] }
+    const uint16_t x = (cpu->ir[0] & 0x02) >> 1;
+    const uint16_t y =  cpu->ir[0] & 0x01;
+    const uint16_t hi = (cpu->ir[2] << 1) & 0xfe;
+    const uint16_t lo = cpu->ir[1] & 0x7f;
+    return (hi << 8) | (x << 8) | (y << 7) | lo;
 }
 
 uint16_t usp_ofs(cpu_t *cpu) {
@@ -414,7 +417,9 @@ bool test(cpu_t *cpu, uint8_t *prog, int len, cpu_t *res) {
     if (!asp) printf("asp wrong (%04X)\n", cpu->asp);
     bool usp = cpu->usp == res->usp;
     if (!usp) printf("usp wrong (%04X)\n", cpu->usp);
-    return t & n & a & dsp & asp & usp;
+    bool pc = cpu->pc == res->pc;
+    if (!pc) printf("pc wrong (%04X)\n", cpu->pc);
+    return t & n & a & dsp & asp & usp & pc;
 }
 
 int main(int argc, char *argv[]) {
@@ -429,8 +434,9 @@ int main(int argc, char *argv[]) {
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 0x7e, 0x7f, OP_PUSHI, OP_END };
         reset(&res);
-        res.t = 0x7f | (0x7e << 8);
+        res.t = 0x7f | (0x7e << 9);
         res.dsp = 2;
+        res.pc = 0x104;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -442,9 +448,10 @@ int main(int argc, char *argv[]) {
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x7f, 0x7e, OP_PUSHI, OP_PUSHT, OP_END};
         reset(&res);
-        res.t = 0x7e | (0x7f << 8);
+        res.t = 0x7e | (0x7f << 9);
         res.n = res.t;
         res.dsp = 4;
+        res.pc = 0x105;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -456,10 +463,11 @@ int main(int argc, char *argv[]) {
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x12, 0x34, OP_PUSHI, OP_APUSH, OP_END};
         reset(&res);
-        res.t = 0x34 | (0x12 << 8);
+        res.t = 0x34 | (0x12 << 9);
         res.a = res.t;
         res.dsp = 2;
         res.asp = 0x42;
+        res.pc = 0x105;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -471,9 +479,10 @@ int main(int argc, char *argv[]) {
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = {0x12, 0x34, OP_PUSHI, OP_PUSHN, OP_END};
         reset(&res);
-        res.n = 0x34 | (0x12 << 8);
+        res.n = 0x34 | (0x12 << 9);
         res.t = 0;
         res.dsp = 4;
+        res.pc = 0x105;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -489,6 +498,7 @@ int main(int argc, char *argv[]) {
         res.n = 0x34;
         res.dsp = 4;
         res.usp = 0x34;
+        res.pc = 0x105;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -504,6 +514,7 @@ int main(int argc, char *argv[]) {
         res.n = 0;
         res.dsp = 2;
         mem[0x34] = 0x99;
+        res.pc = 0x104;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -522,6 +533,7 @@ int main(int argc, char *argv[]) {
         res.dsp = 2;
         res.asp = 0x42;
         mem[0xa3] = 0xcc;
+        res.pc = 0x105;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -543,6 +555,7 @@ int main(int argc, char *argv[]) {
         res.usp = 1;
         mem[0x6] = 0xea;
         mem[0x7] = 0xb4;
+        res.pc = 0x106;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -559,9 +572,10 @@ int main(int argc, char *argv[]) {
             OP_END
         };
         reset(&res);
-        res.t = 0x3344;
-        res.n = 0x3344;
+        res.t = 0x6644;
+        res.n = 0x6644;
         res.dsp = 4;
+        res.pc = 0x10b;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
@@ -636,7 +650,7 @@ int main(int argc, char *argv[]) {
         // 13 BRAABS, RET
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 
-            0x01, 0x06, OP_BRAABS, // branch 0x106
+            0x05, OP_BRAABS | 2, // branch 0x105
             0x14, OP_PUSHI, // push 0x14
             OP_END,
             0x13, OP_PUSHI, // push 0x13
@@ -646,7 +660,7 @@ int main(int argc, char *argv[]) {
         res.t = 0x14;
         res.n = 0x13;
         res.dsp = 4;
-        res.pc = 6;
+        res.pc = 0x105;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");
             fail++;
