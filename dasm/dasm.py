@@ -115,14 +115,14 @@ class dcpuTransformer(lark.Transformer):
         if s == "PUSH":
             if isinstance(op[1], lark.Token):
                 if op[1].type == "REG":
-                    return self._opa_push_regs[str.upper(op[1])]
+                    ret = self._opa_push_regs[str.upper(op[1])]
                 elif op[1].type == "NUMBER":
                     num = self.convert_to_number(op[1])
-                    return Instruction(Instruction.OP_PUSHI, num)
-                elif op[1].type == "ID":
+                    ret = Instruction(Instruction.OP_PUSHI, num)
+                elif self.isID(op[1].type):
                     if op[1].value in variables:
                         num = variables[op[1].value]
-                        return Instruction(Instruction.OP_PUSHI, num)
+                        ret = Instruction(Instruction.OP_PUSHI, num)
             else:
                 print("not handled yet")
         elif s == "FETCH":
@@ -166,8 +166,8 @@ class dcpuTransformer(lark.Transformer):
             else:
                 print("###not handled yet")
         if ret != None:
-            return ret
-        return op
+            return lark.Tree('opa', ret)
+        return lark.Tree('opa', op)
 
     def org(self, dir):
         print(dir)
@@ -192,13 +192,15 @@ class dcpuTransformer(lark.Transformer):
             elif dcpuTransformer.isID(o.type):
                 if o.value in variables:
                     data.append(variables[o.value])
-                else: return op # undefined ID
+                else:
+                    data.append(o) # undefined ID appended as Token
             elif o.type == "ESCAPED_STRING":
                 for c in o.value[1:-1]:
                     data.append(c)
             else:
-                return op
-        return Instruction(Instruction.OP_BYTE, data)
+                print(f"Unknown byte payload in line {o.line}")
+                exit(1)
+        return lark.Tree('byte', Instruction(Instruction.OP_BYTE, data))
 
     def word(self, op):
         print(op)
@@ -209,15 +211,17 @@ class dcpuTransformer(lark.Transformer):
             elif dcpuTransformer.isID(o.type):
                 if o.value in variables:
                     data.append(variables[o.value])
-                else: return op # undefined ID
+                else:
+                    data.append(o) # undefined ID appended as Token
             else:
-                return op
-        return Instruction(Instruction.OP_WORD, data)
+                print(f"Unknown word payload in line {o.line}")
+                exit(1)
+        return lark.Tree('word', Instruction(Instruction.OP_WORD, data))
 
     def res(self, op):
         print(op)
         size = self.convert_to_number(op[0].value)
-        return Instruction(Instruction.OP_RES, size)
+        return lark.Tree('res', Instruction(Instruction.OP_RES, size))
 
 
     def label(self, op):
@@ -227,7 +231,18 @@ class dcpuTransformer(lark.Transformer):
                 print(f"Error in line {op[0].line}: {op[0]} already defined.")
                 exit(1)
             variables[op[0].value] = Instruction._current
-        pass
+        return lark.Tree('label', op)
+    
+    def idlo(self, op):
+        print(op)
+        op[0].type = "IDLO"
+        return op[0]
+
+    def idhi(self, op):
+        print(op)
+        op[0].type ="IDHI"
+        return op[0]
+
 
     def mul(self, op):
         print(op)
@@ -275,14 +290,22 @@ def main():
     prog = "".join(lines)
     t = l.parse(prog)
 
-    print(t.pretty())
-    
-    print("---------------")
+    print(t)
+
+    print("-----------------------------------------")
+
     print("Transformer:")
     n = dcpuTransformer().transform(t)
 
-    print("---------------")
+    print("-----------------------------------------")
 
-    print(n.pretty())
+    print(variables)
+
+    print(n.pretty)
+
+
+
+    n2 = dcpuTransformer().transform(n)
+    print(n2)
 
 main()

@@ -51,6 +51,7 @@ bra a
 bra $1000
 bra ziel
 int
+bra ende
 
 jpc t
 jpc a
@@ -84,4 +85,4 @@ seta
 
 apush
 
-push (ziel+5)*4
+ende:

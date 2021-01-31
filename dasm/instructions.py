@@ -209,8 +209,9 @@ class Instruction:
         else:
             self.databytes = [data]
         self.address = Instruction._current
-        # increment code position
-        Instruction._current = Instruction._current + len(self.data())
+        if Instruction._current >= 0:
+            # increment code position
+            Instruction._current = Instruction._current + len(self.data())
     
     def __str__(self):
         return f"{self.disassemble()}"
@@ -224,29 +225,9 @@ class Instruction:
         code = self._instructions[self.op]
         return code
     
-    def dataa(self):
-        if self.databytes == None:
-            extra = 0
-            b = []
-            if self.immediate != None:
-                num = self.immediate
-                if num != None:
-                    if self.op == self.OP_FETCHU or self.op == self.OP_STOREU:
-                        num = num & 0x3fff
-                    else:
-                        if num & 0x8000:
-                            extra = 2
-                        if num & 0x0080:
-                            extra = extra | 1
-                        num = num & 0x7f7f
-                if num > 0xff:
-                    b.append((num >> 8) & 0xff)
-                if num > 0:
-                    b.append(num & 0xff)
-            b.append(self.op | extra)
-            return b
-        return self.databytes
-    
+    def len(self):
+        return 1 + len(self.databytes)
+
     def data(self):
         d = []
         if self.op > 0xff: # not op-code, but plain data
@@ -273,12 +254,12 @@ class Instruction:
                     d.append((num >> 7) & 0x7f)
                 d.append(num & 0x7f)
         else:
-            if num & 0x8000:
+            if num & 0x0100:
                 extra = 2
             if num & 0x0080:
                 extra = extra | 1
             if num > 0xff:
-                d.append((num >> 8) & 0x7f)
+                d.append((num >> 9) & 0x7f)
             if num > 0:
                 d.append(num & 0x7f)
         
