@@ -7,6 +7,7 @@ import grammar
 from instructions import *
 
 variables = {}
+program  = []
 
 def newToken(name, value):
     t = lark.Token()
@@ -16,34 +17,34 @@ def newToken(name, value):
 class dcpuTransformer(lark.Transformer):
     
     _ops = {
-        "ADD": Instruction(Instruction.OP_ADD),
-        "SUB": Instruction(Instruction.OP_SUB),
-        "AND": Instruction(Instruction.OP_AND),
-        "OR": Instruction(Instruction.OP_OR),
-        "XOR": Instruction(Instruction.OP_XOR),
-        "LSR": Instruction(Instruction.OP_LSR),
-        "CPR": Instruction(Instruction.OP_CPR),
-        "POP": Instruction(Instruction.OP_POP),
-        "APOP": Instruction(Instruction.OP_APOP),
-        "RET": Instruction(Instruction.OP_RET),
-        "SETSTATUS": Instruction(Instruction.OP_SETSTATUS),
-        "SETDSP": Instruction(Instruction.OP_SETDSP),
-        "SETASP": Instruction(Instruction.OP_SETASP),
-        "SETUSP": Instruction(Instruction.OP_SETUSP),
-        "SETA": Instruction(Instruction.OP_SETA),
-        "APUSH": Instruction(Instruction.OP_APUSH),
-        "INT": Instruction(Instruction.OP_INT)
+        "ADD": Instruction.OP_ADD,
+        "SUB": Instruction.OP_SUB,
+        "AND": Instruction.OP_AND,
+        "OR": Instruction.OP_OR,
+        "XOR": Instruction.OP_XOR,
+        "LSR": Instruction.OP_LSR,
+        "CPR": Instruction.OP_CPR,
+        "POP": Instruction.OP_POP,
+        "APOP": Instruction.OP_APOP,
+        "RET": Instruction.OP_RET,
+        "SETSTATUS": Instruction.OP_SETSTATUS,
+        "SETDSP": Instruction.OP_SETDSP,
+        "SETASP": Instruction.OP_SETASP,
+        "SETUSP": Instruction.OP_SETUSP,
+        "SETA": Instruction.OP_SETA,
+        "APUSH": Instruction.OP_APUSH,
+        "INT": Instruction.OP_INT
     }
 
     _opa_push_regs = {
-        "T": Instruction(Instruction.OP_PUSHT),
-        "A": Instruction(Instruction.OP_PUSHA),
-        "N": Instruction(Instruction.OP_PUSHN),
-        "USP": Instruction(Instruction.OP_PUSHUSP),
-        "STATUS": Instruction(Instruction.OP_PUSHS),
-        "DSP": Instruction(Instruction.OP_PUSHDSP),
-        "ASP": Instruction(Instruction.OP_PUSHASP),
-        "PC": Instruction(Instruction.OP_PUSHPC)
+        "T": Instruction.OP_PUSHT,
+        "A": Instruction.OP_PUSHA,
+        "N": Instruction.OP_PUSHN,
+        "USP": Instruction.OP_PUSHUSP,
+        "STATUS": Instruction.OP_PUSHS,
+        "DSP": Instruction.OP_PUSHDSP,
+        "ASP": Instruction.OP_PUSHASP,
+        "PC": Instruction.OP_PUSHPC
     }
 
     @staticmethod
@@ -71,22 +72,23 @@ class dcpuTransformer(lark.Transformer):
         return False
 
     def op(self, op): # op without immediate
-        return self._ops[op[0].upper()]
+        inst = Instruction(self._ops[op[0].upper()])
+        program.append(inst)
     
     def op_store_fetch(self, op_group, op):
         if isinstance(op, lark.Token):
             if op.type == "REG":
-                if   op.upper() == "T": return Instruction(op_group | 0x0) # fetch/store t
-                elif op.upper() == "A": return Instruction(op_group | 0x1) # fetch/store a
+                if   op.upper() == "T": program.append(Instruction(op_group | 0x0)) # fetch/store t
+                elif op.upper() == "A":  program.append(Instruction(op_group | 0x1)) # fetch/store a
             elif op.type == "REL":
-                return Instruction(op_group | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
+                program.append(Instruction(op_group | 0x02, self.convert_rel_to_number(op))) # fetch/store u+#offs
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
-                return Instruction(op_group | 0x04, num) # fetch/store #imm
+                program.append(Instruction(op_group | 0x04, num)) # fetch/store #imm
             elif op.type == "ID":
                 if op.value in variables:
                     num = variables[op.value]
-                    return Instruction(op_group | 0x4, num)
+                    program.append(Instruction(op_group | 0x4, num))
         else:
             print("not handled yet")
         return op
@@ -94,15 +96,15 @@ class dcpuTransformer(lark.Transformer):
     def op_jmp(self, op_group, op):
         if isinstance(op, lark.Token):
             if op.type == "REG":
-                if   op.upper() == "T": return Instruction(op_group | 0x0) # jmp t
-                elif op.upper() == "A": return Instruction(op_group | 0x1) # jmp a
+                if   op.upper() == "T": program.append(Instruction(op_group | 0x0)) # jmp t
+                elif op.upper() == "A": program.append(Instruction(op_group | 0x1)) # jmp a
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
-                return Instruction(op_group | 0x04, num) # jmp #imm
+                program.append(Instruction(op_group | 0x04, num)) # jmp #imm
             elif op.type == "ID":
                 if op.value in variables:
                     num = variables[op.value]
-                    return Instruction(op_group | 0x04, num)
+                    program.append(Instruction(op_group | 0x04, num))
         else:
             print("not handled yet")
         return op
@@ -115,7 +117,7 @@ class dcpuTransformer(lark.Transformer):
         if s == "PUSH":
             if isinstance(op[1], lark.Token):
                 if op[1].type == "REG":
-                    ret = self._opa_push_regs[str.upper(op[1])]
+                    ret = Instruction(self._opa_push_regs[str.upper(op[1])])
                 elif op[1].type == "NUMBER":
                     num = self.convert_to_number(op[1])
                     ret = Instruction(Instruction.OP_PUSHI, num)
@@ -174,7 +176,7 @@ class dcpuTransformer(lark.Transformer):
         if dir[0].type == "NUMBER":
             num = self.convert_to_number(dir[0])
             Instruction._current = num
-            return Instruction(Instruction.OP_ORG)
+            program.append(Instruction(Instruction.OP_ORG, num))
     
     def equ(self, op):
         print(op)
@@ -200,7 +202,7 @@ class dcpuTransformer(lark.Transformer):
             else:
                 print(f"Unknown byte payload in line {o.line}")
                 exit(1)
-        return lark.Tree('byte', Instruction(Instruction.OP_BYTE, data))
+        program.append(Instruction(Instruction.OP_BYTE, data))
 
     def word(self, op):
         print(op)
@@ -216,12 +218,12 @@ class dcpuTransformer(lark.Transformer):
             else:
                 print(f"Unknown word payload in line {o.line}")
                 exit(1)
-        return lark.Tree('word', Instruction(Instruction.OP_WORD, data))
+        program.append(Instruction(Instruction.OP_WORD, data))
 
     def res(self, op):
         print(op)
         size = self.convert_to_number(op[0].value)
-        return lark.Tree('res', Instruction(Instruction.OP_RES, size))
+        program.append(Instruction(Instruction.OP_RES, size))
 
 
     def label(self, op):
@@ -301,11 +303,9 @@ def main():
 
     print(variables)
 
-    print(n.pretty)
+    print("-----------------------------------------")
 
-
-
-    n2 = dcpuTransformer().transform(n)
-    print(n2)
+    for p in program:
+        print(p)
 
 main()

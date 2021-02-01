@@ -211,10 +211,10 @@ class Instruction:
         self.address = Instruction._current
         if Instruction._current >= 0:
             # increment code position
-            Instruction._current = Instruction._current + len(self.data())
+            Instruction._current = Instruction._current + self.len()
     
     def __str__(self):
-        return f"{self.disassemble()}"
+        return f"{self.address}: {self.disassemble()}"
 
     def __repr__(self):
         return f"op: {self.op:02X} asm: '{self.disassemble()}'"
@@ -226,7 +226,16 @@ class Instruction:
         return code
     
     def len(self):
-        return 1 + len(self.databytes)
+        if self.op < 0x100:
+            return 1 + len(self.databytes)
+        if self.op == self.OP_ORG:
+            return 0
+        if self.op == self.OP_BYTE:
+            return len(self.databytes)
+        if self.op == self.OP_WORD:
+            return 2*len(self.databytes)
+        if self.op == self.OP_RES:
+            return self.databytes[0]
 
     def data(self):
         d = []
