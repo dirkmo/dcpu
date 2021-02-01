@@ -78,36 +78,37 @@ class dcpuTransformer(lark.Transformer):
     def op_store_fetch(self, op_group, op):
         if isinstance(op, lark.Token):
             if op.type == "REG":
-                if   op.upper() == "T": program.append(Instruction(op_group | 0x0)) # fetch/store t
-                elif op.upper() == "A":  program.append(Instruction(op_group | 0x1)) # fetch/store a
+                if   op.upper() == "T": return Instruction(op_group | 0x0) # fetch/store t
+                elif op.upper() == "A":  return Instruction(op_group | 0x1) # fetch/store a
             elif op.type == "REL":
-                program.append(Instruction(op_group | 0x02, self.convert_rel_to_number(op))) # fetch/store u+#offs
+                return Instruction(op_group | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
-                program.append(Instruction(op_group | 0x04, num)) # fetch/store #imm
+                return Instruction(op_group | 0x04, num) # fetch/store #imm
             elif op.type == "ID":
                 if op.value in variables:
                     num = variables[op.value]
-                    program.append(Instruction(op_group | 0x4, num))
+                    return Instruction(op_group | 0x4, num)
         else:
             print("not handled yet")
-        return op
+        return None
 
     def op_jmp(self, op_group, op):
         if isinstance(op, lark.Token):
             if op.type == "REG":
-                if   op.upper() == "T": program.append(Instruction(op_group | 0x0)) # jmp t
-                elif op.upper() == "A": program.append(Instruction(op_group | 0x1)) # jmp a
+                if   op.upper() == "T": return Instruction(op_group | 0x0) # jmp t
+                elif op.upper() == "A": return Instruction(op_group | 0x1) # jmp a
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
-                program.append(Instruction(op_group | 0x04, num)) # jmp #imm
+                return Instruction(op_group | 0x04, num) # jmp #imm
             elif op.type == "ID":
-                if op.value in variables:
-                    num = variables[op.value]
-                    program.append(Instruction(op_group | 0x04, num))
+                return Instruction(op_group | 0x04, op.value)
+                # if op.value in variables:
+                #     num = variables[op.value]
+                #     return Instruction(op_group | 0x04, num)
         else:
             print("not handled yet")
-        return op
+        return None
 
 
     def opa(self, op): # op with immediate data
@@ -168,7 +169,7 @@ class dcpuTransformer(lark.Transformer):
             else:
                 print("###not handled yet")
         if ret != None:
-            return lark.Tree('opa', ret)
+            program.append(ret)
         return lark.Tree('opa', op)
 
     def org(self, dir):
@@ -177,11 +178,15 @@ class dcpuTransformer(lark.Transformer):
             num = self.convert_to_number(dir[0])
             Instruction._current = num
             program.append(Instruction(Instruction.OP_ORG, num))
+        else:
+            return dir
     
     def equ(self, op):
         print(op)
         if op[0].type == "ID":
-            variables[op[0].value] = self.convert_to_number(op[1])
+            value = self.convert_to_number(op[1].value)
+            variables[op[0].value] = value
+            program.append(Instruction(Instruction.OP_EQU, [op[0].value, value] ))
         else:
             return op
     
@@ -233,7 +238,9 @@ class dcpuTransformer(lark.Transformer):
                 print(f"Error in line {op[0].line}: {op[0]} already defined.")
                 exit(1)
             variables[op[0].value] = Instruction._current
-        return lark.Tree('label', op)
+            program.append(Instruction(Instruction.OP_LABEL, op[0].value))
+        else:
+            return lark.Tree('label', op)
     
     def idlo(self, op):
         print(op)

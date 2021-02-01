@@ -29,14 +29,14 @@ class Instruction:
     OP_FETCHGROUP   = 0xA0
     OP_FETCHT       = OP_FETCHGROUP | 0x0   # 1010 0000 fetch t        ; t <- mem[t]
     OP_FETCHA       = OP_FETCHGROUP | 0x1   # 1010 0001 fetch a        ; t <- mem[a]
-    OP_FETCHU       = OP_FETCHGROUP | 0x2   # 1010 0010 fetch u+#ofs   ; t <- mem[usp+#ofs]
+    OP_FETCHU       = OP_FETCHGROUP | 0x2   # 1010 0010 fetch u+${0:04x}   ; t <- mem[usp+${0:04x}]
     # OP_FETCH     = OP_FETCHGROUP | 0x3    # 1010 0011
     OP_FETCHABS     = OP_FETCHGROUP | 0x4   # 1010 01xy fetch #imm     ; t <- mem[#imm] mit #imm = {x, ir[22:16], y, ir[14:8]}
 
     OP_STOREGROUP   = 0xA8
     OP_STORET       = OP_STOREGROUP | 0x0   # 1010 1000 store t        ; mem[t] <- n
     OP_STOREA       = OP_STOREGROUP | 0x1   # 1010 1001 store a        ; mem[a] <- t
-    OP_STOREU       = OP_STOREGROUP | 0x2   # 1010 1010 store u+#ofs   ; mem[usp+#ofs] <- t
+    OP_STOREU       = OP_STOREGROUP | 0x2   # 1010 1010 store u+${0:04x}   ; mem[usp+${0:04x}] <- t
     # OP_STORE     = OP_STOREGROUP | 0x3    # 1010 1011
     OP_STOREABS     = OP_STOREGROUP | 0x4   # 1010 11xy store #imm     ; mem[#imm] <- t mit #imm = {x, ir[22:16], y, ir[14:8]}
 
@@ -107,14 +107,16 @@ class Instruction:
     OP_BYTE  = 0x101
     OP_WORD  = 0x102
     OP_RES   = 0x103
+    OP_LABEL = 0x104
+    OP_EQU   = 0x105
 
-    _instructions = ["INV"] * 0x104
+    _instructions = ["INV"] * 0x106
     _current = 0
 
     @classmethod
     def define_disassembly(cls):
         for i in range(0,0x7f):
-            cls._instructions[i] = "LIT {0:04x}"
+            cls._instructions[i] = "LIT ${0:04x}"
         cls._instructions[cls.OP_ADD] = "ADD"
         cls._instructions[cls.OP_SUB] = "SUB"
         cls._instructions[cls.OP_AND] = "AND"
@@ -126,65 +128,65 @@ class Instruction:
         cls._instructions[cls.OP_PUSHA] = "PUSH A"
         cls._instructions[cls.OP_PUSHN] = "PUSH N"
         cls._instructions[cls.OP_PUSHUSP] = "PUSH USP"
-        cls._instructions[cls.OP_PUSHI] = "PUSH {0:04x}"
-        cls._instructions[cls.OP_PUSHI|1] = "PUSH {0:04x}"
-        cls._instructions[cls.OP_PUSHI|2] = "PUSH {0:04x}"
-        cls._instructions[cls.OP_PUSHI|3] = "PUSH {0:04x}"
+        cls._instructions[cls.OP_PUSHI] = "PUSH {0}"
+        cls._instructions[cls.OP_PUSHI|1] = "PUSH {0}"
+        cls._instructions[cls.OP_PUSHI|2] = "PUSH {0}"
+        cls._instructions[cls.OP_PUSHI|3] = "PUSH {0}"
         cls._instructions[cls.OP_PUSHS] = "PUSH STATUS"
         cls._instructions[cls.OP_PUSHDSP] = "PUSH DSP"
         cls._instructions[cls.OP_PUSHASP] = "PUSH ASP"
         cls._instructions[cls.OP_PUSHPC] = "PUSH PC"
         cls._instructions[cls.OP_FETCHT] = "FETCH T"
         cls._instructions[cls.OP_FETCHA] = "FETCH A"
-        cls._instructions[cls.OP_FETCHU] = "FETCH USP+#ofs"
-        cls._instructions[cls.OP_FETCHABS] = "FETCH {0:04x}"
-        cls._instructions[cls.OP_FETCHABS|1] = "FETCH {0:04x}"
-        cls._instructions[cls.OP_FETCHABS|2] = "FETCH {0:04x}"
-        cls._instructions[cls.OP_FETCHABS|3] = "FETCH {0:04x}"
+        cls._instructions[cls.OP_FETCHU] = "FETCH USP+${0}"
+        cls._instructions[cls.OP_FETCHABS] = "FETCH {0}"
+        cls._instructions[cls.OP_FETCHABS|1] = "FETCH {0}"
+        cls._instructions[cls.OP_FETCHABS|2] = "FETCH {0}"
+        cls._instructions[cls.OP_FETCHABS|3] = "FETCH {0}"
         cls._instructions[cls.OP_STORET] = "STORE T"
         cls._instructions[cls.OP_STOREA] = "STORE A"
-        cls._instructions[cls.OP_STOREU] = "STORE U+#ofs"
-        cls._instructions[cls.OP_STOREABS] = "STORE {0:04x}"
-        cls._instructions[cls.OP_STOREABS|1] = "STORE {0:04x}"
-        cls._instructions[cls.OP_STOREABS|2] = "STORE {0:04x}"
-        cls._instructions[cls.OP_STOREABS|3] = "STORE {0:04x}"
+        cls._instructions[cls.OP_STOREU] = "STORE U+${0}"
+        cls._instructions[cls.OP_STOREABS] = "STORE {0}"
+        cls._instructions[cls.OP_STOREABS|1] = "STORE {0}"
+        cls._instructions[cls.OP_STOREABS|2] = "STORE {0}"
+        cls._instructions[cls.OP_STOREABS|3] = "STORE {0}"
         cls._instructions[cls.OP_JMPT] = "JMP T"
         cls._instructions[cls.OP_JMPA] = "JMP A"
-        cls._instructions[cls.OP_JMPABS] = "JMP {0:04x}"
-        cls._instructions[cls.OP_JMPABS|1] = "JMP {0:04x}"
-        cls._instructions[cls.OP_JMPABS|2] = "JMP {0:04x}"
-        cls._instructions[cls.OP_JMPABS|3] = "JMP {0:04x}"
+        cls._instructions[cls.OP_JMPABS] = "JMP {0}"
+        cls._instructions[cls.OP_JMPABS|1] = "JMP {0}"
+        cls._instructions[cls.OP_JMPABS|2] = "JMP {0}"
+        cls._instructions[cls.OP_JMPABS|3] = "JMP {0}"
         cls._instructions[cls.OP_BRAT] = "BRA T"
         cls._instructions[cls.OP_BRAA] = "BRA A"
         cls._instructions[cls.OP_INT] = "INT"
-        cls._instructions[cls.OP_BRAABS] = "BRA {0:04x}"
-        cls._instructions[cls.OP_BRAABS|1] = "BRA {0:04x}"
-        cls._instructions[cls.OP_BRAABS|2] = "BRA {0:04x}"
-        cls._instructions[cls.OP_BRAABS|3] = "BRA {0:04x}"
+        cls._instructions[cls.OP_BRAABS] = "BRA {0}"
+        cls._instructions[cls.OP_BRAABS|1] = "BRA {0}"
+        cls._instructions[cls.OP_BRAABS|2] = "BRA {0}"
+        cls._instructions[cls.OP_BRAABS|3] = "BRA {0}"
         cls._instructions[cls.OP_JMPZT] = "JMPZ T"
         cls._instructions[cls.OP_JMPZA] = "JMPZ A"
-        cls._instructions[cls.OP_JMPZABS] = "JMPZ {0:04x}"
-        cls._instructions[cls.OP_JMPZABS|1] = "JMPZ {0:04x}"
-        cls._instructions[cls.OP_JMPZABS|2] = "JMPZ {0:04x}"
-        cls._instructions[cls.OP_JMPZABS|3] = "JMPZ {0:04x}"
+        cls._instructions[cls.OP_JMPZABS] = "JMPZ {0}"
+        cls._instructions[cls.OP_JMPZABS|1] = "JMPZ {0}"
+        cls._instructions[cls.OP_JMPZABS|2] = "JMPZ {0}"
+        cls._instructions[cls.OP_JMPZABS|3] = "JMPZ {0}"
         cls._instructions[cls.OP_JMPNZT] = "JMPNZ T"
         cls._instructions[cls.OP_JMPNZA] = "JMPNZ A"
-        cls._instructions[cls.OP_JMPNZABS] = "JMPNZ {0:04x}"
-        cls._instructions[cls.OP_JMPNZABS|1] = "JMPNZ {0:04x}"
-        cls._instructions[cls.OP_JMPNZABS|2] = "JMPNZ {0:04x}"
-        cls._instructions[cls.OP_JMPNZABS|3] = "JMPNZ {0:04x}"
+        cls._instructions[cls.OP_JMPNZABS] = "JMPNZ {0}"
+        cls._instructions[cls.OP_JMPNZABS|1] = "JMPNZ {0}"
+        cls._instructions[cls.OP_JMPNZABS|2] = "JMPNZ {0}"
+        cls._instructions[cls.OP_JMPNZABS|3] = "JMPNZ {0}"
         cls._instructions[cls.OP_JMPCT] = "JMPC T"
         cls._instructions[cls.OP_JMPCA] = "JMPC A"
-        cls._instructions[cls.OP_JMPCABS] = "JMPC {0:04x}"
-        cls._instructions[cls.OP_JMPCABS|1] = "JMPC {0:04x}"
-        cls._instructions[cls.OP_JMPCABS|2] = "JMPC {0:04x}"
-        cls._instructions[cls.OP_JMPCABS|3] = "JMPC {0:04x}"
+        cls._instructions[cls.OP_JMPCABS] = "JMPC {0}"
+        cls._instructions[cls.OP_JMPCABS|1] = "JMPC {0}"
+        cls._instructions[cls.OP_JMPCABS|2] = "JMPC {0}"
+        cls._instructions[cls.OP_JMPCABS|3] = "JMPC {0}"
         cls._instructions[cls.OP_JMPNCT] = "JMPNC T"
         cls._instructions[cls.OP_JMPNCA] = "JMPNC A"
-        cls._instructions[cls.OP_JMPNCABS] = "JMPNC {0:04x}"
-        cls._instructions[cls.OP_JMPNCABS|1] = "JMPNC {0:04x}"
-        cls._instructions[cls.OP_JMPNCABS|2] = "JMPNC {0:04x}"
-        cls._instructions[cls.OP_JMPNCABS|3] = "JMPNC {0:04x}"
+        cls._instructions[cls.OP_JMPNCABS] = "JMPNC {0}"
+        cls._instructions[cls.OP_JMPNCABS|1] = "JMPNC {0}"
+        cls._instructions[cls.OP_JMPNCABS|2] = "JMPNC {0}"
+        cls._instructions[cls.OP_JMPNCABS|3] = "JMPNC {0}"
         cls._instructions[cls.OP_POP] = "POP"
         cls._instructions[cls.OP_APOP] = "APOP"
         cls._instructions[cls.OP_RET] = "RET"
@@ -195,10 +197,12 @@ class Instruction:
         cls._instructions[cls.OP_SETA] = "SETA"
         cls._instructions[cls.OP_APUSH] = "APUSH"
 
-        cls._instructions[cls.OP_ORG] = ".ORG {0:04x}"
+        cls._instructions[cls.OP_ORG] = ".ORG ${0:04x}"
         cls._instructions[cls.OP_BYTE] = ".BYTE {0}"
         cls._instructions[cls.OP_WORD] = ".WORD {0} "
         cls._instructions[cls.OP_RES] = ".RES {0}"
+        cls._instructions[cls.OP_LABEL] = "{0}:"
+        cls._instructions[cls.OP_EQU] = ".EQU {0} ${1:04x}"
 
     def __init__(self, op, data = None):
         self.op = op
@@ -220,22 +224,43 @@ class Instruction:
         return f"op: {self.op:02X} asm: '{self.disassemble()}'"
 
     def disassemble(self):
-        # code = str.format(self._instructions[self.op])
-        # todo
         code = self._instructions[self.op]
+        if self.op < 0x100 and len(self.databytes) > 0:
+            if type(self.databytes[0]) is int:
+                code = self._instructions[self.op].format(f"${self.databytes[0]:04x}")
+            else:
+                code = self._instructions[self.op].format(self.databytes[0])
+        if self.op == self.OP_ORG:
+            code = self._instructions[self.op].format(self.databytes[0])
+        if self.op == self.OP_LABEL:
+            code = self._instructions[self.op].format(self.databytes[0])
+        if self.op == self.OP_RES:
+            code = self._instructions[self.op].format(self.databytes[0])
+        if self.op == self.OP_EQU:
+            code = self._instructions[self.op].format(self.databytes[0], self.databytes[1])
+        if self.op == self.OP_BYTE:
+            s = ""
+            for b in self.databytes:
+                if len(s) > 0: s = s + ", "
+                if type(b) is int:
+                    s = s + f"${b:02x}"
+                elif type(b) is str:
+                    s = s + f"'{b}'"
+            code = self._instructions[self.op].format(s)
         return code
     
     def len(self):
         if self.op < 0x100:
             return 1 + len(self.databytes)
-        if self.op == self.OP_ORG:
-            return 0
         if self.op == self.OP_BYTE:
             return len(self.databytes)
         if self.op == self.OP_WORD:
             return 2*len(self.databytes)
         if self.op == self.OP_RES:
             return self.databytes[0]
+        # OP_ORG, OP_LABEL, OP_EQU
+        return 0
+
 
     def data(self):
         d = []

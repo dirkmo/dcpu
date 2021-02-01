@@ -45,6 +45,7 @@ jmp t
 jmp a
 jmp $1000
 jmp ziel
+jmp ende
 
 bra t
 bra a
