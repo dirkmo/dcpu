@@ -29,7 +29,8 @@ _expr: "(" _expr ")"
     | minus
     | mul
     | div
-    | NUMBER | ID | idlo | idhi
+    | NUMBER | ID
+//| idlo | idhi
 
 mul: _expr "*" _expr
 div: _expr "/" _expr
@@ -37,8 +38,8 @@ plus: _expr "+" _expr
 minus: _expr "-" _expr
 
 ID: CNAME
-idlo: "<" CNAME
-idhi: ">" CNAME
+//idlo: "<" CNAME
+//idhi: ">" CNAME
 
 OP: "add"i | "sub"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
