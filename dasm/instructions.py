@@ -204,18 +204,8 @@ class Instruction:
         cls._instructions[cls.OP_LABEL] = "{0}:"
         cls._instructions[cls.OP_EQU] = ".EQU {0} ${1:04x}"
 
-    def __init__(self, op, data = None):
+    def __init__(self, op):
         self.op = op
-        if data == None:
-            self.databytes = []
-        elif type(data) is list:
-            self.databytes = data
-        else:
-            self.databytes = [data]
-        self.address = Instruction._current
-        if Instruction._current >= 0:
-            # increment code position
-            Instruction._current = Instruction._current + self.len()
     
     def __str__(self):
         return f"{self.address}: {self.disassemble()}"
@@ -247,57 +237,84 @@ class Instruction:
                 elif type(b) is str:
                     s = s + f"'{b}'"
             code = self._instructions[self.op].format(s)
+        if self.op == self.OP_WORD:
+            s = ""
+            for w in self.databytes:
+                if len(s) > 0: s = s + ", "
+                if type(w) is int:
+                    s = s + f"${w:04x}"
+                elif type(w) is str:
+                    s = s + f"'{w}'"
+            code = self._instructions[self.op].format(s)
         return code
     
     def len(self):
-        if self.op < 0x100:
-            return 1 + len(self.databytes)
-        if self.op == self.OP_BYTE:
-            return len(self.databytes)
-        if self.op == self.OP_WORD:
-            return 2*len(self.databytes)
-        if self.op == self.OP_RES:
-            return self.databytes[0]
-        # OP_ORG, OP_LABEL, OP_EQU
-        return 0
+        return 1
 
+    def data(self):
+        return self.op
+
+
+class InstructionAbs(Instruction):
+    def __init__(self, op, arg):
+        super().__init__(op)
+        self.op = op
+        self.value = None
+        self.variable = None
+        if type(arg) is str:
+            self.variable = arg
+        else:
+            self.value = arg
+
+    def disassemble(self):
+        if self.variable != None:
+            code = self._instructions[self.op].format(self.variable)
+        else:
+            code = self._instructions[self.op].format(self.value)
+        return code
+
+    def len(self):
+        if self.value != None:
+            return self.data.len() + 1
+        return 3
+
+    def data(self):
+        assert(self.value != None)
+        d = []
+        v = self.value
+        d.append(self.op | (v & 0x3))
+        v = v >> 2
+        if v > 0:
+            d.append(v & 0x7f)
+            v = v >> 7
+        if v > 0:
+            d.append(v & 0x7f)
+        d.reverse()
+        return d
+
+class InstructionRel(Instruction):
+    def __init__(self, op, offset):
+        super().__init__(op)
+        self.op = op
+        self.offset = offset
+
+    def disassemble(self):
+        code = self._instructions[self.op].format(self.offset)
+        return code
+
+    def len(self):
+        return self.data.len() + 1
 
     def data(self):
         d = []
-        if self.op > 0xff: # not op-code, but plain data
-            if self.op == self.OP_BYTE:
-                d = self.databytes
-            elif self.op == self.OP_WORD:
-                for w in self.databytes:
-                    d.append(w & 0xff)
-                    d.append((w >> 8) & 0xff)
-            return d
-        
-        # op-code
-        if len(self.databytes) == 0:
-            # opcode has no data
-            return [self.op]
-        
-        # op-code with data
-        num = self.databytes[0]
-        extra = 0
-        if self.op == self.OP_FETCHU or self.op == self.OP_STOREU:
-            # can use up to two immediates with each 7 bits
-            if num > 0:
-                if num > 0x7f:
-                    d.append((num >> 7) & 0x7f)
-                d.append(num & 0x7f)
-        else:
-            if num & 0x0100:
-                extra = 2
-            if num & 0x0080:
-                extra = extra | 1
-            if num > 0xff:
-                d.append((num >> 9) & 0x7f)
-            if num > 0:
-                d.append(num & 0x7f)
-        
-        d.append(self.op | extra)
+        d.append(self.op)
+        v = self.offset
+        if v > 0:
+            d.append(v & 0x7f)
+            v = v >> 7
+        if v > 0:
+            d.append(v & 0x7f)
+        d.reverse()
         return d
 
 

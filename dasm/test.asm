@@ -1,6 +1,6 @@
 .org $100
 .byte 1, 2, "Hallo"
-.byte 100, <ziel, $ff
+.byte 100, $ff
 .word 1000+1, 100
 .word 1000+1, ziel
 .res $100
@@ -25,8 +25,6 @@ push status
 push dsp
 push asp
 push pc
-push <ziel
-push >ziel
 push ziel
 
 fetch t
@@ -34,6 +32,7 @@ fetch a
 fetch u+$100
 fetch $ffff
 fetch ziel
+fetch UART_TX
 
 store t
 store a

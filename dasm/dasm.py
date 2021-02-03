@@ -68,12 +68,12 @@ class dcpuTransformer(lark.Transformer):
                 if   op.upper() == "T": return Instruction(op_group | 0x0) # fetch/store t
                 elif op.upper() == "A": return Instruction(op_group | 0x1) # fetch/store a
             elif op.type == "REL":
-                return Instruction(op_group | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
+                return InstructionRel(op_group | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
-                return Instruction(op_group | 0x04, num) # fetch/store #imm
+                return InstructionAbs(op_group | 0x04, num) # fetch/store #imm
             elif op.type == "ID":
-                return Instruction(op_group | 0x4, op.value)
+                return InstructionAbs(op_group | 0x4, op.value)
         print("not handled yet")
         return None
 
@@ -84,9 +84,9 @@ class dcpuTransformer(lark.Transformer):
                 elif op.upper() == "A": return Instruction(op_group | 0x1) # jmp a
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
-                return Instruction(op_group | 0x04, num) # jmp #imm
+                return InstructionAbs(op_group | 0x04, num) # jmp #imm
             elif op.type == "ID":
-                return Instruction(op_group | 0x04, op.value)
+                return InstructionAbs(op_group | 0x04, op.value)
         print("not handled yet")
         return None
 
@@ -100,25 +100,25 @@ class dcpuTransformer(lark.Transformer):
                 ret = Instruction(self._opa_push_regs[str.upper(op[1])])
             elif op[1].type == "NUMBER":
                 num = self.convert_to_number(op[1])
-                ret = Instruction(Instruction.OP_PUSHI, num)
+                ret = InstructionAbs(Instruction.OP_PUSHI, num)
             elif op[1].type == "ID":
-                ret = Instruction(Instruction.OP_PUSHI, op[1].value)
+                ret = InstructionAbs(Instruction.OP_PUSHI, op[1].value)
         elif s == "FETCH":
-            ret = self.op_store_fetch(Instruction.OP_FETCHGROUP, op[1])
+            ret = self.op_store_fetch(InstructionAbs.OP_FETCHGROUP, op[1])
         elif s == "STORE":
-            ret = self.op_store_fetch(Instruction.OP_STOREGROUP, op[1])
+            ret = self.op_store_fetch(InstructionAbs.OP_STOREGROUP, op[1])
         elif s == "JMP":
-            ret = self.op_jmp(Instruction.OP_JMPGROUP, op[1])
+            ret = self.op_jmp(InstructionAbs.OP_JMPGROUP, op[1])
         elif s == "BRA":
-            ret = self.op_jmp(Instruction.OP_BRANCHGROUP, op[1])
+            ret = self.op_jmp(InstructionAbs.OP_BRANCHGROUP, op[1])
         elif s == "JPC":
-            ret = self.op_jmp(Instruction.OP_JMPCGROUP, op[1])
+            ret = self.op_jmp(InstructionAbs.OP_JMPCGROUP, op[1])
         elif s == "JPNC":
-            ret = self.op_jmp(Instruction.OP_JMPNCGROUP, op[1])
+            ret = self.op_jmp(InstructionAbs.OP_JMPNCGROUP, op[1])
         elif s == "JPZ":
-            ret = self.op_jmp(Instruction.OP_JMPZGROUP, op[1])
+            ret = self.op_jmp(InstructionAbs.OP_JMPZGROUP, op[1])
         elif s == "JPNZ":
-            ret = self.op_jmp(Instruction.OP_JMPNZGROUP, op[1])
+            ret = self.op_jmp(InstructionAbs.OP_JMPNZGROUP, op[1])
         if ret != None:
             program.append(ret)
         else:
