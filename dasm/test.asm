@@ -10,6 +10,8 @@ xor
 lsr
 cpr
 
+
+.org $40
 ziel:
 
 push t
@@ -25,10 +27,13 @@ push ziel
 
 fetch t
 fetch a
-fetch u+$100
+fetch u+$62
+fetch u+$f13a
 fetch $ffff
 fetch ziel
 fetch UART_TX
+
+.res 4
 
 store t
 store a

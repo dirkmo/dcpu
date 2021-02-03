@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "cwd": "${workspaceFolder}/dasm",
-            "args": ["${fileDirname}/test.asm"],
+            "args": ["${fileDirname}/test.asm", "test.hex"],
             "console": "integratedTerminal"
         },
         {
