@@ -91,7 +91,6 @@ class dcpuTransformer(lark.Transformer):
 
 
     def opa(self, op): # op with immediate data
-        print(op)
         s = str.upper(op[0])
         ret = None
         if s == "PUSH":
@@ -125,7 +124,6 @@ class dcpuTransformer(lark.Transformer):
             return lark.Tree('opa', op)
 
     def org(self, dir):
-        print(dir)
         if dir[0].type == "NUMBER":
             num = self.convert_to_number(dir[0])
             Instruction._current = num
@@ -134,7 +132,6 @@ class dcpuTransformer(lark.Transformer):
             return dir
     
     def equ(self, op):
-        print(op)
         if op[0].type == "ID":
             if op[0] in variables:
                 print(f"Error in line {op[0].line}: {op[1]} already defined.")
@@ -145,7 +142,6 @@ class dcpuTransformer(lark.Transformer):
             return op
     
     def byte(self, op):
-        print(op)
         data = []
         for o in op:
             if o.type == "NUMBER":
@@ -159,7 +155,6 @@ class dcpuTransformer(lark.Transformer):
         program.append(InstructionByte(data))
 
     def word(self, op):
-        print(op)
         data = []
         for o in op:
             if o.type == "NUMBER":
@@ -172,13 +167,11 @@ class dcpuTransformer(lark.Transformer):
         program.append(InstructionWord(data))
 
     def res(self, op):
-        print(op)
         size = self.convert_to_number(op[0].value)
         program.append(InstructionRes(size))
 
 
     def label(self, op):
-        print(op)
         if op[0].type == "CNAME":
             if op[0] in variables:
                 print(f"Error in line {op[0].line}: {op[0]} already defined.")
@@ -189,7 +182,6 @@ class dcpuTransformer(lark.Transformer):
             return lark.Tree('label', op)
     
     def mul(self, op):
-        print(op)
         try:
             value = int(op[0].children[0]) * int(op[1].children[0])
             return lark.Token(type_="NUMBER",value=str(value))
@@ -197,7 +189,6 @@ class dcpuTransformer(lark.Transformer):
             return op
 
     def div(self, op):
-        print(op)
         try:
             value = int(op[0].children[0]) // int(op[1].children[0])
             return lark.Token(type_="NUMBER",value=str(value))
@@ -205,7 +196,6 @@ class dcpuTransformer(lark.Transformer):
             return op
 
     def plus(self, op):
-        print(op)
         try:
             value = int(op[0]) + int(op[1])
             return lark.Token(type_="NUMBER",value=str(value))
@@ -213,7 +203,6 @@ class dcpuTransformer(lark.Transformer):
             return op
 
     def minus(self, op):
-        print(op)
         try:
             value = int(op[0].children[0]) - int(op[1].children[0])
             return lark.Token(type_="NUMBER",value=str(value))
@@ -270,39 +259,36 @@ def saveHex(fn, prog):
     f.close()
 
 def main():
+    print("dasm: Simple dcpu assembler\n")
     l = lark.Lark(grammar.grammar, start = "start")
+
+    if len(sys.argv) < 3:
+        print("Usage: dasm.py <asm file input> <hex file output>")
+        exit(1)
 
     try:
         fn = sys.argv[1]
         with open(fn) as f:
             lines = f.readlines()
     except:
-        print("Cannot open file")
-        return 1
+        print(f"ERROR: Cannot open file {fn}")
+        return 2
 
     prog = "".join(lines)
     t = l.parse(prog)
 
-    print(t)
+    # print(t)
+    # print("-----------------------------------------")
 
-    print("-----------------------------------------")
-
-    print("Transformer:")
     n = dcpuTransformer().transform(t)
 
-    print("-----------------------------------------")
-
-    print(variables)
-
-    print("-----------------------------------------")
-
-    for p in program:
-        print(p)
+    # for p in program:
+    #     print(p)
 
     vars = {}
     count = 1
     while vars != InstructionBase._variables:
-        print(InstructionBase._variables)
+        # print(InstructionBase._variables)
         print(f"Pass {count}")
         count = count + 1
         vars = InstructionBase._variables
@@ -310,6 +296,9 @@ def main():
         for p in program:
             p.update()
 
-    saveHex("out.hex", program)
+    fn = sys.argv[2]
+    saveHex(fn, program)
+
+    print(f"{fn} written.")
 
 main()
