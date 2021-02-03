@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-from instructions import Instruction
+from instructions import *
 import sys
 import os
 import lark
 import grammar
-from instructions import *
 
 program  = []
 variables = []
@@ -153,7 +152,7 @@ class dcpuTransformer(lark.Transformer):
                 data.append(self.convert_to_number(o))
             elif o.type == "ESCAPED_STRING":
                 for c in o.value[1:-1]:
-                    data.append(c)
+                    data.append(ord(c))
             else:
                 print(f"Unknown byte payload in line {o.line}")
                 exit(1)
@@ -221,6 +220,55 @@ class dcpuTransformer(lark.Transformer):
         except:
             return op
 
+def writeHexLine(f, raw):
+    raw = [len(raw)-3] + raw
+    chksum = 0x100 - (sum(raw) & 0xff)
+    raw.append(chksum)
+    f.write(":")
+    for b in raw:
+        f.write(f"{b:02X}")
+    f.write("\n")
+
+def writeHexBlock(f, addr, raw, cols=16, type=0):
+    ## Hexfile format:
+    # : COUNT ADDRESS TYPE DATA CHKSUM
+    # Type 0 data
+    # type 1 EOF
+    s = ""
+    bytes = [ (addr>>8) & 0xff, addr & 0xff, type ]
+    for i,d in enumerate(raw):
+        if i % cols == 0:
+            laddr = addr + i
+            bytes = [ (laddr>>8) & 0xff, laddr & 0xff, type ]
+        bytes.append(d)
+        if i % cols == cols-1:
+            writeHexLine(f, bytes)
+    if len(bytes) > 0:
+        writeHexLine(f, bytes)
+
+
+def saveHex(fn, prog):
+    d = []
+    addr = 0
+    base = 0
+    f = open(fn, "wt")
+    for op in prog:
+        t = type(op)
+        if t is InstructionOrg or t is InstructionRes:
+            # neuer block
+            if len(d) > 0:
+                writeHexBlock(f, base, d)
+            d = []
+            if t is InstructionOrg:
+                base = op.addr
+            else:
+                base = addr + op.size
+            addr = base
+        d = d + op.data()
+        addr = addr + op.len()
+    writeHexBlock(f, 0, [], 16, 1) # type 1 = end of hexfile
+    f.close()
+
 def main():
     l = lark.Lark(grammar.grammar, start = "start")
 
@@ -262,13 +310,6 @@ def main():
         for p in program:
             p.update()
 
+    saveHex("out.hex", program)
 
-    mem = {}
-    for p in program:
-        print(p)
-        for i,x in enumerate(p.data()):
-            assert not (p.address+i in mem)
-            mem[p.address+i] = x
-    
-    print(mem)
 main()

@@ -265,7 +265,6 @@ class InstructionAbs(InstructionBase):
                 s = s + f"(${val:04x})"
         else:
             s = f"${self.value:04x}"
-            code = self._instructions[self.op].format(self.value)
         code = self._instructions[self.op].format(s)
         return code
 
@@ -295,9 +294,11 @@ class InstructionRel(InstructionBase):
         super().__init__(op)
         self.op = op
         self.offset = offset
+        InstructionBase._current = InstructionBase._current + self.len()
 
     def disassemble(self):
-        code = self._instructions[self.op].format(self.offset)
+        s = f"{self.offset:04x}"
+        code = self._instructions[self.op].format(s)
         return code
 
     def len(self):
