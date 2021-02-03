@@ -226,7 +226,12 @@ class InstructionBase:
         return []
     
     def update(self, addr = None):
-        pass
+        if addr == None:
+            self.address = InstructionBase._current
+            InstructionBase._current = InstructionBase._current + self.len()
+        else:
+            self.address = addr
+
 
 class Instruction(InstructionBase):
     def __init__(self, op):
@@ -237,7 +242,8 @@ class Instruction(InstructionBase):
         return 1
 
     def data(self):
-        return self.op
+        return [self.op]
+
 
 class InstructionAbs(InstructionBase):
     def __init__(self, op, arg):
@@ -253,9 +259,14 @@ class InstructionAbs(InstructionBase):
 
     def disassemble(self):
         if self.variable != None:
-            code = self._instructions[self.op].format(self.variable)
+            s = f"{self.variable}"
+            if self.variable in Instruction._variables:
+                val = Instruction._variables[self.variable]
+                s = s + f"(${val:04x})"
         else:
+            s = f"${self.value:04x}"
             code = self._instructions[self.op].format(self.value)
+        code = self._instructions[self.op].format(s)
         return code
 
     def len(self):
@@ -264,7 +275,8 @@ class InstructionAbs(InstructionBase):
         return 3
 
     def data(self):
-        assert(self.value != None)
+        if self.value == None:
+            self.value = Instruction._variables[self.variable]
         d = []
         v = self.value
         d.append(self.op | (v & 0x3))
@@ -277,6 +289,7 @@ class InstructionAbs(InstructionBase):
         d.reverse()
         return d
 
+
 class InstructionRel(InstructionBase):
     def __init__(self, op, offset):
         super().__init__(op)
@@ -288,7 +301,7 @@ class InstructionRel(InstructionBase):
         return code
 
     def len(self):
-        return self.data.len() + 1
+        return len(self.data())
 
     def data(self):
         d = []
@@ -321,7 +334,10 @@ class InstructionOrg(InstructionBase):
     
     def update(self, addr = None):
         if addr != None:
-            InstructionBase._current = addr
+            a = addr
+        else:
+            a = self.addr
+        InstructionBase._current = a
 
 class InstructionByte(InstructionBase):
     def __init__(self, data):
@@ -377,9 +393,16 @@ class InstructionWord(InstructionBase):
                 else:
                     val = 0
                     print(f"{b} undefined")
-            d.append(b & 0xff) # lsb first
-            d.append((b >> 8) & 0xff)
+            d.append(val & 0xff) # lsb first
+            d.append((val >> 8) & 0xff)
         return d
+
+    def update(self, addr = None):
+        if addr == None:
+            self.address = InstructionBase._current
+            InstructionBase._current = InstructionBase._current + self.len()
+        else:
+            self.address = addr
 
 class InstructionRes(InstructionBase):
     def __init__(self, size):
@@ -394,8 +417,15 @@ class InstructionRes(InstructionBase):
         return self.size
 
     def data(self):
-        return [0] * self.size
+        return []
 
+    def update(self, addr = None):
+        if addr == None:
+            self.address = InstructionBase._current
+            InstructionBase._current = InstructionBase._current + self.len()
+        else:
+            self.address = addr
+             
 class InstructionEqu(InstructionBase):
     def __init__(self, id, value):
         super().__init__(InstructionBase.OP_EQU)

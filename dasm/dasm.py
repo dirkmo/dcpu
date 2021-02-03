@@ -251,4 +251,24 @@ def main():
     for p in program:
         print(p)
 
+    vars = {}
+    count = 1
+    while vars != InstructionBase._variables:
+        print(InstructionBase._variables)
+        print(f"Pass {count}")
+        count = count + 1
+        vars = InstructionBase._variables
+        InstructionBase._current = 0
+        for p in program:
+            p.update()
+
+
+    mem = {}
+    for p in program:
+        print(p)
+        for i,x in enumerate(p.data()):
+            assert not (p.address+i in mem)
+            mem[p.address+i] = x
+    
+    print(mem)
 main()

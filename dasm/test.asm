@@ -1,12 +1,6 @@
-.org $100
-.byte 1, 2, "Hallo"
-.byte 100, $ff
-.word 1000+1, 100
-.word 1000+1, ziel
-.res $100
-.equ UART_TX $F000
+.org $0
 
-ziel:
+.equ UART_TX $F000
 
 add
 sub
@@ -15,6 +9,8 @@ or
 xor
 lsr
 cpr
+
+ziel:
 
 push t
 push a
@@ -86,3 +82,9 @@ seta
 apush
 
 ende:
+
+.byte 1, 2, "Hallo"
+.byte 100, $ff
+.word 1000+1, 100
+.res $100
+.word 1000+1, ziel
