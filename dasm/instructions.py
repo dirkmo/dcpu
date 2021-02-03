@@ -1,4 +1,4 @@
-class Instruction:
+class InstructionBase:
     OP_ALU      = 0x80             # 1000 0xxx
 
     # Alu Ops    T <- N op T
@@ -112,6 +112,7 @@ class Instruction:
 
     _instructions = ["INV"] * 0x106
     _current = 0
+    _variables = {}
 
     @classmethod
     def define_disassembly(cls):
@@ -206,6 +207,7 @@ class Instruction:
 
     def __init__(self, op):
         self.op = op
+        self.address = InstructionBase._current
     
     def __str__(self):
         return f"{self.address}: {self.disassemble()}"
@@ -215,47 +217,29 @@ class Instruction:
 
     def disassemble(self):
         code = self._instructions[self.op]
-        if self.op < 0x100 and len(self.databytes) > 0:
-            if type(self.databytes[0]) is int:
-                code = self._instructions[self.op].format(f"${self.databytes[0]:04x}")
-            else:
-                code = self._instructions[self.op].format(self.databytes[0])
-        if self.op == self.OP_ORG:
-            code = self._instructions[self.op].format(self.databytes[0])
-        if self.op == self.OP_LABEL:
-            code = self._instructions[self.op].format(self.databytes[0])
-        if self.op == self.OP_RES:
-            code = self._instructions[self.op].format(self.databytes[0])
-        if self.op == self.OP_EQU:
-            code = self._instructions[self.op].format(self.databytes[0], self.databytes[1])
-        if self.op == self.OP_BYTE:
-            s = ""
-            for b in self.databytes:
-                if len(s) > 0: s = s + ", "
-                if type(b) is int:
-                    s = s + f"${b:02x}"
-                elif type(b) is str:
-                    s = s + f"'{b}'"
-            code = self._instructions[self.op].format(s)
-        if self.op == self.OP_WORD:
-            s = ""
-            for w in self.databytes:
-                if len(s) > 0: s = s + ", "
-                if type(w) is int:
-                    s = s + f"${w:04x}"
-                elif type(w) is str:
-                    s = s + f"'{w}'"
-            code = self._instructions[self.op].format(s)
         return code
     
+    def len(self):
+        return 0
+
+    def data(self):
+        return []
+    
+    def update(self, addr = None):
+        pass
+
+class Instruction(InstructionBase):
+    def __init__(self, op):
+        super().__init__(op)
+        InstructionBase._current = InstructionBase._current + 1
+
     def len(self):
         return 1
 
     def data(self):
         return self.op
 
-
-class InstructionAbs(Instruction):
+class InstructionAbs(InstructionBase):
     def __init__(self, op, arg):
         super().__init__(op)
         self.op = op
@@ -265,6 +249,7 @@ class InstructionAbs(Instruction):
             self.variable = arg
         else:
             self.value = arg
+        InstructionBase._current = InstructionBase._current + self.len()
 
     def disassemble(self):
         if self.variable != None:
@@ -275,7 +260,7 @@ class InstructionAbs(Instruction):
 
     def len(self):
         if self.value != None:
-            return self.data.len() + 1
+            return len(self.data())
         return 3
 
     def data(self):
@@ -292,7 +277,7 @@ class InstructionAbs(Instruction):
         d.reverse()
         return d
 
-class InstructionRel(Instruction):
+class InstructionRel(InstructionBase):
     def __init__(self, op, offset):
         super().__init__(op)
         self.op = op
@@ -318,4 +303,134 @@ class InstructionRel(Instruction):
         return d
 
 
-Instruction.define_disassembly()
+class InstructionOrg(InstructionBase):
+    def __init__(self, addr):
+        super().__init__(InstructionBase.OP_ORG)
+        self.addr = addr
+        InstructionBase._current = addr
+
+    def disassemble(self):
+        code = self._instructions[self.op].format(self.addr)
+        return code
+
+    def len(self):
+        return 0
+
+    def data(self):
+        return []
+    
+    def update(self, addr = None):
+        if addr != None:
+            InstructionBase._current = addr
+
+class InstructionByte(InstructionBase):
+    def __init__(self, data):
+        super().__init__(InstructionBase.OP_BYTE)
+        self.databytes = data
+        InstructionBase._current = InstructionBase._current + self.len()
+
+    def disassemble(self):
+        s = ""
+        for b in self.databytes:
+            if len(s) > 0: s = s + ", "
+            if type(b) is int:
+                s = s + f"${b:02x}"
+            else:
+                s = s + f"'{b}'"
+        code = self._instructions[self.op].format(s)
+        return code
+
+    def len(self):
+        return len(self.databytes)
+
+    def data(self):
+        return self.databytes
+
+class InstructionWord(InstructionBase):
+    def __init__(self, data):
+        super().__init__(InstructionBase.OP_WORD)
+        self.datawords = data
+        InstructionBase._current = InstructionBase._current + self.len()
+
+    def disassemble(self):
+        s = ""
+        for b in self.datawords:
+            if len(s) > 0: s = s + ", "
+            if type(b) is int:
+                s = s + f"${b:04x}"
+            elif type(b) is str:
+                s = s + f"'{b}'"
+        code = self._instructions[self.op].format(s)
+        return code
+
+    def len(self):
+        return len(self.datawords) * 2
+
+    def data(self):
+        d = []
+        for b in self.datawords:
+            if type(b) is int:
+                val = b
+            else:
+                if b in InstructionBase._variables:
+                    val = InstructionBase._variables[b]
+                else:
+                    val = 0
+                    print(f"{b} undefined")
+            d.append(b & 0xff) # lsb first
+            d.append((b >> 8) & 0xff)
+        return d
+
+class InstructionRes(InstructionBase):
+    def __init__(self, size):
+        super().__init__(InstructionBase.OP_RES)
+        self.size = size
+        InstructionBase._current = InstructionBase._current + self.len()
+    
+    def disassemble(self):
+        return f".RES {self.size}"
+
+    def len(self):
+        return self.size
+
+    def data(self):
+        return [0] * self.size
+
+class InstructionEqu(InstructionBase):
+    def __init__(self, id, value):
+        super().__init__(InstructionBase.OP_EQU)
+        self.id = id
+        InstructionBase._variables[id] = value
+    
+    def disassemble(self):
+        value = InstructionBase._variables[self.id]
+        return f".EQU {self.id} {value}"
+
+    def len(self):
+        return 0
+    
+    def data(self):
+        return []
+
+class InstructionLabel(InstructionBase):
+    def __init__(self, id):
+        super().__init__(InstructionBase.OP_LABEL)
+        self.id = id
+        InstructionBase._variables[id] = InstructionBase._current
+    
+    def disassemble(self):
+        return f"{self.id}:"
+
+    def len(self):
+        return 0
+    
+    def data(self):
+        return []
+    
+    def update(self, addr = None):
+        if addr == None:
+            InstructionBase._variables[id] = InstructionBase._current
+        else:
+            InstructionBase._variables[id] = addr
+
+InstructionBase.define_disassembly()

@@ -130,7 +130,7 @@ class dcpuTransformer(lark.Transformer):
         if dir[0].type == "NUMBER":
             num = self.convert_to_number(dir[0])
             Instruction._current = num
-            program.append(Instruction(Instruction.OP_ORG, num))
+            program.append(InstructionOrg(num))
         else:
             return dir
     
@@ -140,7 +140,7 @@ class dcpuTransformer(lark.Transformer):
             if op[0] in variables:
                 print(f"Error in line {op[0].line}: {op[1]} already defined.")
                 exit(1)
-            program.append(Instruction(Instruction.OP_EQU, [op[0].value, self.convert_to_number(op[1].value)]))
+            program.append(InstructionEqu(op[0].value, self.convert_to_number(op[1].value)))
             variables.append(op[0].value)
         else:
             return op
@@ -157,7 +157,7 @@ class dcpuTransformer(lark.Transformer):
             else:
                 print(f"Unknown byte payload in line {o.line}")
                 exit(1)
-        program.append(Instruction(Instruction.OP_BYTE, data))
+        program.append(InstructionByte(data))
 
     def word(self, op):
         print(op)
@@ -170,12 +170,12 @@ class dcpuTransformer(lark.Transformer):
             else:
                 print(f"Unknown word payload in line {o.line}")
                 exit(1)
-        program.append(Instruction(Instruction.OP_WORD, data))
+        program.append(InstructionWord(data))
 
     def res(self, op):
         print(op)
         size = self.convert_to_number(op[0].value)
-        program.append(Instruction(Instruction.OP_RES, size))
+        program.append(InstructionRes(size))
 
 
     def label(self, op):
@@ -185,7 +185,7 @@ class dcpuTransformer(lark.Transformer):
                 print(f"Error in line {op[0].line}: {op[0]} already defined.")
                 exit(1)
             variables.append(op[0].value)
-            program.append(Instruction(Instruction.OP_LABEL, op[0].value))
+            program.append(InstructionLabel(op[0].value))
         else:
             return lark.Tree('label', op)
     
