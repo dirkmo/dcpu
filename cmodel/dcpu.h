@@ -1,6 +1,11 @@
 #ifndef _DCPU_H
 #define _DCPU_H
 
+#include <stdint.h>
+#include <stdbool.h>
+
+#define ARRCOUNT(a) (sizeof(a) / sizeof((a)[0]))
+
 #define FLAG_CARRY 1
 #define FLAG_INTEN 2 // interrupt enable
 
@@ -129,5 +134,47 @@ typedef enum {
 
     OP_END = 0xFF
 } opcode_t;
+
+typedef enum {
+    ST_RESET = 0,
+    ST_FETCH = 1,
+    ST_EXECUTE = 2,
+} state_t;
+
+typedef struct cpu_t cpu_t;
+
+struct cpu_t {
+    
+    // instruction + immediate registers
+    uint8_t ir[3];
+    
+    // program counter, byte addresses
+    uint16_t pc;
+    
+    // data stack
+    uint16_t t;
+    uint16_t n;
+    uint16_t dsp; // byte address
+    
+    // address stack
+    uint16_t asp; // byte address
+    uint16_t a;
+    
+    // user stack pointer
+    uint16_t usp; // byte address
+
+    uint16_t status; // incl. carry
+
+    // memory access
+    uint16_t* (*bus)(cpu_t *cpu);
+    uint16_t busaddr; // byte address
+
+    // state machine state
+    state_t state;
+};
+
+const char *disassemble(cpu_t *cpu);
+void statemachine(cpu_t *cpu);
+void reset(cpu_t *cpu);
 
 #endif
