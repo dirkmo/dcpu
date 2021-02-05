@@ -51,18 +51,15 @@ int loadHex(const char *fn, uint8_t *mem) {
         uint16_t addr = convertHexnumber(line+3, 4);
         uint8_t type = convertHexnumber(line+7, 2);
         uint8_t chksum = convertHexnumber(line+9+len*2, 2);
-        printf("%04x: ", addr);
         for ( int i = 0; i<len; i++) {
             uint8_t dat = convertHexnumber(line+9+i*2, 2);
             mem[addr+i] = dat;
             chksum += dat;
-            printf("%02x ", dat);
         }
         chksum += len + type + (addr & 0xff) + ((addr >> 8) & 0xff);
         if (chksum) {
             return 2;
         }
-        printf("\n");
     }
     fclose(f);
     return 0;
