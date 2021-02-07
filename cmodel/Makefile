@@ -9,7 +9,7 @@ OBJS=$(SRCS:.c=.o)
 BIN=sim
 TEST=test
 
-$(BIN): dcpu.o sim.o
+$(BIN): dcpu.o sim.o uart.o
 	gcc $^ -o $(BIN)
 
 %.o: %.c
