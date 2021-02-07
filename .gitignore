@@ -4,3 +4,4 @@ trace.vcd
 dcpu
 verilog/a.out
 sim/verilator/
+__pycache__/
