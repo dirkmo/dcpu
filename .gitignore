@@ -5,3 +5,4 @@ dcpu
 verilog/a.out
 sim/verilator/
 __pycache__/
+nimmodel/sim

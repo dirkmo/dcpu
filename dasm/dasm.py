@@ -255,6 +255,8 @@ def saveHex(fn, prog):
             addr = base
         d = d + op.data()
         addr = addr + op.len()
+    if len(d) > 0:
+        writeHexBlock(f, base, d)
     writeHexBlock(f, 0, [], 16, 1) # type 1 = end of hexfile
     f.close()
 
@@ -282,19 +284,21 @@ def main():
 
     n = dcpuTransformer().transform(t)
 
-    # for p in program:
-    #     print(p)
+    for p in program:
+        print(p)
 
     vars = {}
     count = 1
-    while vars != InstructionBase._variables:
-        # print(InstructionBase._variables)
+    while 1:
+        print(InstructionBase._variables)
         print(f"Pass {count}")
         count = count + 1
         vars = InstructionBase._variables
         InstructionBase._current = 0
         for p in program:
             p.update()
+        if vars == InstructionBase._variables:
+            break
 
     fn = sys.argv[2]
     saveHex(fn, program)

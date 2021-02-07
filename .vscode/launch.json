@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "cwd": "${workspaceFolder}/dasm",
-            "args": ["${fileDirname}/test.asm", "test.hex"],
+            "args": ["${workspaceFolder}/nimmodel/test.asm", "${workspaceFolder}/nimmodel/test.hex"],
             "console": "integratedTerminal"
         },
         {

@@ -1,86 +1,170 @@
-const
-    OpAlu*              = 0x80
-    OpStackGroup1*      = 0x90
-    OpStackGroup2*      = 0x98
-    OpFetchGroup*       = 0xA0
-    OpStoreGroup*       = 0xA8
-    OpJmpGroup*         = 0xB0
-    OpBraGroup*         = 0xB8
-    OpJmpzGroup*        = 0xC0
-    OpJmpnzGroup*       = 0xC8
-    OpJmpcGroup*        = 0xD0
-    OpJmpncGroup*       = 0xD8
-    OpPopGroup*         = 0xE0
-    OpSetRegGroup*      = 0xF0
-    OpMiscGroup*        = 0xF8
+import tables
 
 const
-    OpAdd*              = OpAlu
-    OpSub*              = OpAlu or 0x01
-    OpAnd*              = OpAlu or 0x02
-    OpOr*               = OpAlu or 0x03
-    OpXor*              = OpAlu or 0x04
-    OpLsr*              = OpAlu or 0x05
-    OpCpr*              = OpAlu or 0x06
+    OpAlu*         : uint8 = 0x80
+    OpStackGroup1* : uint8 = 0x90
+    OpStackGroup2* : uint8 = 0x98
+    OpFetchGroup*  : uint8 = 0xA0
+    OpStoreGroup*  : uint8 = 0xA8
+    OpJmpGroup*    : uint8 = 0xB0
+    OpBraGroup*    : uint8 = 0xB8
+    OpJmpzGroup*   : uint8 = 0xC0
+    OpJmpnzGroup*  : uint8 = 0xC8
+    OpJmpcGroup*   : uint8 = 0xD0
+    OpJmpncGroup*  : uint8 = 0xD8
+    OpPopGroup*    : uint8 = 0xE0
+    OpSetRegGroup* : uint8 = 0xF0
+    OpMiscGroup*   : uint8 = 0xF8
 
-    OpPushT*            = OpStackGroup1 or 0x00
-    OpPushA*            = OpStackGroup1 or 0x01
-    OpPushN*            = OpStackGroup1 or 0x02
-    OpPushUsp*          = OpStackGroup1 or 0x03
-    OpPushI*            = OpStackGroup1 or 0x04
+const
+    OpAdd*       : uint8 = OpAlu or 0x00
+    OpSub*       : uint8 = OpAlu or 0x01
+    OpAnd*       : uint8 = OpAlu or 0x02
+    OpOr*        : uint8 = OpAlu or 0x03
+    OpXor*       : uint8 = OpAlu or 0x04
+    OpLsr*       : uint8 = OpAlu or 0x05
+    OpCpr*       : uint8 = OpAlu or 0x06
 
-    OpPushS*            = OpStackGroup2 or 0x00
-    OpPushDsp*          = OpStackGroup2 or 0x01
-    OpPushAsp*          = OpStackGroup2 or 0x02
-    OpPushPc*           = OpStackGroup2 or 0x03
+    OpPushT*     : uint8 = OpStackGroup1 or 0x00
+    OpPushA*     : uint8 = OpStackGroup1 or 0x01
+    OpPushN*     : uint8 = OpStackGroup1 or 0x02
+    OpPushUsp*   : uint8 = OpStackGroup1 or 0x03
+    OpPushI*     : uint8 = OpStackGroup1 or 0x04
 
-    OpFetchT*           = OpFetchGroup or 0x00
-    OpFetchA*           = OpFetchGroup or 0x01
-    OpFetchU*           = OpFetchGroup or 0x02
-    OpFetchAbs*         = OpFetchGroup or 0x04
+    OpPushS*     : uint8 = OpStackGroup2 or 0x00
+    OpPushDsp*   : uint8 = OpStackGroup2 or 0x01
+    OpPushAsp*   : uint8 = OpStackGroup2 or 0x02
+    OpPushPc*    : uint8 = OpStackGroup2 or 0x03
 
-    OpStoreT*           = OpStoreGroup or 0x00
-    OpStoreA*           = OpStoreGroup or 0x01
-    OpStoreU*           = OpStoreGroup or 0x02
-    OpStoreAbs*         = OpStoreGroup or 0x04
+    OpFetchT*    : uint8 = OpFetchGroup or 0x00
+    OpFetchA*    : uint8 = OpFetchGroup or 0x01
+    OpFetchU*    : uint8 = OpFetchGroup or 0x02
+    OpFetchAbs*  : uint8 = OpFetchGroup or 0x04
 
-    OpJmpT*             = OpJmpGroup or 0x00
-    OpJmpA*             = OpJmpGroup or 0x01
-    OpJmpAbs*           = OpJmpGroup or 0x04
+    OpStoreT*    : uint8 = OpStoreGroup or 0x00
+    OpStoreA*    : uint8 = OpStoreGroup or 0x01
+    OpStoreU*    : uint8 = OpStoreGroup or 0x02
+    OpStoreAbs*  : uint8 = OpStoreGroup or 0x04
 
-    OpBraT*             = OpBraGroup or 0x00
-    OpBraA*             = OpBraGroup or 0x01
-    OpInt*              = OpBraGroup or 0x02
-    OpBraAbs*           = OpBraGroup or 0x04
+    OpJmpT*      : uint8   = OpJmpGroup or 0x00
+    OpJmpA*      : uint8   = OpJmpGroup or 0x01
+    OpJmpAbs*    : uint8   = OpJmpGroup or 0x04
 
-    OpJmpzT*            = OpJmpzGroup or 0x00
-    OpJmpzA*            = OpJmpzGroup or 0x01
-    OpJmpzAbs*          = OpJmpzGroup or 0x04
+    OpBraT*      : uint8   = OpBraGroup or 0x00
+    OpBraA*      : uint8   = OpBraGroup or 0x01
+    OpInt*       : uint8   = OpBraGroup or 0x02
+    OpBraAbs*    : uint8   = OpBraGroup or 0x04
 
-    OpJmpnzT*           = OpJmpnzGroup or 0x00
-    OpJmpnzA*           = OpJmpnzGroup or 0x01
-    OpJmpnzAbs*         = OpJmpnzGroup or 0x04
+    OpJmpzT*     : uint8  = OpJmpzGroup or 0x00
+    OpJmpzA*     : uint8  = OpJmpzGroup or 0x01
+    OpJmpzAbs*   : uint8  = OpJmpzGroup or 0x04
 
-    OpJmpcT*            = OpJmpcGroup or 0x00
-    OpJmpcA*            = OpJmpcGroup or 0x01
-    OpJmpcAbs*          = OpJmpcGroup or 0x04
+    OpJmpnzT*    : uint8 = OpJmpnzGroup or 0x00
+    OpJmpnzA*    : uint8 = OpJmpnzGroup or 0x01
+    OpJmpnzAbs*  : uint8 = OpJmpnzGroup or 0x04
 
-    OpJmpncT*           = OpJmpncGroup or 0x00
-    OpJmpncA*           = OpJmpncGroup or 0x01
-    OpJmpncAbs*         = OpJmpncGroup or 0x04
+    OpJmpcT*     : uint8 = OpJmpcGroup or 0x00
+    OpJmpcA*     : uint8 = OpJmpcGroup or 0x01
+    OpJmpcAbs*   : uint8 = OpJmpcGroup or 0x04
 
-    OpPop*              = OpPopGroup or 0x00
-    OpApop*             = OpPopGroup or 0x02
-    OpRet*              = OpPopGroup or 0x03
+    OpJmpncT*    : uint8 = OpJmpncGroup or 0x00
+    OpJmpncA*    : uint8 = OpJmpncGroup or 0x01
+    OpJmpncAbs*  : uint8 = OpJmpncGroup or 0x04
 
-    OpSetStatus*        = OpSetRegGroup or 0x00
-    OpSetDsp*           = OpSetRegGroup or 0x01
-    OpSetAsp*           = OpSetRegGroup or 0x02
-    OpSetUsp*           = OpSetRegGroup or 0x03
-    OpSetA*             = OpSetRegGroup or 0x04
+    OpPop*       : uint8 = OpPopGroup or 0x00
+    OpApop*      : uint8 = OpPopGroup or 0x02
+    OpRet*       : uint8 = OpPopGroup or 0x03
 
-    OpApush*            = OpMiscGroup or 0x00
+    OpSetStatus* : uint8 = OpSetRegGroup or 0x00
+    OpSetDsp*    : uint8 = OpSetRegGroup or 0x01
+    OpSetAsp*    : uint8 = OpSetRegGroup or 0x02
+    OpSetUsp*    : uint8 = OpSetRegGroup or 0x03
+    OpSetA*      : uint8 = OpSetRegGroup or 0x04
+
+    OpApush*     : uint8 = OpMiscGroup or 0x00
     
-    OpMask*             = 0xF8
+    OpMask*      : uint8 = 0xF8
 
-    OpEnd*              = 0xFF
+    OpEnd*       : uint8 = 0xFF
+
+
+const mnemonics* = {
+    OpAdd: "ADD",
+    OpSub: "SUB",
+    OpOr: "OR",
+    OpXor: "XOR",
+    OpLsr: "LSR",
+    OpCpr: "CPR",
+    OpPushT: "PUSH T",
+    OpPushA: "PUSH A",
+    OpPushN: "PUSH N",
+    OpPushUsp: "PUSH USP",
+    OpPushI or 0: "PUSH",
+    OpPushI or 1: "PUSH",
+    OpPushI or 2: "PUSH",
+    OpPushI or 3: "PUSH",
+    OpPushS: "PUSH STATUS",
+    OpPushDsp: "PUSH DSP",
+    OpPushAsp: "PUSH ASP",
+    OpPushPc: "PUSH PC",
+    OpFetchT: "FETCH T",
+    OpFetchA: "FETCH A",
+    OpFetchU: "FETCH",
+    OpFetchAbs or 0: "FETCH",
+    OpFetchAbs or 1: "FETCH",
+    OpFetchAbs or 2: "FETCH",
+    OpFetchAbs or 3: "FETCH",
+    OpStoreT: "STORE T",
+    OpStoreA: "STORE A",
+    OpStoreU: "STORE U",
+    OpStoreAbs or 0: "STORE",
+    OpStoreAbs or 1: "STORE",
+    OpStoreAbs or 2: "STORE",
+    OpStoreAbs or 3: "STORE",
+    OpJmpT: "JMP T",
+    OpJmpA: "JMP A",
+    OpJmpAbs or 0: "JMP",
+    OpJmpAbs or 1: "JMP",
+    OpJmpAbs or 2: "JMP",
+    OpJmpAbs or 3: "JMP",
+    OpBraT: "BRA T",
+    OpBraA: "BRA A",
+    OpInt: "INT",
+    OpBraAbs or 0: "BRA",
+    OpBraAbs or 1: "BRA",
+    OpBraAbs or 2: "BRA",
+    OpBraAbs or 3: "BRA",
+    OpJmpzT: "JMPZ T",
+    OpJmpzA: "JMPZ A",
+    OpJmpzAbs or 0: "JMPZ",
+    OpJmpzAbs or 1: "JMPZ",
+    OpJmpzAbs or 2: "JMPZ",
+    OpJmpzAbs or 3: "JMPZ",
+    OpJmpnzT: "JMPNZ T",
+    OpJmpnzA: "JMPNZ A",
+    OpJmpnzAbs or 0: "JMPNZ",
+    OpJmpnzAbs or 1: "JMPNZ",
+    OpJmpnzAbs or 2: "JMPNZ",
+    OpJmpnzAbs or 3: "JMPNZ",
+    OpJmpcT: "JMPC T",
+    OpJmpcA: "JMPC A",
+    OpJmpcAbs or 0: "JMPC",
+    OpJmpcAbs or 1: "JMPC",
+    OpJmpcAbs or 2: "JMPC",
+    OpJmpcAbs or 3: "JMPC",
+    OpJmpncT: "JMPNC T",
+    OpJmpncA: "JMPNC A",
+    OpJmpncAbs or 0: "JMPNC",
+    OpJmpncAbs or 1: "JMPNC",
+    OpJmpncAbs or 2: "JMPNC",
+    OpJmpncAbs or 3: "JMPNC",
+    OpPop: "POP",
+    OpApop: "APOP",
+    OpRet: "RET",
+    OpSetStatus: "SETSTATUS",
+    OpSetDsp: "SETDSP",
+    OpSetAsp: "SETASP",
+    OpSetUsp: "SETUSP",
+    OpSetA: "SETA",
+    OpApush: "APUSH",
+}.toTable()

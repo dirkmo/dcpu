@@ -1,28 +1,29 @@
-import parseutils, strutils
+import parseutils, strutils, strformat
 
 ## Hexfile format:
 # : COUNT ADDRESS TYPE DATA CHKSUM
 
-proc getByteFromHexline(hexline: string, idx: int): int =
-    var val: int
-    discard parseHex(hexline[1+idx*2..2+idx*2], val)
-    val
+proc getByteFromHexline(hexline: string, idx: uint8): uint8 =
+    var value: int
+    discard parseHex(hexline[1+idx*2..2+idx*2], value)
+    return uint8(value)
 
-proc readHexfile*(filename: string, memory: var openarray[uint16]) : bool =
+proc readHexfile*(filename: string, memory: var openarray[uint8]) : bool =
     try:
         for l in lines filename:
             let len = getByteFromHexline(l, 0)
             let ahi = getByteFromHexline(l, 1)
             let alo = getByteFromHexline(l, 2)
-            let adr = (ahi shl 8) or alo
+            let adr = (uint16(ahi) shl 8) or alo
             let typ = getByteFromHexline(l, 3)
-            var sum = len + alo + ahi + typ
-            for i in 0 ..< len:
+            let chksum = getByteFromHexline(l, 4+len)
+            var sum = len + alo + ahi + typ + chksum
+            for i in 0u8 ..< len:
                 let val = getByteFromHexline(l, 4+i)
                 sum += val
-                memory[adr+i] = uint16(val)
-            let chksum = getByteFromHexline(l, 4+len)
-            if ((sum + chksum) and 255) != 0:
+                memory[adr+i] = val
+                echo fmt"mem[{adr+i : x}] = {val : x}"
+            if sum != 0:
                 return false
     except:
         return false
