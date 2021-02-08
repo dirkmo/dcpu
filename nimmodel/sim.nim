@@ -33,13 +33,9 @@ proc main =
 
     cpu.setcallbacks(read, write)
 
-    cpu.statemachine()
-    cpu.statemachine()
-    cpu.statemachine()
-    cpu.statemachine()
-    cpu.statemachine()
-    cpu.statemachine()
-    cpu.statemachine()
+    while true:
+        if not cpu.statemachine():
+            break
 
 
 

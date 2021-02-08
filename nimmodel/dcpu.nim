@@ -78,6 +78,65 @@ proc executeStackOp(cpu: var Dcpu) =
     cpu.n = cpu.t
     cpu.t = src[idx]
 
+proc executeFetchOp(cpu: var Dcpu) =
+    let imm = cpu.imm16()
+    let rel = cpu.relImm()
+    let src = [cpu.t, cpu.a, rel, 0, imm, imm, imm, imm]
+    let idx = cpu.ir[0] and 7
+    cpu.t = cpu.read(src[idx])
+
+proc executeStoreOp(cpu: var Dcpu) =
+    let op = cpu.ir[0]
+    let imm = cpu.imm16()
+    let ufsofs = cpu.usp + cpu.relImm()
+    let dstaddr = [cpu.t, cpu.a, ufsofs, 0, imm, imm, imm, imm]
+    let dstidx = cpu.ir[0] and 7
+    let src = if op == OpStoreT: cpu.n else: cpu.t
+    cpu.write(dstaddr[dstidx], src)
+
+proc jmpaddr(cpu: Dcpu): uint16 =
+    let imm = cpu.imm16()
+    let address = [cpu.t, cpu.a, ADDR_INT, 0, imm, imm, imm, imm]
+    let idx = cpu.ir[0] and 7
+    return address[idx]
+
+proc executeJump(cpu: var Dcpu) =
+    cpu.pc = cpu.jmpaddr()
+
+proc executeBranch(cpu: var Dcpu) =
+    # save a to as
+    cpu.write(cpu.asp, cpu.a)
+    cpu.asp += 2
+    # save pc to a (pc has been incremented in dsFetch)
+    cpu.a = cpu.pc
+    cpu.pc = cpu.jmpaddr()
+
+proc executePop(cpu: var Dcpu) =
+    let op = cpu.ir[0]
+    case op:
+    of OpPop:
+        cpu.dsp -= 2
+        cpu.t = cpu.n
+        cpu.n = cpu.read(cpu.dsp)
+    of OpRet:
+        cpu.pc = cpu.a
+    of OpApop:
+        cpu.asp -= 2
+        cpu.a = cpu.read(cpu.asp)
+    else:
+        echo &"Invalid opcode {op:02x}"
+        quit(1)
+
+proc executeSetReg(cpu: var Dcpu) =
+    let idx = cpu.ir[0] and 0x7
+    let dst = [addr cpu.status, addr cpu.dsp, addr cpu.asp, addr cpu.usp, addr cpu.a]
+    dst[idx][] = cpu.t
+
+proc executeApush(cpu: var Dcpu) =
+    cpu.write(cpu.asp, cpu.a)
+    cpu.asp += 2
+    cpu.a = cpu.t
+
 proc execute(cpu: var Dcpu) =
     let op = cpu.ir[0]
     let opgroup = cpu.ir[0] and OpMask
@@ -87,29 +146,35 @@ proc execute(cpu: var Dcpu) =
     of OpStackGroup1, OpStackGroup2:
         cpu.executeStackOp()
     of OpFetchGroup:
-        discard
+        cpu.executeFetchOp()
     of OpStoreGroup:
-        discard
+        cpu.executeStoreOp()
     of OpJmpGroup:
-        discard
+        cpu.executeJump()
     of OpBraGroup:
-        discard
+        cpu.executeBranch()
     of OpJmpzGroup:
-        discard
+        if cpu.t == 0:
+            cpu.executeJump()
     of OpJmpnzGroup:
-        discard
+        if cpu.t != 0:
+            cpu.executeJump()
     of OpJmpcGroup:
-        discard
+        if (cpu.status and FLAG_CARRY) != 0:
+            cpu.executeJump()
     of OpJmpncGroup:
-        discard
+        if (cpu.status and FLAG_CARRY) == 0:
+            cpu.executeJump()
     of OpPopGroup:
-        discard
+        cpu.executePop()
     of OpSetRegGroup:
-        discard
+        cpu.executeSetReg()
     of OpMiscGroup:
-        discard
+        if op == OpApush:
+            cpu.executeApush()
     else:
         echo &"Unknown opcode {op}"
+        quit(1)
 
 #----------------------------------------------------------------------
 # public functions
@@ -143,7 +208,7 @@ proc setcallbacks*(cpu: var Dcpu, rf: ReadFunction, wf: WriteFunction) =
     cpu.read = rf
     cpu.write = wf
 
-proc statemachine*(cpu: var Dcpu) =
+proc statemachine*(cpu: var Dcpu): bool =
     case cpu.state
     of dsReset:
         cpu.reset()
@@ -162,8 +227,11 @@ proc statemachine*(cpu: var Dcpu) =
         if (cpu.ir[0] and 0x80) != 0:
             cpu.state = dsExecute
     of dsExecute:
+        if cpu.ir[0] == OpEnd:
+            return false
         echo fmt"decode: {cpu.disassemble()}"
         cpu.execute()
         cpu.state = dsFetch
         cpu.ir[0] = 0
         cpu.ir[1] = 0
+    return true
