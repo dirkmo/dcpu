@@ -1,87 +1,84 @@
-import net, locks, strformat
+import asyncnet, asyncdispatch, strformat
 
 const
     FLAG_RECEIVED = 1u16
-    FLAG_SENDING = 1u16
+    FLAG_SENDING = 2u16
+
+    TICKS_PER_CHAR = 20
 
 var
-    statusLock: Lock
-    status {.guard: statusLock}: uint16
-    sendCounterLock: Lock
-    sendCounter {.guard: sendCounterLock}: uint
-    rec: uint16
-    send: uint16
-    running = true
-    serverThread: Thread[void]
-    client {.threadvar.}: Socket
+    dataToSend: uint16
+    recBuf: seq[char]
+    client: AsyncSocket
+    sendCounter: uint
+    init: bool = false
 
+proc getStatus(): uint16 =
+    let flagReceived: uint16 = if recBuf.len > 0: FLAG_RECEIVED else: 0
+    let flagSending: uint16 = if sendCounter > 0: FLAG_SENDING else: 0
+    return flagReceived or flagSending
 
-proc startSending(dat: uint16) =
-    withLock sendCounterLock:
-        send = dat
-        sendCounter = 100
+proc receiveFromClient() {.async.} =
+    let (inetAddr, port) = client.getPeerAddr()
+    echo &"Client connected from {inetAddr}:{uint(port)}"
+    while true:
+        let line = await client.recvLine()
+        if line.len == 0: break
+        for i in 0 ..< line.len:
+            recBuf.add(line[i])
+            stdout.write(line[i])
+            stdout.flushFile()
+    echo &"Client from disconnected."
 
-proc server() {.thread.} =
+proc sendToClient() {.async.} =
+    if sendCounter > 0:
+        sendCounter -= 1
+        if sendCounter == 0:
+            let s = &"{char(dataToSend)}"
+            await client.send(s)
+
+proc server() {.async.} =
     echo "Server started"
-    var socket = newSocket()
-    socket.bindAddr(Port(7777))
-    socket.listen()
-
-    var address = ""
-    while running:
-        socket.acceptAddr(client, address)
-        echo("Client connected from: ", address)
-        client.send("Welcome on the Dcpu simulator\n")
-        var s = "_"
-        while s != "":
-            s = client.recv(1, -1)
-            if s.len() > 0:
-                # stdout.write(&"{int(s[0])} ")
-                # stdout.flushFile()
-                # client.send(s)
-                withLock statusLock:
-                    if (status and FLAG_RECEIVED) == 0:
-                        status = status or FLAG_RECEIVED
-                        rec = uint16(s[0])
-        echo "\nClient disconnected."
+    var serverSocket = newAsyncSocket()
+    serverSocket.setSockOpt(OptReuseAddr, true)
+    serverSocket.bindAddr(Port(7777))
+    serverSocket.listen()
+    while true:
+        client = await serverSocket.accept()
+        asyncCheck receiveFromClient()
 
 proc uartRead*(address: uint16): uint16 =
     case address and 0x0003:
-    of 0: 
-        withLock statusLock:
-            return status
-    of 2:
-        withLock statusLock:
-            status = status and not FLAG_RECEIVED
-        return rec
+    of 0: return getStatus()
+    of 2: # return received char
+        if recBuf.len > 0:
+            let rec = uint16(recBuf[0])
+            recBuf.delete(0)
+            return rec
     else: discard
     return 0
 
 proc uartWrite*(address: uint16, dat: uint16) =
     case address and 0x0003:
-    of 0: discard
-    of 2: 
-        withLock statusLock:
-            if (status and FLAG_SENDING) == 0:
-                status = status or FLAG_SENDING
-                startSending(dat)
+    of 0: discard # status not writable
+    of 2:  # start sending char if idle
+        if sendCounter == 0:
+            dataToSend = dat
+            sendCounter = TICKS_PER_CHAR
     else: discard
 
 proc uartHandle*() =
-    withLock sendCounterLock:
-        if sendCounter != 0:
-            sendCounter -= 1
-            if sendCounter == 0:
-                let s = &"{char(send)}"
-                client.send(s)
-                withLock statusLock:
-                    status = status and not FLAG_SENDING
+    if not init:
+        asyncCheck server()
+        init = true
+    poll(0)
 
-initLock(statusLock)
-initLock(sendCounterLock)
+proc loop() =
+    if sendCounter > 0:
+        asyncCheck sendToClient()
+    poll()
 
-createThread[void](serverThread, server)
+asyncCheck server()
 
-echo "Waiting"
 while true:
-    discard
+    loop()
