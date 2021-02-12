@@ -232,6 +232,7 @@ def writeHexBlock(f, addr, raw, cols=16, type=0):
         bytes.append(d)
         if i % cols == cols-1:
             writeHexLine(f, bytes)
+            bytes = []
     if len(bytes) > 0:
         writeHexLine(f, bytes)
 
