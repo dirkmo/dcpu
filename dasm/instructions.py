@@ -210,7 +210,7 @@ class InstructionBase:
         self.address = InstructionBase._current
     
     def __str__(self):
-        return f"{self.address}: {self.disassemble()}"
+        return f"{self.address:04x}: {self.disassemble()}"
 
     def __repr__(self):
         return f"op: {self.op:02X} asm: '{self.disassemble()}'"
@@ -288,6 +288,14 @@ class InstructionAbs(InstructionBase):
         d.reverse()
         return d
 
+    def update(self, addr = None):
+        if self.variable != None:
+            self.value = Instruction._variables[self.variable]
+        if addr == None:
+            self.address = InstructionBase._current
+            InstructionBase._current = InstructionBase._current + self.len()
+        else:
+            self.address = addr
 
 class InstructionRel(InstructionBase):
     def __init__(self, op, offset):

@@ -285,9 +285,6 @@ def main():
 
     n = dcpuTransformer().transform(t)
 
-    for p in program:
-        print(p)
-
     vars = {}
     count = 1
     while 1:
@@ -301,8 +298,21 @@ def main():
         if vars == InstructionBase._variables:
             break
 
+    for p in program:
+        print(p)
+
     fn = sys.argv[2]
     saveHex(fn, program)
+
+    with open(fn+".lst", "wt") as f:
+        for p in program:
+            raw = ""
+            for d in p.data():
+                raw = raw + f"{d:02x} "
+            s = f"{p}"
+            if len(s) < 40:
+                s = s + " " * (40-len(s))
+            f.write(f"{s} # {raw}\n")
 
     print(f"{fn} written.")
 

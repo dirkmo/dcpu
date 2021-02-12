@@ -91,6 +91,7 @@ const
 const mnemonics* = {
     OpAdd: "ADD",
     OpSub: "SUB",
+    OpAnd: "AND",
     OpOr: "OR",
     OpXor: "XOR",
     OpLsr: "LSR",

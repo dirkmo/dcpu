@@ -8,8 +8,8 @@ const
     FLAG_INTEN = 2u16
 
 type
-    DcpuState = enum
-        dsReset, dsFetch, dsExecute
+    DcpuState* = enum
+        dsReset, dsFetch, dsExecute, dsFinish, dsError
 
     ReadFunction* = proc(adr: uint16): uint16 {.nimcall.}
     WriteFunction* = proc(adr, dat: uint16) {.nimcall.}
@@ -24,6 +24,11 @@ type
         state: DcpuState
         read: ReadFunction
         write: WriteFunction
+
+var
+    # immediate counter to detect program errors (more than 2 immediates in sequence)
+    immCounter = 0
+
 
 #----------------------------------------------------------------------
 # private functions
@@ -139,7 +144,7 @@ proc executeApush(cpu: var Dcpu) =
 
 proc execute(cpu: var Dcpu) =
     let op = cpu.ir[0]
-    let opgroup = cpu.ir[0] and OpMask
+    let opgroup = op and OpMask
     case opgroup:
     of OpAlu:
         cpu.executeAluop()
@@ -173,11 +178,15 @@ proc execute(cpu: var Dcpu) =
         if op == OpApush:
             cpu.executeApush()
     else:
-        echo &"Unknown opcode {op}"
+        echo &"Unknown opcode {op:02x}"
         quit(1)
 
 #----------------------------------------------------------------------
 # public functions
+
+proc dumpRegisters*(cpu: Dcpu): string =
+    let s = &"pc={cpu.pc:04x} t={cpu.t:04x} n={cpu.n:04x} a={cpu.a:04x} dsp={cpu.dsp:04x} asp={cpu.asp:04x} usp={cpu.usp:04x}"
+    return s
 
 proc disassemble*(cpu: Dcpu): string =
     let op = cpu.ir[0]
@@ -208,11 +217,12 @@ proc setcallbacks*(cpu: var Dcpu, rf: ReadFunction, wf: WriteFunction) =
     cpu.read = rf
     cpu.write = wf
 
-proc statemachine*(cpu: var Dcpu): bool =
+proc statemachine*(cpu: var Dcpu): DcpuState =
     case cpu.state
     of dsReset:
         cpu.reset()
         cpu.state = dsFetch
+        immCounter = 0
     of dsFetch:
         cpu.ir[2] = cpu.ir[1]
         cpu.ir[1] = cpu.ir[0]
@@ -226,12 +236,24 @@ proc statemachine*(cpu: var Dcpu): bool =
         cpu.pc += 1
         if (cpu.ir[0] and 0x80) != 0:
             cpu.state = dsExecute
+        else:
+            immCounter += 1
+            if immCounter > 2:
+                cpu.state = dsError
     of dsExecute:
+        immCounter = 0
         if cpu.ir[0] == OpEnd:
-            return false
-        echo fmt"decode: {cpu.disassemble()}"
-        cpu.execute()
-        cpu.state = dsFetch
-        cpu.ir[0] = 0
-        cpu.ir[1] = 0
-    return true
+            cpu.state = dsFinish
+        else:
+            echo fmt"decode: {cpu.disassemble()}"
+            cpu.execute()
+            cpu.state = dsFetch
+            cpu.ir[0] = 0
+            cpu.ir[1] = 0
+    of dsFinish:
+        echo &"Simulator stop at ${cpu.pc:04x}"
+    of dsError:
+        echo &"Program error"
+        cpu.state = dsFinish
+
+    return cpu.state

@@ -4,14 +4,13 @@ const
     FLAG_RECEIVED = 1u16
     FLAG_SENDING = 2u16
 
-    TICKS_PER_CHAR = 20
+    TICKS_PER_CHAR = 1
 
 var
     dataToSend: uint16
     recBuf: seq[char]
     client: AsyncSocket
     sendCounter: uint
-    init: bool = false
 
 proc getStatus(): uint16 =
     let flagReceived: uint16 = if recBuf.len > 0: FLAG_RECEIVED else: 0
@@ -28,14 +27,16 @@ proc receiveFromClient() {.async.} =
             recBuf.add(line[i])
             stdout.write(line[i])
             stdout.flushFile()
-    echo &"Client from disconnected."
+    echo &"Client disconnected."
 
-proc sendToClient() {.async.} =
+proc sendToClient() =
     if sendCounter > 0:
+        echo &"{sendCounter=}"
         sendCounter -= 1
         if sendCounter == 0:
+            echo "Sende jetzt"
             let s = &"{char(dataToSend)}"
-            await client.send(s)
+            discard client.send(s)
 
 proc server() {.async.} =
     echo "Server started"
@@ -65,20 +66,11 @@ proc uartWrite*(address: uint16, dat: uint16) =
         if sendCounter == 0:
             dataToSend = dat
             sendCounter = TICKS_PER_CHAR
+            echo &"Sending: {char(dat)}"
     else: discard
 
-proc uartHandle*() =
-    if not init:
-        asyncCheck server()
-        init = true
-    poll(0)
-
-proc loop() =
-    if sendCounter > 0:
-        asyncCheck sendToClient()
-    poll()
+proc handleUart*() =
+    if client != nil:
+        sendToClient()
 
 asyncCheck server()
-
-while true:
-    loop()
