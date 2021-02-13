@@ -1,16 +1,22 @@
-import asyncnet, asyncdispatch, strformat
+import asyncnet, asyncdispatch, strformat, terminal
 
 const
     FLAG_RECEIVED = 1u16
     FLAG_SENDING = 2u16
 
-    TICKS_PER_CHAR = 1
+    TICKS_PER_CHAR = 10
 
 var
     dataToSend: uint16
     recBuf: seq[char]
     client: AsyncSocket
     sendCounter: uint
+
+proc coloredWrite(s: string, fg: ForegroundColor = fgDefault, bg: BackgroundColor =bgDefault) =
+    setForegroundColor(fg)
+    setBackgroundColor(bg)
+    stdout.write(s)
+    resetAttributes()
 
 proc getStatus(): uint16 =
     let flagReceived: uint16 = if recBuf.len > 0: FLAG_RECEIVED else: 0
@@ -25,18 +31,20 @@ proc receiveFromClient() {.async.} =
         if line.len == 0: break
         for i in 0 ..< line.len:
             recBuf.add(line[i])
-            stdout.write(line[i])
-            stdout.flushFile()
+        coloredWrite(line, fgMagenta)
+        stdout.flushFile()
     echo &"Client disconnected."
 
 proc sendToClient() =
     if sendCounter > 0:
-        echo &"{sendCounter=}"
         sendCounter -= 1
         if sendCounter == 0:
             let s = &"{char(dataToSend)}"
-            echo &"sendCounter == 0, Sende jetzt {s}"
-            discard client.send(s)
+            if client != nil:
+                discard client.send(s)
+            else:
+                coloredWrite(s, fgMagenta)
+                stdout.flushFile()
 
 proc server() {.async.} =
     echo "Server started"
@@ -66,13 +74,14 @@ proc uartWrite*(address: uint16, dat: uint16) =
         if sendCounter == 0:
             dataToSend = dat
             sendCounter = TICKS_PER_CHAR
-            echo &"Sending: {char(dat)}"
+            # echo &"Sending: {char(dat)}"
         else:
             echo &"Cannot send {char(dat)}"
     else: discard
 
 proc handleUart*() =
-    if client != nil:
-        sendToClient()
+    sendToClient()
 
 asyncCheck server()
+
+system.addQuitProc(resetAttributes)

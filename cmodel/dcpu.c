@@ -17,13 +17,14 @@ static void alu(cpu_t *cpu) {
     int op = cpu->ir[0];
     uint32_t r = 0;
     switch(op) {
-        case OP_ADD: r = cpu->n  + cpu->t; break;
-        case OP_SUB: r = cpu->n  - cpu->t; break;
-        case OP_AND: r = cpu->n  & cpu->t; break;
-        case OP_OR:  r = cpu->n  | cpu->t; break;
-        case OP_XOR: r = cpu->n  ^ cpu->t; break;
-        case OP_LSR: r = cpu->n >> cpu->t; break;
-        case OP_CPR: r = (cpu->n << 8) | (cpu->t & 0xff); break;
+        case OP_ADD:  r = cpu->n  + cpu->t; break;
+        case OP_SUB:  r = cpu->n  - cpu->t; break;
+        case OP_AND:  r = cpu->n  & cpu->t; break;
+        case OP_OR:   r = cpu->n  | cpu->t; break;
+        case OP_XOR:  r = cpu->n  ^ cpu->t; break;
+        case OP_LSR:  r = cpu->n >> cpu->t; break;
+        case OP_CPR:  r = (cpu->n << 8) | (cpu->t & 0xff); break;
+        case OP_SWAP: r = cpu->n; cpu->n = cpu->t; break;
         default:
             printf("undefined alu op (%02X)\n", op);
             assert(0);
@@ -226,6 +227,8 @@ const char *disassemble(cpu_t *cpu) {
         [OP_OR] = "OR",
         [OP_XOR] = "XOR",
         [OP_LSR] = "LSR",
+        [OP_CPR] = "CPR",
+        [OP_SWAP] = "SWAP",
         [OP_PUSHT] = "PUSH T",
         [OP_PUSHA] = "PUSH A",
         [OP_PUSHN] = "PUSH N",
@@ -298,7 +301,6 @@ const char *disassemble(cpu_t *cpu) {
         [OP_SETUSP] = "SETUSP",
         [OP_SETA] = "SETA",
         [OP_APUSH] = "APUSH",
-        [OP_CPR] = "CPR",
     };
     if (op >= ARRCOUNT(mnemonics)) {
         sprintf(s, "unknown opcode %02X", op);

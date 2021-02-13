@@ -34,16 +34,10 @@ var
     immCounter = 0
     loglevel* = llVerbose
 
+proc logTerminal*(s: string, level: LogLevel = llError, newline: bool = true)
 
 #----------------------------------------------------------------------
 # private functions
-
-proc logTerminal(s: string, level: LogLevel = llError, newline: bool = true) =
-    if loglevel < level:
-        if newline:
-            echo s
-        else:
-            stdout.write s
 
 proc opHasImm16(cpu: Dcpu): bool =
     let op = cpu.ir[0] and 0xFCu8
@@ -80,6 +74,9 @@ proc executeAluop(cpu: var Dcpu) =
     of OpXor: r = cpu.n xor cpu.t
     of OpLsr: r = cpu.n shl cpu.t
     of OpCpr: r = (cpu.n shl 8) or (cpu.t and 0xff)
+    of OpSwap:
+        r = cpu.n
+        cpu.n = cpu.t
     else: discard
     cpu.t = uint16(r)
     cpu.status = cpu.status and not (FLAG_ZERO or FLAG_CARRY)
@@ -202,6 +199,13 @@ proc execute(cpu: var Dcpu) =
 
 #----------------------------------------------------------------------
 # public functions
+
+proc logTerminal*(s: string, level: LogLevel = llError, newline: bool = true) =
+    if loglevel < level:
+        if newline:
+            echo s
+        else:
+            stdout.write s
 
 proc dumpRegisters*(cpu: Dcpu): string =
     let s = &"pc={cpu.pc:04x} t={cpu.t:04x} n={cpu.n:04x} a={cpu.a:04x} dsp={cpu.dsp:04x} asp={cpu.asp:04x} usp={cpu.usp:04x}"

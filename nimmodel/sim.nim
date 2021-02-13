@@ -32,18 +32,18 @@ proc handleParams =
     if params.len() < 1:
         return
     let hexfn = params[0]
-    echo fmt"Reading {hexfn}"
+    logTerminal fmt"Reading {hexfn}", llInfo
     let success = readHexfile(hexfn, mem)
     if not success:
-        echo fmt"Failed to read {hexfn}"
+        logTerminal &"Failed to read {hexfn}", llError
 
 proc loadHexfile(params: seq[string]) =
     if params.len > 1:
         let fn = params[1]
         if readHexfile(fn, mem):
-            echo &"Loaded {fn}"
+            logTerminal &"Loaded {fn}", llInfo
         else:
-            echo &"Failed to load {fn}"
+            logTerminal &"Failed to load {fn}", llError
 
 proc setLogLevel(params: seq[string]) =
     if params.len > 1:
@@ -53,9 +53,9 @@ proc setLogLevel(params: seq[string]) =
         of "INFO": loglevel = llInfo
         of "ERROR": loglevel = llError
         else:
-            echo "Unknown loglevel"
+            logTerminal "Unknown loglevel", llError
     else:
-        loglevel = llInfo
+        echo &"{loglevel}"
     discard
 
 proc handleInput() =
@@ -72,8 +72,8 @@ proc handleInput() =
     else:
         if simrun:
             simrun = false
-            echo &"{cpu.disassemble()}"
-            echo "CPU stopped."
+            logTerminal &"{cpu.disassemble()}", llInfo
+            logTerminal "CPU stopped.", llInfo
 
 proc main =
     handleParams()
@@ -86,7 +86,7 @@ proc main =
             if state == dsFinish:
                 simrun = false
             if laststate == dsExecute:
-                echo cpu.dumpRegisters() & "\n"
+                logTerminal cpu.dumpRegisters() & "\n", llDebug
 
             laststate = state
             
