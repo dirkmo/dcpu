@@ -97,7 +97,7 @@ const mnemonics* = {
     OpXor: "XOR",
     OpLsr: "LSR",
     OpCpr: "CPR",
-    OpSwap: "SWAP"
+    OpSwap: "SWAP",
     OpPushT: "PUSH T",
     OpPushA: "PUSH A",
     OpPushN: "PUSH N",
