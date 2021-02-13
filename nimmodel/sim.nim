@@ -45,6 +45,19 @@ proc loadHexfile(params: seq[string]) =
         else:
             echo &"Failed to load {fn}"
 
+proc setLogLevel(params: seq[string]) =
+    if params.len > 1:
+        case params[1].toUpper:
+        of "DEBUG": loglevel = llDebug
+        of "VERBOSE": loglevel = llVerbose
+        of "INFO": loglevel = llInfo
+        of "ERROR": loglevel = llError
+        else:
+            echo "Unknown loglevel"
+    else:
+        loglevel = llInfo
+    discard
+
 proc handleInput() =
     if not hasLine():
         return
@@ -55,6 +68,7 @@ proc handleInput() =
     of "QUIT", "EXIT": quit(0)
     of "RUN": simrun = true
     of "RESET": cpu.reset()
+    of "LOG": setLogLevel(parts)
     else:
         if simrun:
             simrun = false

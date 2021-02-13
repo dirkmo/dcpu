@@ -22,7 +22,7 @@ proc readHexfile*(filename: string, memory: var openarray[uint8]) : bool =
                 let val = getByteFromHexline(l, 4+i)
                 sum += val
                 memory[adr+i] = val
-                echo fmt"mem[{adr+i:04x}] = {val : x}"
+                # echo fmt"mem[{adr+i:04x}] = {val : x}"
             if sum != 0:
                 return false
     except:

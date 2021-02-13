@@ -310,9 +310,10 @@ int main(int argc, char *argv[]) {
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 0x3f, OP_PUSHI | 3, // T <- 0xff, dsp=1
             0x70>>2, OP_STOREABS, // mem[0x70] <- T
-            0x40, OP_JMPZABS, // jmpz 0x100
-            OP_PUSHI,
-            0x70>>2, OP_JMPZABS,
+            OP_OR, // will clear zero flag
+            0x40, OP_JMPZABS, // jmpz 0x100 (should not take)
+            OP_PUSHI, OP_AND, // will set zero flag
+            0x70>>2, OP_JMPZABS, // (should take jmpz)
             0xfe, // invalid op
             OP_END
         };
@@ -332,17 +333,17 @@ int main(int argc, char *argv[]) {
         printf("\nTest %d\n", testnr++);
         uint8_t prog[] = { 0x3f, OP_PUSHI | 3, // T <- 0xff, dsp=1
             0x70>>2, OP_STOREABS, // mem[0x70] <- T
-            OP_PUSHI, // T <- 0
-            0x40, OP_JMPNZABS, // jmpz 0x100
-            OP_PUSHI | 1, // T <- 1
-            0x70>>2, OP_JMPNZABS,
+            OP_PUSHI, OP_AND, // set zero flag
+            0x40, OP_JMPNZABS, // jmpnz 0x100, should not take
+            OP_OR, // clear zero flag
+            0x70>>2, OP_JMPNZABS, // jmp 0x70, should take
             0xfe, // invalid op
             OP_END
         };
         reset(&res);
-        res.t = 0x1;
-        res.n = 0x0;
-        res.dsp = 6;
+        res.t = 0xff;
+        res.n = 0xff;
+        res.dsp = 4;
         res.pc = 0x71;
         if (!test(&cpu, prog, sizeof(prog), &res)) {
             printf("fail\n");

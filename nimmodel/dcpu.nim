@@ -25,14 +25,25 @@ type
         state: DcpuState
         read: ReadFunction
         write: WriteFunction
+    
+    LogLevel* = enum
+        llDebug, llVerbose, llInfo, llError
 
 var
     # immediate counter to detect program errors (more than 2 immediates in sequence)
     immCounter = 0
+    loglevel* = llVerbose
 
 
 #----------------------------------------------------------------------
 # private functions
+
+proc logTerminal(s: string, level: LogLevel = llError, newline: bool = true) =
+    if loglevel < level:
+        if newline:
+            echo s
+        else:
+            stdout.write s
 
 proc opHasImm16(cpu: Dcpu): bool =
     let op = cpu.ir[0] and 0xFCu8
@@ -137,7 +148,7 @@ proc executePop(cpu: var Dcpu) =
         cpu.asp -= 2
         cpu.a = cpu.read(cpu.asp)
     else:
-        echo &"Invalid opcode {op:02x}"
+        logTerminal(&"Invalid opcode {op:02x}")
         quit(1)
 
 proc executeSetReg(cpu: var Dcpu) =
@@ -186,7 +197,7 @@ proc execute(cpu: var Dcpu) =
         if op == OpApush:
             cpu.executeApush()
     else:
-        echo &"Unknown opcode {op:02x}"
+        logTerminal(&"Unknown opcode {op:02x}")
         quit(1)
 
 #----------------------------------------------------------------------
@@ -208,7 +219,7 @@ proc disassemble*(cpu: Dcpu): string =
     return &"unknown op {op:02x}"
 
 proc reset*(cpu: var Dcpu) =
-    echo "CPU Reset"
+    logTerminal("CPU Reset", llInfo)
     cpu.ir = [0u8, 0u8, 0u8]
     cpu.pc = ADDR_RESET
     cpu.t = 0
@@ -235,12 +246,11 @@ proc statemachine*(cpu: var Dcpu): DcpuState =
         cpu.ir[2] = cpu.ir[1]
         cpu.ir[1] = cpu.ir[0]
         let w = cpu.read(cpu.pc)
-        # echo fmt"{w : 04x}"
         if (cpu.pc and 1) == 0:
             cpu.ir[0] = uint8(w)
         else:
             cpu.ir[0] = uint8(w shr 8)
-        echo fmt"fetch {cpu.pc :04x}: {cpu.ir[0] :02x}"
+        logTerminal(&"fetch {cpu.pc :04x}: {cpu.ir[0] :02x}", llDebug)
         cpu.pc += 1
         if (cpu.ir[0] and 0x80) != 0:
             cpu.state = dsExecute
@@ -253,15 +263,15 @@ proc statemachine*(cpu: var Dcpu): DcpuState =
         if cpu.ir[0] == OpEnd:
             cpu.state = dsFinish
         else:
-            echo fmt"decode: {cpu.disassemble()}"
+            logTerminal &"decode: {cpu.disassemble()}", llInfo
             cpu.execute()
             cpu.state = dsFetch
             cpu.ir[0] = 0
             cpu.ir[1] = 0
     of dsFinish:
-        echo &"Simulator stop at ${cpu.pc:04x}"
+        logTerminal &"Simulator stop at ${cpu.pc:04x}", llInfo
     of dsError:
-        echo &"Program error"
+        logTerminal &"Program error"
         cpu.state = dsFinish
 
     return cpu.state

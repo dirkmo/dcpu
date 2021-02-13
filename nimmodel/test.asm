@@ -23,6 +23,6 @@ wait_tx: # busy wait ( -- )
     fetch UART_ST
     push 2
     and
+    pop pop
     jpnz wait_tx
-    pop
     ret
