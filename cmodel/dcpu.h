@@ -6,8 +6,9 @@
 
 #define ARRCOUNT(a) (sizeof(a) / sizeof((a)[0]))
 
-#define FLAG_CARRY 1
-#define FLAG_INTEN 2 // interrupt enable
+#define FLAG_ZERO 1
+#define FLAG_CARRY 2
+#define FLAG_INTEN 4 // interrupt enable
 
 #define ADDR_RESET 0x0100
 #define ADDR_INT   0xFFF0

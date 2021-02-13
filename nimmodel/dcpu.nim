@@ -4,8 +4,9 @@ import opcodes
 const
     ADDR_INT*   = 0xfff0u16
     ADDR_RESET* = 0x0100u16
-    FLAG_CARRY = 1u16
-    FLAG_INTEN = 2u16
+    FLAG_ZERO  = 1u16 # set by alu and fetch ops
+    FLAG_CARRY = 2u16
+    FLAG_INTEN = 4u16
 
 type
     DcpuState* = enum
@@ -70,9 +71,11 @@ proc executeAluop(cpu: var Dcpu) =
     of OpCpr: r = (cpu.n shl 8) or (cpu.t and 0xff)
     else: discard
     cpu.t = uint16(r)
-    cpu.status = cpu.status and not FLAG_CARRY
+    cpu.status = cpu.status and not (FLAG_ZERO or FLAG_CARRY)
     if r > 0xffff:
         cpu.status = cpu.status or FLAG_CARRY
+    if cpu.t == 0:
+        cpu.status = cpu.status or FLAG_ZERO
 
 proc executeStackOp(cpu: var Dcpu) =
     let imm = cpu.imm16()
@@ -89,6 +92,11 @@ proc executeFetchOp(cpu: var Dcpu) =
     let src = [cpu.t, cpu.a, rel, 0, imm, imm, imm, imm]
     let idx = cpu.ir[0] and 7
     cpu.t = cpu.read(src[idx])
+    # setting zero flag
+    if cpu.t == 0:
+        cpu.status = cpu.status or FLAG_ZERO
+    else:
+        cpu.status = cpu.status and not FLAG_ZERO
 
 proc executeStoreOp(cpu: var Dcpu) =
     let op = cpu.ir[0]
@@ -159,10 +167,10 @@ proc execute(cpu: var Dcpu) =
     of OpBraGroup:
         cpu.executeBranch()
     of OpJmpzGroup:
-        if cpu.t == 0:
+        if (cpu.status and FLAG_ZERO) != 0:
             cpu.executeJump()
     of OpJmpnzGroup:
-        if cpu.t != 0:
+        if (cpu.status and FLAG_ZERO) == 0:
             cpu.executeJump()
     of OpJmpcGroup:
         if (cpu.status and FLAG_CARRY) != 0:

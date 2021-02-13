@@ -30,6 +30,7 @@ static void alu(cpu_t *cpu) {
     }
     cpu->t = r & 0xFFFF;
     cpu->status = (cpu->status & ~FLAG_CARRY) | ((r > 0xFFFF) ? FLAG_CARRY : 0);
+    cpu->status = (cpu->status & ~FLAG_ZERO) | ((cpu->t == 0) ? FLAG_ZERO : 0);
 }
 
 static uint16_t usp_ofs(cpu_t *cpu) {
@@ -69,6 +70,8 @@ static void execute_fetchop(cpu_t *cpu) {
     cpu->busaddr = addr[idx];
     // read from memory into t
     cpu->t = *cpu->bus(cpu);
+    // setting zero flag
+    cpu->status = cpu->t ? (cpu->status & ~FLAG_ZERO) : (cpu->status | FLAG_ZERO);
 }
 
 static void execute_storeop(cpu_t *cpu) {
@@ -170,17 +173,17 @@ static void execute(cpu_t *cpu) {
             execute_branch(cpu);
             break;
         case OP_JMPZGROUP:
-            if (cpu->t == 0) {
+            if ((cpu->status & FLAG_ZERO)) {
                 execute_jump(cpu);
             }
             break;
         case OP_JMPNZGROUP:
-            if (cpu->t != 0) {
+            if ((cpu->status & FLAG_ZERO) == 0) {
                 execute_jump(cpu);
             }
             break;
         case OP_JMPCGROUP:
-            if ((cpu->status & FLAG_CARRY) != 0) {
+            if ((cpu->status & FLAG_CARRY)) {
                 execute_jump(cpu);
             }
             break;
@@ -297,8 +300,12 @@ const char *disassemble(cpu_t *cpu) {
         [OP_APUSH] = "APUSH",
         [OP_CPR] = "CPR",
     };
-    sprintf(buf, "%s", mnemonics[op]);
-    sprintf(s, buf, imm(cpu));
+    if (op >= ARRCOUNT(mnemonics)) {
+        sprintf(s, "unknown opcode %02X", op);
+    } else {
+        sprintf(buf, "%s", mnemonics[op]);
+        sprintf(s, buf, imm(cpu));
+    }
     return s;
 }
 

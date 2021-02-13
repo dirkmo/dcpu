@@ -34,8 +34,8 @@ proc sendToClient() =
         echo &"{sendCounter=}"
         sendCounter -= 1
         if sendCounter == 0:
-            echo "Sende jetzt"
             let s = &"{char(dataToSend)}"
+            echo &"sendCounter == 0, Sende jetzt {s}"
             discard client.send(s)
 
 proc server() {.async.} =
@@ -67,6 +67,8 @@ proc uartWrite*(address: uint16, dat: uint16) =
             dataToSend = dat
             sendCounter = TICKS_PER_CHAR
             echo &"Sending: {char(dat)}"
+        else:
+            echo &"Cannot send {char(dat)}"
     else: discard
 
 proc handleUart*() =
