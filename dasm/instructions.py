@@ -443,7 +443,7 @@ class InstructionEqu(InstructionBase):
     
     def disassemble(self):
         value = InstructionBase._variables[self.id]
-        return f".EQU {self.id} {value}"
+        return f".EQU {self.id} ${value:04x}"
 
     def len(self):
         return 0
@@ -455,7 +455,7 @@ class InstructionLabel(InstructionBase):
     def __init__(self, id):
         super().__init__(InstructionBase.OP_LABEL)
         self.id = id
-        InstructionBase._variables[id] = InstructionBase._current
+        InstructionBase._variables[self.id] = InstructionBase._current
     
     def disassemble(self):
         return f"{self.id}:"
@@ -468,8 +468,9 @@ class InstructionLabel(InstructionBase):
     
     def update(self, addr = None):
         if addr == None:
-            InstructionBase._variables[id] = InstructionBase._current
+            InstructionBase._variables[self.id] = InstructionBase._current
         else:
-            InstructionBase._variables[id] = addr
+            InstructionBase._variables[self.id] = addr
+        self.address = InstructionBase._variables[self.id]
 
 InstructionBase.define_disassembly()

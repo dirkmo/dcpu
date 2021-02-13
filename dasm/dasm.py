@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 from instructions import *
 import sys
-import os
+# import os
+import copy
 import lark
 import grammar
 
@@ -291,12 +292,14 @@ def main():
         print(InstructionBase._variables)
         print(f"Pass {count}")
         count = count + 1
-        vars = InstructionBase._variables
+        vars = copy.deepcopy(InstructionBase._variables)
         InstructionBase._current = 0
         for p in program:
             p.update()
         if vars == InstructionBase._variables:
             break
+
+    print(InstructionBase._variables)
 
     for p in program:
         print(p)
