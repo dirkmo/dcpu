@@ -12,8 +12,9 @@ module dcpu(
 `define INT_ADDR        16'hfffa
 `define RESET_ADDR      16'h0100
 
-`define STATUS_CARRY     0
-`define STATUS_INTEN     1
+`define STATUS_ZERO      1
+`define STATUS_CARRY     2
+`define STATUS_INTEN     4
 
 input i_clk;
 input i_reset;
@@ -29,7 +30,7 @@ reg r_int;
 reg [15:0] pc;
 reg [15:0] t, n, a;
 reg [14:0] dsp, asp, usp; // stack pointers are word aligned
-reg [ 1:0] status;
+reg [ 2:0] status;
 /* verilator lint_off UNUSED */
 reg [23:0] ir;
 /* verilator lint_on UNUSED */
@@ -123,7 +124,7 @@ begin
         4'b0010: stackgroup_src = n;
         4'b0011: stackgroup_src = wusp;
         4'b01??: stackgroup_src = ir_abs16;
-        4'b1000: stackgroup_src = { 14'h0, status };
+        4'b1000: stackgroup_src = { 13'h0, status };
         4'b1001: stackgroup_src = wdsp;
         4'b1010: stackgroup_src = wasp;
         4'b1011: stackgroup_src = pc;
@@ -212,8 +213,8 @@ begin
         case(op[7:3])
             OP_JMPGROUP:    dojump = 1;
             OP_BRANCHGROUP: dojump = 1;
-            OP_JMPZGROUP:   dojump = t == 16'd0;
-            OP_JMPNZGROUP:  dojump = t != 16'd0;
+            OP_JMPZGROUP:   dojump = status[`STATUS_ZERO];
+            OP_JMPNZGROUP:  dojump = ~status[`STATUS_ZERO];
             OP_JMPCGROUP:   dojump = status[`STATUS_CARRY];
             OP_JMPNCGROUP:  dojump = ~status[`STATUS_CARRY];
             default: dojump = 0;
@@ -340,17 +341,26 @@ begin
         4'b0100: alu_output = { 1'b0, n ^ t };
         4'b0101: alu_output = { lsr[0], lsr[16:1] };
         4'b0110: alu_output = { 1'b0, n[7:0], t[7:0]};
+        4'b0111: alu_output = { 1'b0,  n[15:8]};
         default: alu_output = 0;
     endcase
 end
 
 // status
+wire is_fetch_op  = (op[7:3] == OP_FETCHGROUP);
+wire is_alu_op    = (op[7:3] == OP_ALU);
+// zero flag is set by alu and fetch ops
+wire set_zeroflag = (state == EXECUTE) && (is_fetch_op || is_alu_op);
+
+wire zero_flag = (t == 16'd0);
+
 always @(posedge i_clk)
 begin
     if (op[7:3] == OP_ALU) begin
         status[`STATUS_CARRY] <= alu_output[16];
+        status[`STATUS_ZERO] <= set_zeroflag ? zero_flag : status[`STATUS_ZERO];
     end else if (op[7:0] == OP_SETSTATUS) begin
-        status[1:0] <= t[1:0];
+        status[2:0] <= t[2:0];
     end
     
 end
