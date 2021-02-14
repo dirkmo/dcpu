@@ -18,6 +18,7 @@ type
     Dcpu* = object
         ir: array[0..2,uint8]
         pc: uint16
+        lastPc: uint16 # for printing disasm before execution (where pc has already been inc'ed)
         t, n, a: uint16
         dsp, asp, usp: uint16
         status: uint16
@@ -39,7 +40,7 @@ proc logTerminal*(s: string, level: LogLevel = llError, newline: bool = true)
 #----------------------------------------------------------------------
 # private functions
 
-proc opHasImm16(cpu: Dcpu): bool =
+func opHasImm16(cpu: Dcpu): bool =
     let op = cpu.ir[0] and 0xFCu8
     case op
     of OpPushI, OpFetchAbs, OpStoreAbs, OpJmpAbs, OpBraAbs, OpJmpzAbs, OpJmpnzAbs, OpJmpcAbs, OpJmpncAbs:
@@ -48,11 +49,11 @@ proc opHasImm16(cpu: Dcpu): bool =
         discard
     return false
 
-proc opHasRelImm(cpu: Dcpu): bool =
+func opHasRelImm(cpu: Dcpu): bool =
     let op = cpu.ir[0]
     return (op == OpFetchU) or (op == OpStoreU)
 
-proc imm16(cpu: Dcpu): uint16 =
+func imm16(cpu: Dcpu): uint16 =
     let xy = uint16(cpu.ir[0] and 0x03)
     let lo = uint16(cpu.ir[1] and 0x7f) shl 2
     let hi = uint16(cpu.ir[2] and 0x7f) shl 9
@@ -74,9 +75,6 @@ proc executeAluop(cpu: var Dcpu) =
     of OpXor: r = cpu.n xor cpu.t
     of OpLsr: r = cpu.n shl cpu.t
     of OpCpr: r = (cpu.n shl 8) or (cpu.t and 0xff)
-    of OpSwap:
-        r = cpu.n
-        cpu.n = cpu.t
     else: discard
     cpu.t = uint16(r)
     cpu.status = cpu.status and not (FLAG_ZERO or FLAG_CARRY)
@@ -200,6 +198,16 @@ proc execute(cpu: var Dcpu) =
 #----------------------------------------------------------------------
 # public functions
 
+func pc*(cpu: Dcpu): uint16 = cpu.pc
+func lastPc*(cpu: Dcpu): uint16 = cpu.lastPc
+func t*(cpu: Dcpu): uint16 = cpu.t
+func n*(cpu: Dcpu): uint16 = cpu.n
+func a*(cpu: Dcpu): uint16 = cpu.a
+func dsp*(cpu: Dcpu): uint16 = cpu.dsp
+func asp*(cpu: Dcpu): uint16 = cpu.asp
+func usp*(cpu: Dcpu): uint16 = cpu.usp
+func status*(cpu: Dcpu): uint16 = cpu.status
+
 proc logTerminal*(s: string, level: LogLevel = llError, newline: bool = true) =
     if loglevel < level:
         if newline:
@@ -207,11 +215,7 @@ proc logTerminal*(s: string, level: LogLevel = llError, newline: bool = true) =
         else:
             stdout.write s
 
-proc dumpRegisters*(cpu: Dcpu): string =
-    let s = &"pc={cpu.pc:04x} t={cpu.t:04x} n={cpu.n:04x} a={cpu.a:04x} dsp={cpu.dsp:04x} asp={cpu.asp:04x} usp={cpu.usp:04x}"
-    return s
-
-proc disassemble*(cpu: Dcpu): string =
+func disassemble*(cpu: Dcpu): string =
     let op = cpu.ir[0]
     if mnemonics.hasKey(op):
         var sImm: string
@@ -226,6 +230,7 @@ proc reset*(cpu: var Dcpu) =
     logTerminal("CPU Reset", llInfo)
     cpu.ir = [0u8, 0u8, 0u8]
     cpu.pc = ADDR_RESET
+    cpu.lastPc = ADDR_RESET
     cpu.t = 0
     cpu.a = 0
     cpu.n = 0
@@ -254,7 +259,7 @@ proc statemachine*(cpu: var Dcpu): DcpuState =
             cpu.ir[0] = uint8(w)
         else:
             cpu.ir[0] = uint8(w shr 8)
-        logTerminal(&"fetch {cpu.pc :04x}: {cpu.ir[0] :02x}", llDebug)
+        # logTerminal(&"fetch {cpu.pc :04x}: {cpu.ir[0] :02x}", llDebug)
         cpu.pc += 1
         if (cpu.ir[0] and 0x80) != 0:
             cpu.state = dsExecute
@@ -267,15 +272,16 @@ proc statemachine*(cpu: var Dcpu): DcpuState =
         if cpu.ir[0] == OpEnd:
             cpu.state = dsFinish
         else:
-            logTerminal &"decode: {cpu.disassemble()}", llInfo
+            # logTerminal &"decode: {cpu.disassemble()}", llInfo
             cpu.execute()
             cpu.state = dsFetch
             cpu.ir[0] = 0
             cpu.ir[1] = 0
+            cpu.lastPc = cpu.pc
     of dsFinish:
-        logTerminal &"Simulator stop at ${cpu.pc:04x}", llInfo
+        discard
     of dsError:
         logTerminal &"Program error"
         cpu.state = dsFinish
 
-    return cpu.state
+    return cpu.state # this is the next state

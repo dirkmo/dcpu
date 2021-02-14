@@ -1,4 +1,4 @@
-import parseutils, strutils, strformat
+import parseutils #, strutils, strformat
 
 ## Hexfile format:
 # : COUNT ADDRESS TYPE DATA CHKSUM

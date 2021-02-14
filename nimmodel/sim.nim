@@ -1,11 +1,16 @@
 import
-    os, strformat, strutils, asyncdispatch,
+    os, strformat, strutils, asyncdispatch, sequtils,
     hexfile, dcpu, uart, inputreader
+
+type
+    RunModes = enum
+        rmStop, rmRun, rmStep
 
 var
     mem: array[0..0xffff, uint8]
-    simrun: bool = false
+    breakpoints: seq[uint16]
     cpu = Dcpu()
+    runMode: RunModes = rmStop
 
 proc read(adr: uint16): uint16 =
     let wordaddr = adr and 0xfffe
@@ -56,45 +61,130 @@ proc setLogLevel(params: seq[string]) =
             logTerminal "Unknown loglevel", llError
     else:
         echo &"{loglevel}"
-    discard
+
+proc breakpoint(params: seq[string]) =
+    case params.len():
+    of 1: # list break points
+        echo "Breakpoints:"
+        for idx,b in breakpoints:
+            echo &"{idx}: ${b:04x}"
+    of 2: # set breakpoint if address
+        if params[1].toUpper == "CLEAR":
+            breakpoints.delete(0, breakpoints.len()-1)
+            echo "Breakpoints clear"
+        else:
+            try:
+                let a = uint16(parseHexInt(params[1]))
+                breakpoints.add(a)
+                echo &"Added breakpoint at ${a:04x}"
+            except:
+                echo "Invalid hex address"
+    of 3:
+        if params[1].toUpper() == "DEL":
+            try:
+                let idx = parseInt(params[2])
+                breakpoints.del(idx)
+                echo &"Breakpoint {idx} deleted."
+            except:
+                echo "Invalid index"
+        else: echo "Error."
+    else:
+        echo "Too many arguments"
+    echo ""
+
+proc dumpRegisters(cpu: Dcpu): string =
+    let s = &"pc={cpu.pc:04x} t={cpu.t:04x} n={cpu.n:04x} a={cpu.a:04x} dsp={cpu.dsp:04x} asp={cpu.asp:04x} usp={cpu.usp:04x} status={cpu.status:02x}"
+    return s
+
+proc dumpMem(params: seq[string]) =
+    var a, l: uint16
+    var error = true
+    case params.len():
+    of 2,3:
+        try:
+            a = uint16(params[1].parseHexInt())
+            error = false
+        except: discard
+        try: l = uint16(params[2].parseHexInt())
+        except: l = 16
+    else: discard
+
+    if error:
+        echo "Usage: dump <addr> [len]  ; numbers are in hex"
+    else:
+        for ad in a..(a+l-1):
+            if (ad mod 16) == (a mod 16):
+                stdout.write(&"{ad:04x}: ")
+            stdout.write(&"{mem[ad]:02x} ")
+            if (ad mod 16) == ((a+15) mod 16):
+                stdout.write("\n")    
+    echo ""
+
+proc step(): DcpuState =
+    var state = dsReset
+    while true:
+        state = cpu.statemachine()
+        case state:
+        of dsReset: discard
+        of dsFetch: discard
+        of dsExecute:
+            logTerminal cpu.dumpRegisters() & "\n", llDebug
+            break
+        of dsFinish:
+            runMode = rmStop
+            logTerminal &"Simulator stop at ${cpu.pc:04x}", llInfo
+            break
+        of dsError:
+            runMode = rmStop
+            break
+
+    return state
+
 
 proc handleInput() =
     if not hasLine():
         return
     let input = getLine()
+    if input == "": # convenience: step on enter
+        discard step()
     let parts = input.split()
     case parts[0].toUpper():
     of "LOAD": loadHexfile(parts)
     of "QUIT", "EXIT": quit(0)
-    of "RUN": simrun = true
+    of "RUN": runMode = rmRun
     of "RESET": cpu.reset()
     of "LOG": setLogLevel(parts)
+    of "STEP": discard step()
+    of "BREAK": breakpoint(parts)
+    of "REGS": echo cpu.dumpRegisters()
+    of "DUMP": dumpMem(parts)
     else:
-        if simrun:
-            simrun = false
+        if runMode == rmRun:
+            runMode = rmStop
             logTerminal &"{cpu.disassemble()}", llInfo
             logTerminal "CPU stopped.", llInfo
+    
+    stdout.write(&"${cpu.lastPc():04X}: {cpu.disassemble()}\n> ")
+    stdout.flushFile()
+
 
 proc main =
     handleParams()
     
     cpu.setcallbacks(read, write)
-    var laststate = dsFetch
-    while true:
-        if simrun:
-            let state = cpu.statemachine()
-            if state == dsFinish:
-                simrun = false
-            if laststate == dsExecute:
-                logTerminal cpu.dumpRegisters() & "\n", llDebug
 
-            laststate = state
+    while true:
+        if runMode == rmRun:
+            if cpu.lastPc() in breakpoints:
+                echo "Stopped at breakpoint"
+                runMode = rmStop
+            else:
+                discard step()
             
         handleInput()
 
         handleUart()
-
-        poll(0)
+        poll(if runMode == rmRun: 0 else: 100)
         
 
 main()

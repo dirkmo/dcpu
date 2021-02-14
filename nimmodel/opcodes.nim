@@ -24,7 +24,6 @@ const
     OpXor*       : uint8 = OpAlu or 0x04
     OpLsr*       : uint8 = OpAlu or 0x05
     OpCpr*       : uint8 = OpAlu or 0x06
-    OpSwap*      : uint8 = OpAlu or 0x07
 
     OpPushT*     : uint8 = OpStackGroup1 or 0x00
     OpPushA*     : uint8 = OpStackGroup1 or 0x01
@@ -97,7 +96,6 @@ const mnemonics* = {
     OpXor: "XOR",
     OpLsr: "LSR",
     OpCpr: "CPR",
-    OpSwap: "SWAP",
     OpPushT: "PUSH T",
     OpPushA: "PUSH A",
     OpPushN: "PUSH N",
