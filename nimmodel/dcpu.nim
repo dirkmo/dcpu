@@ -142,6 +142,8 @@ proc executePop(cpu: var Dcpu) =
         cpu.n = cpu.read(cpu.dsp)
     of OpRet:
         cpu.pc = cpu.a
+        cpu.asp -= 2
+        cpu.a = cpu.read(cpu.asp)
     of OpApop:
         cpu.asp -= 2
         cpu.a = cpu.read(cpu.asp)

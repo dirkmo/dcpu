@@ -7,7 +7,7 @@ const
     TICKS_PER_CHAR = 10
 
 var
-    dataToSend: uint16
+    dataToSend: uint8
     recBuf: seq[char]
     client: AsyncSocket
     sendCounter: uint
@@ -72,7 +72,7 @@ proc uartWrite*(address: uint16, dat: uint16) =
     of 0: discard # status not writable
     of 2:  # start sending char if idle
         if sendCounter == 0:
-            dataToSend = dat
+            dataToSend = uint8(dat)
             sendCounter = TICKS_PER_CHAR
             # echo &"Sending: {char(dat)}"
         else:

@@ -128,7 +128,7 @@ proc step(): DcpuState =
         of dsReset: discard
         of dsFetch: discard
         of dsExecute:
-            logTerminal cpu.dumpRegisters() & "\n", llDebug
+            logTerminal cpu.dumpRegisters() & "\n", llInfo
             break
         of dsFinish:
             runMode = rmStop
