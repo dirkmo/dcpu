@@ -41,7 +41,7 @@ ID: CNAME
 //idlo: "<" CNAME
 //idhi: ">" CNAME
 
-OP: "add"i | "sub"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i
+OP: "add"i | "sub"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i | "swap"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
   | "setusp"i | "seta"i | "apush"i | "int"i
 

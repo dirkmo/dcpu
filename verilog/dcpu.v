@@ -257,6 +257,7 @@ begin
         case (op[7:3])
             OP_STACKGROUP1: n <= t;
             OP_STACKGROUP2: n <= t;
+            OP_ALU: if (op[2:0] == 3'b111) n <= t; // OP_SWAP
             default: n <= n;
         endcase
     end

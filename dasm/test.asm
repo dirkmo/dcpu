@@ -9,6 +9,7 @@ or
 xor
 lsr
 cpr
+swap
 
 
 .org $40

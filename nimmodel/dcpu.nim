@@ -75,6 +75,9 @@ proc executeAluop(cpu: var Dcpu) =
     of OpXor: r = cpu.n xor cpu.t
     of OpLsr: r = cpu.n shl cpu.t
     of OpCpr: r = (cpu.n shl 8) or (cpu.t and 0xff)
+    of OpSwap:
+        r = cpu.n
+        cpu.n = cpu.t
     else: discard
     cpu.t = uint16(r)
     cpu.status = cpu.status and not (FLAG_ZERO or FLAG_CARRY)

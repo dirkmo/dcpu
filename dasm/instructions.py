@@ -10,6 +10,7 @@ class InstructionBase:
     OP_XOR      = OP_ALU | 0x4     # 1000 0100 xor
     OP_LSR      = OP_ALU | 0x5     # 1000 0101 lsr
     OP_CPR      = OP_ALU | 0x6     # 1000 0110 cpr  ; t <- { n[7:0], t[7:0] } (compress 2 chars into one word)
+    OP_SWAP     = OP_ALU | 0x7     # 1000 0111 swap
 
     # Stack
     OP_STACKGROUP1  = 0x90                  # 1001 xxxx
@@ -125,6 +126,7 @@ class InstructionBase:
         cls._instructions[cls.OP_XOR] = "XOR"
         cls._instructions[cls.OP_LSR] = "LSR"
         cls._instructions[cls.OP_CPR] = "CPR"
+        cls._instructions[cls.OP_SWAP] = "SWAP"
         cls._instructions[cls.OP_PUSHT] = "PUSH T"
         cls._instructions[cls.OP_PUSHA] = "PUSH A"
         cls._instructions[cls.OP_PUSHN] = "PUSH N"

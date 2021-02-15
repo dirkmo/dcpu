@@ -14,6 +14,7 @@ or
 xor
 lsr
 cpr
+swap
 
 push t
 push a

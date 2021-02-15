@@ -29,7 +29,7 @@ typedef enum {
     
 
     // # Alu Ops    T <- N op T
-    OP_ALU      = 0x80,           // 1000 0xxx
+    OP_ALU      = 0x80,            // 1000 0xxx
     OP_ADD      = OP_ALU | 0x0,    // 1000 0000 plus
     OP_SUB      = OP_ALU | 0x1,    // 1000 0001 minus
     OP_AND      = OP_ALU | 0x2,    // 1000 0010 and
@@ -37,7 +37,7 @@ typedef enum {
     OP_XOR      = OP_ALU | 0x4,    // 1000 0100 xor
     OP_LSR      = OP_ALU | 0x5,    // 1000 0101 lsr
     OP_CPR      = OP_ALU | 0x6,    // 1000 0110 cpr  ; t <- { n[7:0], t[7:0] } (compress 2 chars into one word)
-    // = OP_ALU | 0x06, // 1000 0110
+    OP_SWAP     = OP_ALU | 0x07,   // 1000 0111
     // = OP_ALU | 0x07, // 1000 0111
 
     // # Stack
