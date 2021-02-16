@@ -70,7 +70,7 @@ class dcpuTransformer(lark.Transformer):
                 elif op.upper() == "A": return Instruction(op_group | 0x1) # fetch/store a
                 elif op.upper() == "N": return Instruction(op_group | 0x2) # fetch/store n
             elif op.type == "REL":
-                return InstructionRel(op_group | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
+                return InstructionRel(op_group | 0x03, self.convert_rel_to_number(op)) # fetch/store u+#offs
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
                 return InstructionAbs(op_group | 0x04, num) # fetch/store #imm
