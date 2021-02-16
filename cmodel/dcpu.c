@@ -61,9 +61,9 @@ static void execute_stackop(cpu_t *cpu) {
 static void execute_fetchop(cpu_t *cpu) {
     const uint16_t _im = imm(cpu);
     const uint16_t uspofs = usp_ofs(cpu);
-    const uint16_t addr[] = { cpu->t, cpu->a, uspofs, 0, _im, _im, _im, _im };
+    const uint16_t addr[] = { cpu->t, cpu->a, cpu->n, uspofs, _im, _im, _im, _im };
     const uint8_t idx = cpu->ir[0] & 7;
-    if( idx >= ARRCOUNT(addr) || (idx == 3) ) {
+    if( idx >= ARRCOUNT(addr) ) {
         printf("fetch: invalid index (%d)\n", idx);
         assert(0);
     }
@@ -79,10 +79,10 @@ static void execute_storeop(cpu_t *cpu) {
     const uint8_t op = cpu->ir[0];
     const uint16_t _im = imm(cpu);
     const uint16_t uspofs = usp_ofs(cpu);
-    const uint16_t destaddr[] = { cpu->t, cpu->a, uspofs, 0, _im, _im, _im, _im };
+    const uint16_t destaddr[] = { cpu->t, cpu->a, cpu->n, uspofs, _im, _im, _im, _im };
     const uint8_t idx = cpu->ir[0] & 7;
     const uint16_t src[] = { cpu->n, cpu->t};
-    if( idx >= ARRCOUNT(destaddr) || (idx == 3) ) {
+    if( idx >= ARRCOUNT(destaddr) ) {
         printf("store: invalid index (%d)\n", idx);
         assert(0);
     }
@@ -94,9 +94,9 @@ static void execute_storeop(cpu_t *cpu) {
 
 static uint16_t jmpaddr(cpu_t *cpu) {
     const uint16_t _im = imm(cpu);
-    const uint16_t addr[] = { cpu->t, cpu->a, ADDR_INT, 0, _im, _im, _im, _im };
+    const uint16_t addr[] = { cpu->t, cpu->a, ADDR_INT, cpu->n, _im, _im, _im, _im };
     const uint8_t idx = cpu->ir[0] & 7;
-    if( idx >= ARRCOUNT(addr) || (idx == 3) ) {
+    if( idx >= ARRCOUNT(addr) ) {
         printf("store: invalid index (%d)\n", idx);
         assert(0);
     }
@@ -243,6 +243,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_PUSHPC] = "PUSH PC",
         [OP_FETCHT] = "FETCH T",
         [OP_FETCHA] = "FETCH A",
+        [OP_FETCHN] = "FETCH N",
         [OP_FETCHU] = "FETCH USP+#ofs",
         [OP_FETCHABS] = "FETCH %04X",
         [OP_FETCHABS|1] = "FETCH %04X",
@@ -250,6 +251,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_FETCHABS|3] = "FETCH %04X",
         [OP_STORET] = "STORE T",
         [OP_STOREA] = "STORE A",
+        [OP_STOREN] = "STORE N",
         [OP_STOREU] = "STORE U+#ofs",
         [OP_STOREABS] = "STORE %04X",
         [OP_STOREABS|1] = "STORE %04X",
@@ -257,6 +259,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_STOREABS|3] = "STORE %04X",
         [OP_JMPT] = "JMP T",
         [OP_JMPA] = "JMP A",
+        [OP_JMPN] = "JMP N",
         [OP_JMPABS] = "JMP %04X",
         [OP_JMPABS|1] = "JMP %04X",
         [OP_JMPABS|2] = "JMP %04X",
@@ -264,30 +267,35 @@ const char *disassemble(cpu_t *cpu) {
         [OP_BRAT] = "BRA T",
         [OP_BRAA] = "BRA A",
         [OP_INT] = "INT",
+        [OP_BRAN] = "BRA N",
         [OP_BRAABS] = "BRA %04X",
         [OP_BRAABS|1] = "BRA %04X",
         [OP_BRAABS|2] = "BRA %04X",
         [OP_BRAABS|3] = "BRA %04X",
         [OP_JMPZT] = "JMPZ T",
         [OP_JMPZA] = "JMPZ A",
+        [OP_JMPZN] = "JMPZ N",
         [OP_JMPZABS] = "JMPZ %04X",
         [OP_JMPZABS|1] = "JMPZ %04X",
         [OP_JMPZABS|2] = "JMPZ %04X",
         [OP_JMPZABS|3] = "JMPZ %04X",
         [OP_JMPNZT] = "JMPNZ T",
         [OP_JMPNZA] = "JMPNZ A",
+        [OP_JMPNZN] = "JMPNZ N",
         [OP_JMPNZABS] = "JMPNZ %04X",
         [OP_JMPNZABS|1] = "JMPNZ %04X",
         [OP_JMPNZABS|2] = "JMPNZ %04X",
         [OP_JMPNZABS|3] = "JMPNZ %04X",
         [OP_JMPCT] = "JMPC T",
         [OP_JMPCA] = "JMPC A",
+        [OP_JMPCN] = "JMPC N",
         [OP_JMPCABS] = "JMPC %04X",
         [OP_JMPCABS|1] = "JMPC %04X",
         [OP_JMPCABS|2] = "JMPC %04X",
         [OP_JMPCABS|3] = "JMPC %04X",
         [OP_JMPNCT] = "JMPNC T",
         [OP_JMPNCA] = "JMPNC A",
+        [OP_JMPNCN] = "JMPNC N",
         [OP_JMPNCABS] = "JMPNC %04X",
         [OP_JMPNCABS|1] = "JMPNC %04X",
         [OP_JMPNCABS|2] = "JMPNC %04X",

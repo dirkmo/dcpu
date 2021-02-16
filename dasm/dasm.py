@@ -84,6 +84,7 @@ class dcpuTransformer(lark.Transformer):
             if op.type == "REG":
                 if   op.upper() == "T": return Instruction(op_group | 0x0) # jmp t
                 elif op.upper() == "A": return Instruction(op_group | 0x1) # jmp a
+                elif op.upper() == "N": return Instruction(op_group | 0x3) # jmp n
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
                 return InstructionAbs(op_group | 0x04, num) # jmp #imm

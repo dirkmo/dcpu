@@ -40,36 +40,44 @@ const
     OpFetchT*    : uint8 = OpFetchGroup or 0x00
     OpFetchA*    : uint8 = OpFetchGroup or 0x01
     OpFetchU*    : uint8 = OpFetchGroup or 0x02
+    OpFetchN*    : uint8 = OpFetchGroup or 0x03
     OpFetchAbs*  : uint8 = OpFetchGroup or 0x04
 
     OpStoreT*    : uint8 = OpStoreGroup or 0x00
     OpStoreA*    : uint8 = OpStoreGroup or 0x01
     OpStoreU*    : uint8 = OpStoreGroup or 0x02
+    OpStoreN*    : uint8 = OpStoreGroup or 0x03
     OpStoreAbs*  : uint8 = OpStoreGroup or 0x04
 
     OpJmpT*      : uint8   = OpJmpGroup or 0x00
     OpJmpA*      : uint8   = OpJmpGroup or 0x01
+    OpJmpN*      : uint8   = OpJmpGroup or 0x03
     OpJmpAbs*    : uint8   = OpJmpGroup or 0x04
 
     OpBraT*      : uint8   = OpBraGroup or 0x00
     OpBraA*      : uint8   = OpBraGroup or 0x01
     OpInt*       : uint8   = OpBraGroup or 0x02
+    OpBraN*      : uint8   = OpBraGroup or 0x03
     OpBraAbs*    : uint8   = OpBraGroup or 0x04
 
     OpJmpzT*     : uint8  = OpJmpzGroup or 0x00
     OpJmpzA*     : uint8  = OpJmpzGroup or 0x01
+    OpJmpzN*     : uint8  = OpJmpzGroup or 0x03
     OpJmpzAbs*   : uint8  = OpJmpzGroup or 0x04
 
     OpJmpnzT*    : uint8 = OpJmpnzGroup or 0x00
     OpJmpnzA*    : uint8 = OpJmpnzGroup or 0x01
+    OpJmpnzN*    : uint8 = OpJmpnzGroup or 0x03
     OpJmpnzAbs*  : uint8 = OpJmpnzGroup or 0x04
 
     OpJmpcT*     : uint8 = OpJmpcGroup or 0x00
     OpJmpcA*     : uint8 = OpJmpcGroup or 0x01
+    OpJmpcN*     : uint8 = OpJmpcGroup or 0x03
     OpJmpcAbs*   : uint8 = OpJmpcGroup or 0x04
 
     OpJmpncT*    : uint8 = OpJmpncGroup or 0x00
     OpJmpncA*    : uint8 = OpJmpncGroup or 0x01
+    OpJmpncN*    : uint8 = OpJmpncGroup or 0x03
     OpJmpncAbs*  : uint8 = OpJmpncGroup or 0x04
 
     OpPop*       : uint8 = OpPopGroup or 0x00
@@ -112,6 +120,7 @@ const mnemonics* = {
     OpPushPc: "PUSH PC",
     OpFetchT: "FETCH T",
     OpFetchA: "FETCH A",
+    OpFetchN: "FETCH N",
     OpFetchU: "FETCH",
     OpFetchAbs or 0: "FETCH",
     OpFetchAbs or 1: "FETCH",
@@ -119,6 +128,7 @@ const mnemonics* = {
     OpFetchAbs or 3: "FETCH",
     OpStoreT: "STORE T",
     OpStoreA: "STORE A",
+    OpStoreN: "STORE N",
     OpStoreU: "STORE U",
     OpStoreAbs or 0: "STORE",
     OpStoreAbs or 1: "STORE",
@@ -126,6 +136,7 @@ const mnemonics* = {
     OpStoreAbs or 3: "STORE",
     OpJmpT: "JMP T",
     OpJmpA: "JMP A",
+    OpJmpN: "JMP N",
     OpJmpAbs or 0: "JMP",
     OpJmpAbs or 1: "JMP",
     OpJmpAbs or 2: "JMP",
@@ -133,30 +144,35 @@ const mnemonics* = {
     OpBraT: "BRA T",
     OpBraA: "BRA A",
     OpInt: "INT",
+    OpBraN: "BRA N",
     OpBraAbs or 0: "BRA",
     OpBraAbs or 1: "BRA",
     OpBraAbs or 2: "BRA",
     OpBraAbs or 3: "BRA",
     OpJmpzT: "JMPZ T",
     OpJmpzA: "JMPZ A",
+    OpJmpzN: "JMPZ N",
     OpJmpzAbs or 0: "JMPZ",
     OpJmpzAbs or 1: "JMPZ",
     OpJmpzAbs or 2: "JMPZ",
     OpJmpzAbs or 3: "JMPZ",
     OpJmpnzT: "JMPNZ T",
     OpJmpnzA: "JMPNZ A",
+    OpJmpnzN: "JMPNZ N",
     OpJmpnzAbs or 0: "JMPNZ",
     OpJmpnzAbs or 1: "JMPNZ",
     OpJmpnzAbs or 2: "JMPNZ",
     OpJmpnzAbs or 3: "JMPNZ",
     OpJmpcT: "JMPC T",
     OpJmpcA: "JMPC A",
+    OpJmpcN: "JMPC N",
     OpJmpcAbs or 0: "JMPC",
     OpJmpcAbs or 1: "JMPC",
     OpJmpcAbs or 2: "JMPC",
     OpJmpcAbs or 3: "JMPC",
     OpJmpncT: "JMPNC T",
     OpJmpncA: "JMPNC A",
+    OpJmpncN: "JMPNC N",
     OpJmpncAbs or 0: "JMPNC",
     OpJmpncAbs or 1: "JMPNC",
     OpJmpncAbs or 2: "JMPNC",
