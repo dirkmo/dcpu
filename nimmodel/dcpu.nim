@@ -73,7 +73,7 @@ proc executeAluop(cpu: var Dcpu) =
     of OpAnd: r = cpu.n and cpu.t
     of OpOr:  r = cpu.n or cpu.t
     of OpXor: r = cpu.n xor cpu.t
-    of OpLsr: r = cpu.n shl cpu.t
+    of OpLsr: r = cpu.n shr cpu.t
     of OpCpr: r = (cpu.n shl 8) or (cpu.t and 0xff)
     of OpSwap:
         r = cpu.n
@@ -88,7 +88,7 @@ proc executeAluop(cpu: var Dcpu) =
 
 proc executeStackOp(cpu: var Dcpu) =
     let imm = cpu.imm16()
-    let src = [cpu.t, cpu.a, cpu.n, cpu.usp, imm, imm, imm, imm, cpu.status, cpu.dsp, cpu.asp, cpu.pc]
+    let src = [cpu.t, cpu.a, cpu.usp, cpu.n, imm, imm, imm, imm, cpu.status, cpu.dsp, cpu.asp, cpu.pc]
     let idx = cpu.ir[0] and 7
     cpu.write(cpu.dsp, cpu.n) # push n to ds
     cpu.dsp += 2
@@ -98,7 +98,7 @@ proc executeStackOp(cpu: var Dcpu) =
 proc executeFetchOp(cpu: var Dcpu) =
     let imm = cpu.imm16()
     let rel = cpu.relImm()
-    let src = [cpu.t, cpu.a, rel, 0, imm, imm, imm, imm]
+    let src = [cpu.t, cpu.a, rel, cpu.n, imm, imm, imm, imm]
     let idx = cpu.ir[0] and 7
     cpu.t = cpu.read(src[idx])
     # setting zero flag
@@ -111,14 +111,14 @@ proc executeStoreOp(cpu: var Dcpu) =
     let op = cpu.ir[0]
     let imm = cpu.imm16()
     let ufsofs = cpu.usp + cpu.relImm()
-    let dstaddr = [cpu.t, cpu.a, ufsofs, 0, imm, imm, imm, imm]
+    let dstaddr = [cpu.t, cpu.a, ufsofs, cpu.n, imm, imm, imm, imm]
     let dstidx = cpu.ir[0] and 7
     let src = if op == OpStoreT: cpu.n else: cpu.t
     cpu.write(dstaddr[dstidx], src)
 
 proc jmpaddr(cpu: Dcpu): uint16 =
     let imm = cpu.imm16()
-    let address = [cpu.t, cpu.a, ADDR_INT, 0, imm, imm, imm, imm]
+    let address = [cpu.t, cpu.a, ADDR_INT, cpu.n, imm, imm, imm, imm]
     let idx = cpu.ir[0] and 7
     return address[idx]
 

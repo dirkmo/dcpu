@@ -44,8 +44,8 @@ typedef enum {
     OP_STACKGROUP1  = 0x90,           // 1001 xxxx
     OP_PUSHT        = OP_STACKGROUP1 | 0x0,  // 1001 0000 push t            ; mem[dsp] <- n, dsp++, n <- t
     OP_PUSHA        = OP_STACKGROUP1 | 0x1,  // 1001 0001 push a            ; mem[dsp] <- n, dsp++, n <- t, t <- a
-    OP_PUSHN        = OP_STACKGROUP1 | 0x2,  // 1001 0010 push n            ; mem[dsp] <- n, dsp++, n <- t, t <- n
-    OP_PUSHUSP      = OP_STACKGROUP1 | 0x3,  // 1001 0011 push usp          ; mem[dsp] <- n, dsp++, n <- t, t <- usp
+    OP_PUSHUSP      = OP_STACKGROUP1 | 0x2,  // 1001 0010 push usp          ; mem[dsp] <- n, dsp++, n <- t, t <- usp
+    OP_PUSHN        = OP_STACKGROUP1 | 0x3,  // 1001 0011 push n            ; mem[dsp] <- n, dsp++, n <- t, t <- n
     OP_PUSHI        = OP_STACKGROUP1 | 0x4,  // 1001 01xy push #im          ; mem[dsp] <- n, dsp++, n <- t, t <- {ir[22:16], ir[14:8], ir[1:0]}
 
     OP_STACKGROUP2  = 0x98,
@@ -62,15 +62,15 @@ typedef enum {
     OP_FETCHGROUP   = 0xA0,
     OP_FETCHT       = OP_FETCHGROUP | 0x0, // 1010 0000 fetch t           ; t <- mem[t]
     OP_FETCHA       = OP_FETCHGROUP | 0x1, // 1010 0001 fetch a           ; t <- mem[a]
-    OP_FETCHN       = OP_FETCHGROUP | 0x2, // 1010 0010 fetch n           ; t <- mem[n]
-    OP_FETCHU       = OP_FETCHGROUP | 0x3, // 1010 0011 fetch u+#ofs      ; t <- mem[usp+#ofs]
+    OP_FETCHU       = OP_FETCHGROUP | 0x2, // 1010 0010 fetch u+#ofs      ; t <- mem[usp+#ofs]
+    OP_FETCHN       = OP_FETCHGROUP | 0x3, // 1010 0011 fetch n           ; t <- mem[n]
     OP_FETCHABS     = OP_FETCHGROUP | 0x4, // 1010 01xy fetch #imm        ; t <- mem[#imm] mit #imm = {ir[22:16], ir[14:8], ir[1:0]}
 
     OP_STOREGROUP   = 0xA8,
     OP_STORET       = OP_STOREGROUP | 0x0, // 1010 1000 store t           ; mem[t] <- n
     OP_STOREA       = OP_STOREGROUP | 0x1, // 1010 1001 store a           ; mem[a] <- t
-    OP_STOREN       = OP_STOREGROUP | 0x2, // 1010 1010 store n           ; mem[n] <- t
-    OP_STOREU       = OP_STOREGROUP | 0x3, // 1010 1011 store u+#ofs      ; mem[usp+#ofs] <- t
+    OP_STOREU       = OP_STOREGROUP | 0x2, // 1010 1010 store u+#ofs      ; mem[usp+#ofs] <- t
+    OP_STOREN       = OP_STOREGROUP | 0x3, // 1010 1011 store n           ; mem[n] <- t
     OP_STOREABS     = OP_STOREGROUP | 0x4, // 1010 11xy store #imm        ; mem[#imm] <- t mit #imm = {ir[22:16], ir[14:8], ir[1:0]}
 
     // # Jumps

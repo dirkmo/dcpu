@@ -19,7 +19,7 @@ wait_tx: # busy wait ( -- )
     push 2 # bit 1: flag sending
     and # sets zero flag if sending done
     pop pop
-    jpnz wait_tx
+    jnz wait_tx
     ret
 
 sendc: # ( c -- c )
@@ -62,17 +62,15 @@ hibyte: # ( w -- hi )
 sendzstr: # ( a -- )
     push 0           # a 0
     fetch n          # a [a]
-    bra lobyte       # a lo
     jpz sendzstr_end
-    bra sendc        # a lo
-    fetch n          # a [a]
+    bra sendc        # a [a]
     bra hibyte       # a hi
     jpz sendzstr_end
-    bra sendc
+    bra sendc        # a hi
     pop              # a
-    push 1           # a 1
-    add              # a (a+1)
-    swap pop         # (a+1)
+    push 2           # a 2
+    add              # a (a+2)
+    swap pop         # (a+2)
     jmp sendzstr
 sendzstr_end:
     ret

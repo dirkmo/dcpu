@@ -68,9 +68,9 @@ class dcpuTransformer(lark.Transformer):
             if op.type == "REG":
                 if   op.upper() == "T": return Instruction(op_group | 0x0) # fetch/store t
                 elif op.upper() == "A": return Instruction(op_group | 0x1) # fetch/store a
-                elif op.upper() == "N": return Instruction(op_group | 0x2) # fetch/store n
+                elif op.upper() == "N": return Instruction(op_group | 0x3) # fetch/store n
             elif op.type == "REL":
-                return InstructionRel(op_group | 0x03, self.convert_rel_to_number(op)) # fetch/store u+#offs
+                return InstructionRel(op_group | 0x02, self.convert_rel_to_number(op)) # fetch/store u+#offs
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
                 return InstructionAbs(op_group | 0x04, num) # fetch/store #imm
@@ -115,11 +115,11 @@ class dcpuTransformer(lark.Transformer):
             ret = self.op_jmp(InstructionAbs.OP_BRANCHGROUP, op[1])
         elif s == "JPC":
             ret = self.op_jmp(InstructionAbs.OP_JMPCGROUP, op[1])
-        elif s == "JPNC":
+        elif s == "JNC":
             ret = self.op_jmp(InstructionAbs.OP_JMPNCGROUP, op[1])
         elif s == "JPZ":
             ret = self.op_jmp(InstructionAbs.OP_JMPZGROUP, op[1])
-        elif s == "JPNZ":
+        elif s == "JNZ":
             ret = self.op_jmp(InstructionAbs.OP_JMPNZGROUP, op[1])
         if ret != None:
             program.append(ret)

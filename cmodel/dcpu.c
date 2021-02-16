@@ -41,7 +41,7 @@ static uint16_t usp_ofs(cpu_t *cpu) {
 
 static void execute_stackop(cpu_t *cpu) {
     const uint16_t _im = imm(cpu);
-    const uint16_t src[] = { cpu->t, cpu->a, cpu->n, cpu->usp, _im, _im, _im, _im, cpu->status, cpu->dsp, cpu->asp, cpu->pc };
+    const uint16_t src[] = { cpu->t, cpu->a, cpu->usp, cpu->n, _im, _im, _im, _im, cpu->status, cpu->dsp, cpu->asp, cpu->pc };
     const uint8_t idx = cpu->ir[0] & 7;
     if( idx >= ARRCOUNT(src)) {
         printf("push: index out of range (%d)\n", idx);
@@ -61,7 +61,7 @@ static void execute_stackop(cpu_t *cpu) {
 static void execute_fetchop(cpu_t *cpu) {
     const uint16_t _im = imm(cpu);
     const uint16_t uspofs = usp_ofs(cpu);
-    const uint16_t addr[] = { cpu->t, cpu->a, cpu->n, uspofs, _im, _im, _im, _im };
+    const uint16_t addr[] = { cpu->t, cpu->a, uspofs, cpu->n, _im, _im, _im, _im };
     const uint8_t idx = cpu->ir[0] & 7;
     if( idx >= ARRCOUNT(addr) ) {
         printf("fetch: invalid index (%d)\n", idx);
@@ -79,7 +79,7 @@ static void execute_storeop(cpu_t *cpu) {
     const uint8_t op = cpu->ir[0];
     const uint16_t _im = imm(cpu);
     const uint16_t uspofs = usp_ofs(cpu);
-    const uint16_t destaddr[] = { cpu->t, cpu->a, cpu->n, uspofs, _im, _im, _im, _im };
+    const uint16_t destaddr[] = { cpu->t, cpu->a, uspofs, cpu->n, _im, _im, _im, _im };
     const uint8_t idx = cpu->ir[0] & 7;
     const uint16_t src[] = { cpu->n, cpu->t};
     if( idx >= ARRCOUNT(destaddr) ) {
