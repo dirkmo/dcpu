@@ -110,8 +110,9 @@ class InstructionBase:
     OP_RES   = 0x103
     OP_LABEL = 0x104
     OP_EQU   = 0x105
+    OP_ALIGN = 0x106
 
-    _instructions = ["INV"] * 0x106
+    _instructions = ["INV"] * 0x107
     _current = 0
     _variables = {}
 
@@ -206,6 +207,7 @@ class InstructionBase:
         cls._instructions[cls.OP_RES] = ".RES {0}"
         cls._instructions[cls.OP_LABEL] = "{0}:"
         cls._instructions[cls.OP_EQU] = ".EQU {0} ${1:04x}"
+        cls._instructions[cls.OP_ALIGN] = ".ALIGN"
 
     def __init__(self, op):
         self.op = op
@@ -474,5 +476,25 @@ class InstructionLabel(InstructionBase):
         else:
             InstructionBase._variables[self.id] = addr
         self.address = InstructionBase._variables[self.id]
+
+class InstructionAlign(InstructionBase):
+    def __init__(self):
+        super().__init__(InstructionBase.OP_ALIGN)
+
+    def len(self):
+        if (self.address & 1):
+            return 1
+        else:
+            return 0
+    
+    def data(self):
+        return [0] * self.len()
+
+    def update(self, addr = None):
+        if addr == None:
+            self.address = InstructionBase._current
+            InstructionBase._current = InstructionBase._current + self.len()
+        else:
+            self.address = addr
 
 InstructionBase.define_disassembly()

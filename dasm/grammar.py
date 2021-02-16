@@ -13,12 +13,16 @@ _dir: equ
    | byte
    | word
    | org
+   | align
 
 equ: ".equ"i ID _expr
 res: ".res"i NUMBER
 byte: ".byte"i (_expr|ESCAPED_STRING) ["," (_expr|ESCAPED_STRING)]*
 word: ".word"i _expr ["," _expr]*
 org: ".org"i NUMBER
+align: ALIGN
+
+ALIGN: ".align"i
 
 op: OP
 

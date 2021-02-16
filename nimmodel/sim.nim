@@ -13,6 +13,9 @@ var
     runMode: RunModes = rmStop
 
 proc read(adr: uint16): uint16 =
+    if (adr and 1) == 1:
+        echo &"Unaligned read from {adr:04x}"
+        runMode = rmStop
     let wordaddr = adr and 0xfffe
     var w: uint16
     case wordaddr:
@@ -24,6 +27,9 @@ proc read(adr: uint16): uint16 =
     return w
 
 proc write(adr, dat: uint16) =
+    if (adr and 1) == 1:
+        echo &"Unaligned write to {adr:04x}"
+        runMode = rmStop
     let wordaddr = adr and 0xfffe
     case wordaddr:
     of 0xffe0, 0xffe2:

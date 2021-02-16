@@ -77,5 +77,5 @@ sendzstr: # ( a -- )
 sendzstr_end:
     ret
 
-
+.align
 msg: .byte "Hallo Welt!", 0

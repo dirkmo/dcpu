@@ -75,7 +75,7 @@ class dcpuTransformer(lark.Transformer):
                 return InstructionAbs(op_group | 0x04, num) # fetch/store #imm
             elif op.type == "ID":
                 return InstructionAbs(op_group | 0x4, op.value)
-        print("not handled yet")
+        print(f"store/fetch not handled yet {op}")
         return None
 
     def op_jmp(self, op_group, op):
@@ -88,7 +88,7 @@ class dcpuTransformer(lark.Transformer):
                 return InstructionAbs(op_group | 0x04, num) # jmp #imm
             elif op.type == "ID":
                 return InstructionAbs(op_group | 0x04, op.value)
-        print("not handled yet")
+        print(f"jmp not handled yet: {op}")
         return None
 
 
@@ -122,7 +122,7 @@ class dcpuTransformer(lark.Transformer):
         if ret != None:
             program.append(ret)
         else:
-            print("###not handled yet")
+            print(f"opa not handled yet: {op}")
             return lark.Tree('opa', op)
 
     def org(self, dir):
@@ -182,6 +182,9 @@ class dcpuTransformer(lark.Transformer):
             program.append(InstructionLabel(op[0].value))
         else:
             return lark.Tree('label', op)
+    
+    def align(self, op):
+        program.append(InstructionAlign())
     
     def mul(self, op):
         try:
