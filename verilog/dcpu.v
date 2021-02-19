@@ -28,8 +28,8 @@ output reg o_rw;
 reg r_int;
 
 reg [15:0] pc;
-reg [15:0] t, n, a;
-reg [14:0] dsp, asp, usp; // stack pointers are word aligned
+reg [15:0] t, n, a, u;
+reg [14:0] dsp, asp; // stack pointers are word aligned
 reg [ 2:0] status;
 /* verilator lint_off UNUSED */
 reg [23:0] ir;
@@ -39,7 +39,7 @@ wire [15:0] wdsp    = { dsp, 1'b0 };
 wire [15:0] wdsp_m1 = { dsp-1'b1, 1'b0 };
 wire [15:0] wasp    = { asp, 1'b0 };
 wire [15:0] wasp_m1 = { asp-1'b1, 1'b0 };
-wire [15:0] wusp    = { usp, 1'b0 };
+wire [15:0] wu      = { u, 1'b0 };
 wire [15:0] pc_p1   =   pc + 1'b1;
 
 wire [7:0] op = (state == FETCH) ? pc[0] ? i_dat[15:8] : i_dat[7:0]
@@ -122,7 +122,7 @@ begin
         4'b0000: stackgroup_src = t;
         4'b0001: stackgroup_src = a;
         4'b0010: stackgroup_src = n;
-        4'b0011: stackgroup_src = wusp;
+        4'b0011: stackgroup_src = wu;
         4'b01??: stackgroup_src = ir_abs16;
         4'b1000: stackgroup_src = { 13'h0, status };
         4'b1001: stackgroup_src = wdsp;
@@ -137,8 +137,8 @@ begin
     casez (op[2:0])
         3'b000:  fetch_store_group_addr = t;
         3'b001:  fetch_store_group_addr = a;
-        3'b010:  fetch_store_group_addr = wusp + {2'b00, ir_offs13};
-        3'b011:  fetch_store_group_addr = wusp;
+        3'b010:  fetch_store_group_addr = wu + {2'b00, ir_offs13};
+        3'b011:  fetch_store_group_addr = wu;
         3'b1??:  fetch_store_group_addr = ir_abs16;
         default: fetch_store_group_addr = t;
     endcase
@@ -149,7 +149,7 @@ begin
     casez (op[2:0])
         3'b000:  jumpgroup_addr = t;
         3'b001:  jumpgroup_addr = a;
-        3'b010:  jumpgroup_addr = `INT_ADDR;
+        3'b010:  jumpgroup_addr = (op[7:0] == 8'hba) ? `INT_ADDR : wu;
         3'b1??:  jumpgroup_addr = ir_abs16;
         default: jumpgroup_addr = t;
     endcase
@@ -322,10 +322,10 @@ always @(posedge i_clk)
 begin
     if (state == EXECUTE) begin
         if (op[7:0] == OP_SETUSP)
-            usp <= t[15:1];
+            u <= t[15:1];
     end
     if (state == RESET) begin
-        usp <= 15'd0;
+        u <= 15'd0;
     end
 end
 

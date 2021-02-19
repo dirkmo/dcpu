@@ -47,12 +47,12 @@ ID: CNAME
 
 OP: "add"i | "sub"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i | "swap"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
-  | "setusp"i | "seta"i | "apush"i | "int"i
+  | "setu"i | "seta"i | "apush"i | "int"i
 
-OPA: "push"i | "fetch"i | "store"i | "jmp"i | "bra"i | "jpc"i
+OPA: "push"i | "fetch"i | "store"i | "jp"i | "bra"i | "jpc"i
    | "jnc"i | "jpz"i | "jnz"i
 
-REG: "asp"i | "t"i | "a"i | "n"i | "usp"i | "status"i | "dsp"i | "pc"i
+REG: "asp"i | "t"i | "a"i | "n"i | "u"i | "status"i | "dsp"i | "pc"i
 
 REL: "u+"i NUMBER
 

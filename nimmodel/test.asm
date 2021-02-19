@@ -36,12 +36,6 @@ wait_rx: # busy wait ( -- )
     jpz wait_rx
     ret
 
-key: # ( -- c )
-    bra wait_rx
-    push 0
-    fetch UART_RX
-    ret
-
 # get low byte of word
 lobyte: # ( w -- lo )
     push $ff # w $ff
@@ -71,9 +65,18 @@ sendzstr: # ( a -- )
     push 2           # a 2
     add              # a (a+2)
     swap pop         # (a+2)
-    jmp sendzstr
+    jp sendzstr
+    # hier fehlt noch ein drop irgdendwo...
 sendzstr_end:
     ret
+
+
+key: # ( -- c )
+    bra wait_rx
+    push 0
+    fetch UART_RX
+    ret
+
 
 .align
 msg: .byte "Hallo Welt!", 0

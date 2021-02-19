@@ -31,7 +31,7 @@ class dcpuTransformer(lark.Transformer):
         "SETSTATUS": Instruction.OP_SETSTATUS,
         "SETDSP": Instruction.OP_SETDSP,
         "SETASP": Instruction.OP_SETASP,
-        "SETUSP": Instruction.OP_SETUSP,
+        "SETU": Instruction.OP_SETU,
         "SETA": Instruction.OP_SETA,
         "APUSH": Instruction.OP_APUSH,
         "INT": Instruction.OP_INT
@@ -41,7 +41,7 @@ class dcpuTransformer(lark.Transformer):
         "T": Instruction.OP_PUSHT,
         "A": Instruction.OP_PUSHA,
         "N": Instruction.OP_PUSHN,
-        "USP": Instruction.OP_PUSHUSP,
+        "U": Instruction.OP_PUSHU,
         "STATUS": Instruction.OP_PUSHS,
         "DSP": Instruction.OP_PUSHDSP,
         "ASP": Instruction.OP_PUSHASP,
@@ -84,6 +84,11 @@ class dcpuTransformer(lark.Transformer):
             if op.type == "REG":
                 if   op.upper() == "T": return Instruction(op_group | 0x0) # jmp t
                 elif op.upper() == "A": return Instruction(op_group | 0x1) # jmp a
+                elif op.upper() == "U": 
+                    if op_group == InstructionAbs.OP_BRANCHGROUP:
+                        print("invalid branch register U")
+                        exit(1)
+                    return Instruction(op_group | 0x2) # jmp u
                 elif op.upper() == "N": return Instruction(op_group | 0x3) # jmp n
             elif op.type == "NUMBER":
                 num = self.convert_to_number(op)
@@ -109,7 +114,7 @@ class dcpuTransformer(lark.Transformer):
             ret = self.op_store_fetch(InstructionAbs.OP_FETCHGROUP, op[1])
         elif s == "STORE":
             ret = self.op_store_fetch(InstructionAbs.OP_STOREGROUP, op[1])
-        elif s == "JMP":
+        elif s == "JP":
             ret = self.op_jmp(InstructionAbs.OP_JMPGROUP, op[1])
         elif s == "BRA":
             ret = self.op_jmp(InstructionAbs.OP_BRANCHGROUP, op[1])
@@ -257,7 +262,7 @@ def saveHex(fn, prog):
                 writeHexBlock(f, base, d)
             d = []
             if t is InstructionOrg:
-                base = op.addr
+                base = op.address
             else:
                 base = addr + op.size
             addr = base
@@ -313,16 +318,18 @@ def main():
     fn = sys.argv[2]
     saveHex(fn, program)
 
+    size = 0
     with open(fn+".lst", "wt") as f:
         for p in program:
             raw = ""
             for d in p.data():
                 raw = raw + f"{d:02x} "
+                size += 1
             s = f"{p}"
             if len(s) < 40:
                 s = s + " " * (40-len(s))
             f.write(f"{s} # {raw}\n")
 
-    print(f"{fn} written.")
+    print(f"{fn} written, size: {size} bytes.")
 
 main()

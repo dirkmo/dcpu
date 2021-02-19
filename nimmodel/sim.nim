@@ -93,7 +93,7 @@ proc breakpoint(params: seq[string]) =
     echo ""
 
 proc dumpRegisters(cpu: Dcpu): string =
-    let s = &"pc={cpu.pc:04x} t={cpu.t:04x} n={cpu.n:04x} a={cpu.a:04x} dsp={cpu.dsp:04x} asp={cpu.asp:04x} usp={cpu.usp:04x} status={cpu.status:02x}"
+    let s = &"pc={cpu.pc:04x} t={cpu.t:04x} n={cpu.n:04x} a={cpu.a:04x} dsp={cpu.dsp:04x} asp={cpu.asp:04x} u={cpu.u:04x} status={cpu.status:02x}"
     return s
 
 proc dumpMem(params: seq[string]) =

@@ -38,7 +38,6 @@ typedef enum {
     OP_LSR      = OP_ALU | 0x5,    // 1000 0101 lsr
     OP_CPR      = OP_ALU | 0x6,    // 1000 0110 cpr  ; t <- { n[7:0], t[7:0] } (compress 2 chars into one word)
     OP_SWAP     = OP_ALU | 0x07,   // 1000 0111
-    // = OP_ALU | 0x07, // 1000 0111
 
     // # Stack
     OP_STACKGROUP1  = 0x90,           // 1001 xxxx
@@ -77,7 +76,7 @@ typedef enum {
     OP_JMPGROUP     = 0xB0,
     OP_JMPT         = OP_JMPGROUP | 0x0, // 1011 0000 jmp t             ; pc <- t
     OP_JMPA         = OP_JMPGROUP | 0x1, // 1011 0001 jmp a             ; pc <- a
-    // OP_JMP       = OP_JMPGROUP | 0x2, // 1011 0010
+    OP_JMPU         = OP_JMPGROUP | 0x2, // 1011 0010 jmp u             ; pc <- usp
     OP_JMPN         = OP_JMPGROUP | 0x3, // 1011 0011 jmp n             ; pc <- n
     OP_JMPABS       = OP_JMPGROUP | 0x4, // 1011 01xy jmp #im           ; pc <- #im mit #im =  {ir[22:16], ir[14:8], ir[1:0]}
 
@@ -91,28 +90,28 @@ typedef enum {
     OP_JMPZGROUP    = 0xC0,
     OP_JMPZT        = OP_JMPZGROUP | 0x0, // 1100 0000 jz t                ; pc <- t
     OP_JMPZA        = OP_JMPZGROUP | 0x1, // 1100 0001 jz a                ; pc <- a
-    // OP_JMPZ      = OP_JMPZGROUP | 0x2, // 1100 0010
+    OP_JMPZU        = OP_JMPZGROUP | 0x2, // 1100 0010 jz u
     OP_JMPZN        = OP_JMPZGROUP | 0x3, // 1100 0011 jz  n
     OP_JMPZABS      = OP_JMPZGROUP | 0x4, // 1100 01xy jz #im              ; pc <- {ir[22:16], ir[14:8], ir[1:0]}
 
     OP_JMPNZGROUP   = 0xC8,
     OP_JMPNZT       = OP_JMPNZGROUP | 0x0, // 1100 1000 jnz t              ; pc <- t or pc+1
     OP_JMPNZA       = OP_JMPNZGROUP | 0x1, // 1100 1001 jnz a              ; pc <- a or pc+1
-    // OP_JMPNZ     = OP_JMPNZGROUP | 0x2, // 1100 1010
+    OP_JMPNZU       = OP_JMPNZGROUP | 0x2, // 1100 1010 jnz u
     OP_JMPNZN       = OP_JMPNZGROUP | 0x3, // 1100 1011 jnz n
     OP_JMPNZABS     = OP_JMPNZGROUP | 0x4, // 1100 11xy jnz #im            ; pc <- #im or pc+1
 
     OP_JMPCGROUP    = 0xD0,
     OP_JMPCT        = OP_JMPCGROUP | 0x0, // 1101 0000 jc t
     OP_JMPCA        = OP_JMPCGROUP | 0x1, // 1101 0001 jc a
-    // OP_JMPC      = OP_JMPCGROUP | 0x2, // 1101 0010
+    OP_JMPCU        = OP_JMPCGROUP | 0x2, // 1101 0010 jc u
     OP_JMPCN        = OP_JMPCGROUP | 0x3, // 1101 0011 jc n
     OP_JMPCABS      = OP_JMPCGROUP | 0x4, // 1101 01xy jc #im            ; #im =  {ir[22:16], ir[14:8], ir[1:0]}
 
     OP_JMPNCGROUP   = 0xD8,
     OP_JMPNCT       = OP_JMPNCGROUP | 0x0, // 1101 1000 jnc t
     OP_JMPNCA       = OP_JMPNCGROUP | 0x1, // 1101 1001 jnc a
-    // OP_JMPNC     = OP_JMPNCGROUP | 0x2, // 1101 1010
+    OP_JMPNCU       = OP_JMPNCGROUP | 0x2, // 1101 1010 jnc u
     OP_JMPNCN       = OP_JMPNCGROUP | 0x3, // 1101 1011 jnc n
     OP_JMPNCABS     = OP_JMPNCGROUP | 0x4, // 1101 11xy jnc #im          ; #im =  {ir[22:16], ir[14:8], ir[1:0]}
 

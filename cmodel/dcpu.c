@@ -93,8 +93,10 @@ static void execute_storeop(cpu_t *cpu) {
 }
 
 static uint16_t jmpaddr(cpu_t *cpu) {
+    const uint8_t op = cpu->ir[0];
     const uint16_t _im = imm(cpu);
-    const uint16_t addr[] = { cpu->t, cpu->a, ADDR_INT, cpu->n, _im, _im, _im, _im };
+    const uint16_t usp_int = (op == OP_INT) ? ADDR_INT : cpu->usp;
+    const uint16_t addr[] = { cpu->t, cpu->a, usp_int, cpu->n, _im, _im, _im, _im };
     const uint8_t idx = cpu->ir[0] & 7;
     if( idx >= ARRCOUNT(addr) ) {
         printf("store: invalid index (%d)\n", idx);
@@ -260,6 +262,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_JMPT] = "JMP T",
         [OP_JMPA] = "JMP A",
         [OP_JMPN] = "JMP N",
+        [OP_JMPU] = "JMP USP",
         [OP_JMPABS] = "JMP %04X",
         [OP_JMPABS|1] = "JMP %04X",
         [OP_JMPABS|2] = "JMP %04X",
@@ -275,6 +278,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_JMPZT] = "JMPZ T",
         [OP_JMPZA] = "JMPZ A",
         [OP_JMPZN] = "JMPZ N",
+        [OP_JMPZU] = "JMPZ USP",
         [OP_JMPZABS] = "JMPZ %04X",
         [OP_JMPZABS|1] = "JMPZ %04X",
         [OP_JMPZABS|2] = "JMPZ %04X",
@@ -282,6 +286,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_JMPNZT] = "JMPNZ T",
         [OP_JMPNZA] = "JMPNZ A",
         [OP_JMPNZN] = "JMPNZ N",
+        [OP_JMPNZU] = "JMPNZ USP",
         [OP_JMPNZABS] = "JMPNZ %04X",
         [OP_JMPNZABS|1] = "JMPNZ %04X",
         [OP_JMPNZABS|2] = "JMPNZ %04X",
@@ -289,6 +294,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_JMPCT] = "JMPC T",
         [OP_JMPCA] = "JMPC A",
         [OP_JMPCN] = "JMPC N",
+        [OP_JMPCU] = "JMPC USP",
         [OP_JMPCABS] = "JMPC %04X",
         [OP_JMPCABS|1] = "JMPC %04X",
         [OP_JMPCABS|2] = "JMPC %04X",
@@ -296,6 +302,7 @@ const char *disassemble(cpu_t *cpu) {
         [OP_JMPNCT] = "JMPNC T",
         [OP_JMPNCA] = "JMPNC A",
         [OP_JMPNCN] = "JMPNC N",
+        [OP_JMPNCU] = "JMPNC USP",
         [OP_JMPNCABS] = "JMPNC %04X",
         [OP_JMPNCABS|1] = "JMPNC %04X",
         [OP_JMPNCABS|2] = "JMPNC %04X",

@@ -29,7 +29,7 @@ const
     OpPushT*     : uint8 = OpStackGroup1 or 0x00
     OpPushA*     : uint8 = OpStackGroup1 or 0x01
     OpPushN*     : uint8 = OpStackGroup1 or 0x02
-    OpPushUsp*   : uint8 = OpStackGroup1 or 0x03
+    OpPushU*     : uint8 = OpStackGroup1 or 0x03
     OpPushI*     : uint8 = OpStackGroup1 or 0x04
 
     OpPushS*     : uint8 = OpStackGroup2 or 0x00
@@ -51,6 +51,7 @@ const
 
     OpJmpT*      : uint8   = OpJmpGroup or 0x00
     OpJmpA*      : uint8   = OpJmpGroup or 0x01
+    OpJmpU*      : uint8   = OpJmpGroup or 0x02
     OpJmpN*      : uint8   = OpJmpGroup or 0x03
     OpJmpAbs*    : uint8   = OpJmpGroup or 0x04
 
@@ -62,21 +63,25 @@ const
 
     OpJmpzT*     : uint8  = OpJmpzGroup or 0x00
     OpJmpzA*     : uint8  = OpJmpzGroup or 0x01
+    OpJmpzU*     : uint8  = OpJmpzGroup or 0x02
     OpJmpzN*     : uint8  = OpJmpzGroup or 0x03
     OpJmpzAbs*   : uint8  = OpJmpzGroup or 0x04
 
     OpJmpnzT*    : uint8 = OpJmpnzGroup or 0x00
     OpJmpnzA*    : uint8 = OpJmpnzGroup or 0x01
+    OpJmpnzU*    : uint8 = OpJmpnzGroup or 0x02
     OpJmpnzN*    : uint8 = OpJmpnzGroup or 0x03
     OpJmpnzAbs*  : uint8 = OpJmpnzGroup or 0x04
 
     OpJmpcT*     : uint8 = OpJmpcGroup or 0x00
     OpJmpcA*     : uint8 = OpJmpcGroup or 0x01
+    OpJmpcU*     : uint8 = OpJmpcGroup or 0x02
     OpJmpcN*     : uint8 = OpJmpcGroup or 0x03
     OpJmpcAbs*   : uint8 = OpJmpcGroup or 0x04
 
     OpJmpncT*    : uint8 = OpJmpncGroup or 0x00
     OpJmpncA*    : uint8 = OpJmpncGroup or 0x01
+    OpJmpncU*    : uint8 = OpJmpncGroup or 0x02
     OpJmpncN*    : uint8 = OpJmpncGroup or 0x03
     OpJmpncAbs*  : uint8 = OpJmpncGroup or 0x04
 
@@ -87,7 +92,7 @@ const
     OpSetStatus* : uint8 = OpSetRegGroup or 0x00
     OpSetDsp*    : uint8 = OpSetRegGroup or 0x01
     OpSetAsp*    : uint8 = OpSetRegGroup or 0x02
-    OpSetUsp*    : uint8 = OpSetRegGroup or 0x03
+    OpSetU*      : uint8 = OpSetRegGroup or 0x03
     OpSetA*      : uint8 = OpSetRegGroup or 0x04
 
     OpApush*     : uint8 = OpMiscGroup or 0x00
@@ -109,7 +114,7 @@ const mnemonics* = {
     OpPushT: "PUSH T",
     OpPushA: "PUSH A",
     OpPushN: "PUSH N",
-    OpPushUsp: "PUSH USP",
+    OpPushU: "PUSH U",
     OpPushI or 0: "PUSH",
     OpPushI or 1: "PUSH",
     OpPushI or 2: "PUSH",
@@ -134,13 +139,14 @@ const mnemonics* = {
     OpStoreAbs or 1: "STORE",
     OpStoreAbs or 2: "STORE",
     OpStoreAbs or 3: "STORE",
-    OpJmpT: "JMP T",
-    OpJmpA: "JMP A",
-    OpJmpN: "JMP N",
-    OpJmpAbs or 0: "JMP",
-    OpJmpAbs or 1: "JMP",
-    OpJmpAbs or 2: "JMP",
-    OpJmpAbs or 3: "JMP",
+    OpJmpT: "JP T",
+    OpJmpA: "JP A",
+    OpJmpU: "JP U",
+    OpJmpN: "JP N",
+    OpJmpAbs or 0: "JP",
+    OpJmpAbs or 1: "JP",
+    OpJmpAbs or 2: "JP",
+    OpJmpAbs or 3: "JP",
     OpBraT: "BRA T",
     OpBraA: "BRA A",
     OpInt: "INT",
@@ -149,41 +155,45 @@ const mnemonics* = {
     OpBraAbs or 1: "BRA",
     OpBraAbs or 2: "BRA",
     OpBraAbs or 3: "BRA",
-    OpJmpzT: "JMPZ T",
-    OpJmpzA: "JMPZ A",
-    OpJmpzN: "JMPZ N",
-    OpJmpzAbs or 0: "JMPZ",
-    OpJmpzAbs or 1: "JMPZ",
-    OpJmpzAbs or 2: "JMPZ",
-    OpJmpzAbs or 3: "JMPZ",
-    OpJmpnzT: "JMPNZ T",
-    OpJmpnzA: "JMPNZ A",
-    OpJmpnzN: "JMPNZ N",
-    OpJmpnzAbs or 0: "JMPNZ",
-    OpJmpnzAbs or 1: "JMPNZ",
-    OpJmpnzAbs or 2: "JMPNZ",
-    OpJmpnzAbs or 3: "JMPNZ",
-    OpJmpcT: "JMPC T",
-    OpJmpcA: "JMPC A",
-    OpJmpcN: "JMPC N",
-    OpJmpcAbs or 0: "JMPC",
-    OpJmpcAbs or 1: "JMPC",
-    OpJmpcAbs or 2: "JMPC",
-    OpJmpcAbs or 3: "JMPC",
-    OpJmpncT: "JMPNC T",
-    OpJmpncA: "JMPNC A",
-    OpJmpncN: "JMPNC N",
-    OpJmpncAbs or 0: "JMPNC",
-    OpJmpncAbs or 1: "JMPNC",
-    OpJmpncAbs or 2: "JMPNC",
-    OpJmpncAbs or 3: "JMPNC",
+    OpJmpzT: "JPZ T",
+    OpJmpzA: "JPZ A",
+    OpJmpzU: "JPZ U",
+    OpJmpzN: "JPZ N",
+    OpJmpzAbs or 0: "JPZ",
+    OpJmpzAbs or 1: "JPZ",
+    OpJmpzAbs or 2: "JPZ",
+    OpJmpzAbs or 3: "JPZ",
+    OpJmpnzT: "JPNZ T",
+    OpJmpnzA: "JPNZ A",
+    OpJmpnzU: "JPNZ U",
+    OpJmpnzN: "JPNZ N",
+    OpJmpnzAbs or 0: "JPNZ",
+    OpJmpnzAbs or 1: "JPNZ",
+    OpJmpnzAbs or 2: "JPNZ",
+    OpJmpnzAbs or 3: "JPNZ",
+    OpJmpcT: "JPC T",
+    OpJmpcA: "JPC A",
+    OpJmpcU: "JPC U",
+    OpJmpcN: "JPC N",
+    OpJmpcAbs or 0: "JPC",
+    OpJmpcAbs or 1: "JPC",
+    OpJmpcAbs or 2: "JPC",
+    OpJmpcAbs or 3: "JPC",
+    OpJmpncT: "JPNC T",
+    OpJmpncA: "JPNC A",
+    OpJmpncU: "JPNC U",
+    OpJmpncN: "JPNC N",
+    OpJmpncAbs or 0: "JPNC",
+    OpJmpncAbs or 1: "JPNC",
+    OpJmpncAbs or 2: "JPNC",
+    OpJmpncAbs or 3: "JPNC",
     OpPop: "POP",
     OpApop: "APOP",
     OpRet: "RET",
     OpSetStatus: "SETSTATUS",
     OpSetDsp: "SETDSP",
     OpSetAsp: "SETASP",
-    OpSetUsp: "SETUSP",
+    OpSetU: "SETU",
     OpSetA: "SETA",
     OpApush: "APUSH",
 }.toTable()

@@ -20,7 +20,7 @@ type
         pc: uint16
         lastPc: uint16 # for printing disasm before execution (where pc has already been inc'ed)
         t, n, a: uint16
-        dsp, asp, usp: uint16
+        dsp, asp, u: uint16
         status: uint16
         busaddr: uint16
         state: DcpuState
@@ -79,7 +79,13 @@ proc executeAluop(cpu: var Dcpu) =
         r = cpu.n
         cpu.n = cpu.t
     else: discard
-    cpu.t = uint16(r)
+
+    if op != OpSwap:
+        # pop t
+        cpu.t = uint16(r)
+        cpu.dsp -= 2
+        cpu.n = cpu.read(cpu.dsp)
+    
     cpu.status = cpu.status and not (FLAG_ZERO or FLAG_CARRY)
     if r > 0xffff:
         cpu.status = cpu.status or FLAG_CARRY
@@ -88,7 +94,7 @@ proc executeAluop(cpu: var Dcpu) =
 
 proc executeStackOp(cpu: var Dcpu) =
     let imm = cpu.imm16()
-    let src = [cpu.t, cpu.a, cpu.usp, cpu.n, imm, imm, imm, imm, cpu.status, cpu.dsp, cpu.asp, cpu.pc]
+    let src = [cpu.t, cpu.a, cpu.u, cpu.n, imm, imm, imm, imm, cpu.status, cpu.dsp, cpu.asp, cpu.pc]
     let idx = cpu.ir[0] and 7
     cpu.write(cpu.dsp, cpu.n) # push n to ds
     cpu.dsp += 2
@@ -110,50 +116,67 @@ proc executeFetchOp(cpu: var Dcpu) =
 proc executeStoreOp(cpu: var Dcpu) =
     let op = cpu.ir[0]
     let imm = cpu.imm16()
-    let ufsofs = cpu.usp + cpu.relImm()
+    let ufsofs = cpu.u + cpu.relImm()
     let dstaddr = [cpu.t, cpu.a, ufsofs, cpu.n, imm, imm, imm, imm]
     let dstidx = cpu.ir[0] and 7
     let src = if op == OpStoreT: cpu.n else: cpu.t
     cpu.write(dstaddr[dstidx], src)
 
 proc jmpaddr(cpu: Dcpu): uint16 =
+    let op = cpu.ir[0]
     let imm = cpu.imm16()
-    let address = [cpu.t, cpu.a, ADDR_INT, cpu.n, imm, imm, imm, imm]
+    let u_int = if (op == OpInt): ADDR_INT else: cpu.u
+    let address = [cpu.t, cpu.a, u_int, cpu.n, imm, imm, imm, imm]
     let idx = cpu.ir[0] and 7
     return address[idx]
 
+proc popDs(cpu: var Dcpu) =
+    cpu.dsp -= 2
+    cpu.t = cpu.n
+    cpu.n = cpu.read(cpu.dsp)
+
+proc popAs(cpu: var Dcpu) =
+    cpu.asp -= 2
+    cpu.a = cpu.read(cpu.asp)
+
 proc executeJump(cpu: var Dcpu) =
+    let idx = cpu.ir[0] and 7
     cpu.pc = cpu.jmpaddr()
+    if idx == 0: # pop ds
+        cpu.popDs()
+    elif idx == 1: # pop as
+        cpu.popAs()
 
 proc executeBranch(cpu: var Dcpu) =
-    # save a to as
-    cpu.write(cpu.asp, cpu.a)
-    cpu.asp += 2
+    let idx = cpu.ir[0] and 7
+    if idx == 0: # pop ds
+        cpu.popDs()
+        # save a to as
+        cpu.write(cpu.asp, cpu.a)
+        cpu.asp += 2
+    elif idx == 1: # pop as
+        discard # no pop necessary, because return address is pushed on as
     # save pc to a (pc has been incremented in dsFetch)
-    cpu.a = cpu.pc
     cpu.pc = cpu.jmpaddr()
+    cpu.a = cpu.pc
 
 proc executePop(cpu: var Dcpu) =
     let op = cpu.ir[0]
     case op:
     of OpPop:
-        cpu.dsp -= 2
-        cpu.t = cpu.n
-        cpu.n = cpu.read(cpu.dsp)
+        cpu.pop_ds()
     of OpRet:
         cpu.pc = cpu.a
-        cpu.asp -= 2
-        cpu.a = cpu.read(cpu.asp)
+        cpu.popAs()
     of OpApop:
-        cpu.asp -= 2
-        cpu.a = cpu.read(cpu.asp)
+        cpu.popAs()
     else:
         logTerminal(&"Invalid opcode {op:02x}")
         quit(1)
 
 proc executeSetReg(cpu: var Dcpu) =
     let idx = cpu.ir[0] and 0x7
-    let dst = [addr cpu.status, addr cpu.dsp, addr cpu.asp, addr cpu.usp, addr cpu.a]
+    let dst = [addr cpu.status, addr cpu.dsp, addr cpu.asp, addr cpu.u, addr cpu.a]
     dst[idx][] = cpu.t
 
 proc executeApush(cpu: var Dcpu) =
@@ -210,7 +233,7 @@ func n*(cpu: Dcpu): uint16 = cpu.n
 func a*(cpu: Dcpu): uint16 = cpu.a
 func dsp*(cpu: Dcpu): uint16 = cpu.dsp
 func asp*(cpu: Dcpu): uint16 = cpu.asp
-func usp*(cpu: Dcpu): uint16 = cpu.usp
+func u*(cpu: Dcpu): uint16 = cpu.u
 func status*(cpu: Dcpu): uint16 = cpu.status
 
 proc logTerminal*(s: string, level: LogLevel = llError, newline: bool = true) =
@@ -241,7 +264,7 @@ proc reset*(cpu: var Dcpu) =
     cpu.n = 0
     cpu.dsp = 0
     cpu.asp = 0
-    cpu.usp = 0
+    cpu.u = 0
     cpu.status = 0
     cpu.state = dsFetch
     # deliberately not setting read/write
