@@ -63,6 +63,17 @@ buildin_exit:
     pop    # --
     jp next_word
 
+buildin_lit: # ( -- n )
+    push u   # -- u
+    push 2   # u -- u 2
+    add      # u 2 -- u+2
+    setu     # u+2 -- u
+    fetch t  # u -- (u)
+    jp next_word
+
+buildin_stop:
+    .byte $ff
+
 .org $1000
 dict:
 
@@ -73,8 +84,15 @@ d_exit:
 exit:
     .word buildin_exit
 
-d_plus: # ( n n -- n )
+d_lit:
     .word d_exit
+    .byte 3, "lit"
+    .align
+lit:
+    .word buildin_lit
+
+d_plus: # ( n n -- n )
+    .word d_lit
     .byte 4, "plus"
     .align
 plus:
@@ -114,9 +132,17 @@ quad:
     .word dup
     .word exit
 
+d_stop:
+    .word d_quad
+    .byte 4, "stop"
+    .align
+stop:
+    .word buildin_stop
+
 forth:
     .word docol
-    .word quad
+    .word lit
+    .word $abcd
+#    .word quad
+    .word stop
 
-simstop:
-    .byte $ff
