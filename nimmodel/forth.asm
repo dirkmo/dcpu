@@ -14,32 +14,51 @@ state:  .word 0 # 0: interpret, 1: compile
 
 .org $100
     push ADDR_DS
-    setdsp pop
+    setdsp # dsp set, no push necessary
     push ADDR_AS
     setasp pop
 
 mainloop:
-    jp mainloop
+    push forth
+    setu
+    fetch t
+    fetch t
+    jp t
+    .byte $ff
 
 docol:
-    push u
-    apush
+    # save u on as
+    push u   # -- u
+    apush    # -- u ; as: -- u
+    fetch t  # u -- (t)
+    setu     # (t) -- u
+    fetch t  # u -- (u)
+    jp t     # --
+
+
+next_word: # ( -- )
+    # u = u + 2
+    push u  # -- u
+    push 2  # u -- u 2
+    add     # u 2 -- u+2
+    setu    # u -- u
+    # indirect jump t
+    fetch t # u -- (t)
+    fetch t # (t) -- ((t))
+    jp t    # ((t)) --
+
+exit:
+    # restore u from as
+    push a # -- a
+    apop   # a -- a; as: a --
+    setu   # u -- u
+    pop    # --
     jp next_word
 
 
-next_word:
-    # u = u + 2
-    push u  # u
-    push 2  # u 2
-    add # u+2
-    setu # u
-    jp t
-
-exit:
-    ret
 
 buildin_plus: # ( n n -- n )
-    add swap pop
+    add
     jp next_word
 
 buildin_dup: # ( n -- n n )
@@ -50,32 +69,56 @@ buildin_drop: # ( n -- )
     pop
     jp next_word
 
+
+
 .org $1000
 dict:
 
-plus: # ( n n -- n )
+d_plus: # ( n n -- n )
     .word 0 # first word
     .byte 4, "plus"
     .align
+plus:
     .word buildin_plus
 
-dup: # ( n -- n n )
-    .word plus # previous word
+d_dup: # ( n -- n n )
+    .word d_plus # previous word
     .byte 3, "dup"
     .align
+dup:
     .word buildin_dup
 
-drop: # ( n -- )
-    .word dup # previous word
+d_drop: # ( n -- )
+    .word d_dup # previous word
     .byte 4, "drop"
     .align
+drop:
     .word buildin_drop
 
-double: # ( n -- n)
-    .word drop # previous word
+d_double: # ( n -- n)
+    .word d_drop # previous word
     .byte 6, "double"
     .align
+double:
     .word docol
     .word dup
     .word plus
     .word exit
+
+
+d_quad: # ( n -- n )
+    .word d_double
+    .byte 5, "quad"
+    .align
+quad:
+    .word docol
+    .word dup
+    .word double
+    .word double
+    .word exit
+
+forth:
+    .word quad
+
+simstop:
+    .byte $ff

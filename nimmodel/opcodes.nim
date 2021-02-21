@@ -28,8 +28,8 @@ const
 
     OpPushT*     : uint8 = OpStackGroup1 or 0x00
     OpPushA*     : uint8 = OpStackGroup1 or 0x01
-    OpPushN*     : uint8 = OpStackGroup1 or 0x02
-    OpPushU*     : uint8 = OpStackGroup1 or 0x03
+    OpPushU*     : uint8 = OpStackGroup1 or 0x02
+    OpPushN*     : uint8 = OpStackGroup1 or 0x03
     OpPushI*     : uint8 = OpStackGroup1 or 0x04
 
     OpPushS*     : uint8 = OpStackGroup2 or 0x00

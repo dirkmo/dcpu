@@ -5,6 +5,7 @@ _line: op+ [SH_COMMENT] NEWLINE
     | opa [SH_COMMENT] NEWLINE
     | label [SH_COMMENT]
     | _dir [SH_COMMENT]
+    | [SH_COMMENT] NEWLINE
 
 label: CNAME ":"
 
