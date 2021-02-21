@@ -18,7 +18,7 @@ wait_tx: # busy wait ( -- )
     fetch UART_ST
     push 2 # bit 1: flag sending
     and # sets zero flag if sending done
-    pop pop
+    pop
     jnz wait_tx
     ret
 
@@ -32,7 +32,7 @@ wait_rx: # busy wait ( -- )
     fetch UART_ST
     push 1 # bit 0: flag received
     and # sets zero flag if nothing received
-    pop pop
+    pop
     jpz wait_rx
     ret
 

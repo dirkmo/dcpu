@@ -1,3 +1,7 @@
+.equ UART_ST $FFE0
+.equ UART_TX $FFE2
+.equ UART_RX $FFE2
+
 .equ ADDR_INPBUF_LEN    $900
 .equ ADDR_INPBUF        $902
 .equ ADDR_DICT          $1000
@@ -10,6 +14,7 @@ latest: .res 2 # pointer to last dict entry
 next:   .res 2 # interpreter pointer in word beeing executed
 here:   .res 2  # pointer for adding stuff to dict
 state:  .word 0 # 0: interpret, 1: compile
+base:   .res 2 # base for numbers (8, 10, 16, ...)
 
 
 .org $100
@@ -42,7 +47,6 @@ next_word: # ( -- )
     fetch t # (t) -- ((t))
     jp t    # ((t)) --
 
-
 buildin_plus: # ( n n -- n )
     add
     jp next_word
@@ -74,6 +78,36 @@ buildin_lit: # ( -- n )
 buildin_stop:
     .byte $ff
 
+wait_rx: # busy wait ( -- )
+    push 0
+    fetch UART_ST
+    push 1 # bit 0: flag received
+    and # sets zero flag if nothing received
+    pop
+    jpz wait_rx
+    ret
+
+wait_tx: # busy wait ( -- )
+    push 0
+    fetch UART_ST
+    push 2 # bit 1: flag sending
+    and # sets zero flag if sending done
+    pop
+    jpz wait_rx
+    ret
+
+buildin_key: ( -- c )
+    bra wait_rx
+    push 0
+    fetch UART_RX
+    jp next_word
+
+buildin_emit: ( c -- )
+    bra wait_tx
+    store UART_TX
+    jp next_word
+
+
 .org $1000
 dict:
 
@@ -91,8 +125,21 @@ d_lit:
 lit:
     .word buildin_lit
 
-d_plus: # ( n n -- n )
+d_key:
     .word d_lit
+    .byte 3, "key"
+    .align
+key:
+    .word buildin_key
+
+d_emit:
+    .word d_key
+    .byte 4, "emit"
+emit:
+    .word buildin_emit
+
+d_plus: # ( n n -- n )
+    .word d_emit
     .byte 4, "plus"
     .align
 plus:
