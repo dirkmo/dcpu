@@ -18,13 +18,9 @@ state:  .word 0 # 0: interpret, 1: compile
     push ADDR_AS
     setasp pop
 
-mainloop:
     push forth
     setu
-    fetch t
-    fetch t
-    jp t
-    .byte $ff
+    jp next_word
 
 docol:
     # save u on as
@@ -32,9 +28,8 @@ docol:
     apush    # -- u ; as: -- u
     fetch t  # u -- (t)
     setu     # (t) -- u
-    fetch t  # u -- (u)
-    jp t     # --
-
+    pop
+    # jp next_word *fallthrough*
 
 next_word: # ( -- )
     # u = u + 2
@@ -46,15 +41,6 @@ next_word: # ( -- )
     fetch t # u -- (t)
     fetch t # (t) -- ((t))
     jp t    # ((t)) --
-
-exit:
-    # restore u from as
-    push a # -- a
-    apop   # a -- a; as: a --
-    setu   # u -- u
-    pop    # --
-    jp next_word
-
 
 
 buildin_plus: # ( n n -- n )
@@ -69,13 +55,26 @@ buildin_drop: # ( n -- )
     pop
     jp next_word
 
-
+buildin_exit:
+    # restore u from as
+    push a # -- a
+    apop   # a -- a; as: a --
+    setu   # u -- u
+    pop    # --
+    jp next_word
 
 .org $1000
 dict:
 
-d_plus: # ( n n -- n )
+d_exit:
     .word 0 # first word
+    .byte 4, "exit"
+    .align
+exit:
+    .word buildin_exit
+
+d_plus: # ( n n -- n )
+    .word d_exit
     .byte 4, "plus"
     .align
 plus:
@@ -105,19 +104,18 @@ double:
     .word plus
     .word exit
 
-
 d_quad: # ( n -- n )
     .word d_double
     .byte 5, "quad"
     .align
 quad:
     .word docol
+    .word double
     .word dup
-    .word double
-    .word double
     .word exit
 
 forth:
+    .word docol
     .word quad
 
 simstop:
