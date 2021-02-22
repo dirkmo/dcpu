@@ -157,8 +157,8 @@ proc executeBranch(cpu: var Dcpu) =
     elif idx == 1: # pop as
         discard # no pop necessary, because return address is pushed on as
     # save pc to a (pc has been incremented in dsFetch)
-    cpu.pc = cpu.jmpaddr()
     cpu.a = cpu.pc
+    cpu.pc = cpu.jmpaddr()
 
 proc executePop(cpu: var Dcpu) =
     let op = cpu.ir[0]
