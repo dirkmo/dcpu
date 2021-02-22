@@ -50,8 +50,7 @@ OP: "add"i | "sub"i | "and"i | "or"i | "xor"i | "lsr"i | "cpr"i | "swap"i
   | "pop"i | "apop"i | "ret"i | "setstatus"i | "setdsp"i | "setasp"i
   | "setu"i | "seta"i | "apush"i | "int"i
 
-OPA: "push"i | "fetch"i | "store"i | "jp"i | "bra"i | "jpc"i
-   | "jnc"i | "jpz"i | "jnz"i
+OPA: "push"i | "fetch"i | "store"i | "bra"i | "jc"i | "jnc"i | "jz"i | "jnz"i | "jp"i
 
 REG: "asp"i | "t"i | "a"i | "n"i | "u"i | "status"i | "dsp"i | "pc"i
 

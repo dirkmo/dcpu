@@ -118,11 +118,11 @@ class dcpuTransformer(lark.Transformer):
             ret = self.op_jmp(InstructionAbs.OP_JMPGROUP, op[1])
         elif s == "BRA":
             ret = self.op_jmp(InstructionAbs.OP_BRANCHGROUP, op[1])
-        elif s == "JPC":
+        elif s == "JC":
             ret = self.op_jmp(InstructionAbs.OP_JMPCGROUP, op[1])
         elif s == "JNC":
             ret = self.op_jmp(InstructionAbs.OP_JMPNCGROUP, op[1])
-        elif s == "JPZ":
+        elif s == "JZ":
             ret = self.op_jmp(InstructionAbs.OP_JMPZGROUP, op[1])
         elif s == "JNZ":
             ret = self.op_jmp(InstructionAbs.OP_JMPNZGROUP, op[1])
@@ -301,7 +301,7 @@ def main():
     count = 1
     while 1:
         print(InstructionBase._variables)
-        print(f"Pass {count}")
+        print(f"\nPass {count}")
         count = count + 1
         vars = copy.deepcopy(InstructionBase._variables)
         InstructionBase._current = 0
@@ -312,8 +312,8 @@ def main():
 
     print(InstructionBase._variables)
 
-    for p in program:
-        print(p)
+    # for p in program:
+    #     print(p)
 
     fn = sys.argv[2]
     saveHex(fn, program)
