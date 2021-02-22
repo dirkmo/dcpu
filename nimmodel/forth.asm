@@ -84,7 +84,7 @@ wait_rx: # busy wait ( -- )
     push 1 # bit 0: flag received
     and # sets zero flag if nothing received
     pop
-    jpz wait_rx
+    jz wait_rx
     ret
 
 wait_tx: # busy wait ( -- )
@@ -93,20 +93,49 @@ wait_tx: # busy wait ( -- )
     push 2 # bit 1: flag sending
     and # sets zero flag if sending done
     pop
-    jpz wait_rx
+    jz wait_tx
     ret
 
-buildin_key: ( -- c )
+buildin_key: # ( -- c )
     bra wait_rx
     push 0
     fetch UART_RX
     jp next_word
 
-buildin_emit: ( c -- )
+buildin_emit: # ( c -- )
     bra wait_tx
     store UART_TX
     jp next_word
 
+align: # ( a -- a' )
+    # adds 1 if a is odd
+    push t      # a -- a a
+    push $1     # a a -- a a 1
+    and         # a a 1 -- a a&1
+    add         # a a&1 -- a'
+    ret
+
+wordaftercstring: # ( a -- a )
+    push t   # a -- a a
+    fetch t  # a -- a (a)  ; (a) is count and first char
+    push $ff # a (a) -- a (a) $ff
+    and      # a (a) $ff -- a c  ; c = count
+    push 1   # a c -- a c 1
+    add      # a c 1 -- a c+1
+    add      # a c+1 -- a+c+1  ; note: this addr might not be word aligned
+    bra align # a+c+1 -- a'
+    ret
+
+buildin_cfa: # ( a -- a)
+    # on stack: addr of word
+    push 2   # a -- a 2
+    add      # a 2 -- a+2
+    # now t is addr of word name (counted string), eg. .byte 3, "dup"
+    bra wordaftercstring # a+2 -- a'
+    jp next_word
+
+buildin_find:
+    jp next_word
 
 .org $1000
 dict:
@@ -185,6 +214,18 @@ d_stop:
     .align
 stop:
     .word buildin_stop
+
+d_cfa:
+    .word d_stop
+    .byte 4, ">cfa"
+cfa:
+    .word buildin_cfa
+
+d_find:
+    .word d_cfa
+    .byte 4, "find"
+find:
+    .word buildin_find
 
 forth:
     .word docol
