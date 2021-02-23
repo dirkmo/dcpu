@@ -164,6 +164,7 @@ key:
 d_emit:
     .word d_key
     .byte 4, "emit"
+    .align
 emit:
     .word buildin_emit
 
@@ -218,12 +219,14 @@ stop:
 d_cfa:
     .word d_stop
     .byte 4, ">cfa"
+    .align
 cfa:
     .word buildin_cfa
 
 d_find:
     .word d_cfa
     .byte 4, "find"
+    .align
 find:
     .word buildin_find
 

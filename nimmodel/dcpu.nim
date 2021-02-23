@@ -149,16 +149,20 @@ proc executeJump(cpu: var Dcpu) =
 
 proc executeBranch(cpu: var Dcpu) =
     let idx = cpu.ir[0] and 7
-    if idx == 0: # pop ds
-        cpu.popDs()
-        # save a to as
+    if idx == 1: # pop as
+        # no pop as necessary
+        # cpu.a can just be overwritten with cpu.pc without touching asp
+        discard
+    else:
+        # pushing a to as
         cpu.write(cpu.asp, cpu.a)
         cpu.asp += 2
-    elif idx == 1: # pop as
-        discard # no pop necessary, because return address is pushed on as
     # save pc to a (pc has been incremented in dsFetch)
     cpu.a = cpu.pc
     cpu.pc = cpu.jmpaddr()
+    if idx == 0: # pop ds
+        cpu.popDs()
+
 
 proc executePop(cpu: var Dcpu) =
     let op = cpu.ir[0]
