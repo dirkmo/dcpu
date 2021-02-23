@@ -455,7 +455,9 @@ class InstructionLabel(InstructionBase):
     def __init__(self, id):
         super().__init__(InstructionBase.OP_LABEL)
         self.id = id
+        InstructionBase._current += InstructionBase._current % 1 # enforce word alignment
         InstructionBase._variables[self.id] = InstructionBase._current
+        self.address = InstructionBase._current
     
     def disassemble(self):
         return f"{self.id}:"
@@ -467,8 +469,7 @@ class InstructionLabel(InstructionBase):
         return []
     
     def update(self):
-        if InstructionBase._current % 1 == 1: # enforce word alignment
-            InstructionBase._current += 1
+        InstructionBase._current += InstructionBase._current % 1 # enforce word alignment
         InstructionBase._variables[self.id] = InstructionBase._current
         self.address = InstructionBase._current
 
