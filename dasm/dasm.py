@@ -23,7 +23,7 @@ class dcpuTransformer(lark.Transformer):
         "OR": Instruction.OP_OR,
         "XOR": Instruction.OP_XOR,
         "LSR": Instruction.OP_LSR,
-        "CPR": Instruction.OP_CPR,
+        "LSL": Instruction.OP_LSL,
         "SWAP": Instruction.OP_SWAP,
         "POP": Instruction.OP_POP,
         "APOP": Instruction.OP_APOP,

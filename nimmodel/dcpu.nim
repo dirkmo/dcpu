@@ -74,15 +74,16 @@ proc executeAluop(cpu: var Dcpu) =
     of OpOr:  r = cpu.n or cpu.t
     of OpXor: r = cpu.n xor cpu.t
     of OpLsr: r = cpu.n shr cpu.t
-    of OpCpr: r = (cpu.n shl 8) or (cpu.t and 0xff)
+    of OpLsl: r = cpu.n shl cpu.t
     of OpSwap:
         r = cpu.n
         cpu.n = cpu.t
     else: discard
 
+    cpu.t = uint16(r)
+
     if op != OpSwap:
         # pop t
-        cpu.t = uint16(r)
         cpu.dsp -= 2
         cpu.n = cpu.read(cpu.dsp)
     
