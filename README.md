@@ -1,2 +1,2 @@
 # dcpu
-32 Bit Softcore CPU with Wishbone bus
+16 Bit Stack Machine
