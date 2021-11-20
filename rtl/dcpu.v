@@ -83,14 +83,16 @@ always @(*)
         5'h05: w_alu = {1'b0, N & T};
         5'h06: w_alu = {1'b0, N | T};
         5'h07: w_alu = {1'b0, N ^ T};
-        5'h08: w_alu = {1'b0, N & T};
-        5'h09: w_alu = {1'b0, ~T};
+        5'h08: w_alu = {1'b0, ~T};
+        5'h09: w_alu = 0;
         5'h0a: w_alu = {2'b00, T[15:1]}; // T >> 1
         5'h0b: w_alu = { T[15:0], 1'b0}; // T << 1
         5'h0c: w_alu = {1'b0, i_dat}; // [T]
         5'h0d: w_alu = {1'b0, i_dat}; // [R]
         5'h0e: w_alu = |T ? {1'b0, r_pc} : {1'b0, R}; // condition for JZ R
         5'h0f: w_alu = |T ? {1'b0, r_pc} : {1'b0, T}; // condition for JZ T
+        5'h10: w_alu = {9'b0, T[15:8]};
+        5'h11: w_alu = {1'b0, T[7:0], 8'h00};
         default: w_alu = 0;
     endcase
 
@@ -166,6 +168,8 @@ always @(posedge i_clk)
     if (s_execute) begin
         if (w_op_literal)
             r_dstack[w_dspn] <= r_op;
+        else if (w_op_dst_T || w_op_dst_N)
+            r_dstack[w_dspn] <= w_alu[15:0];
     end
 
 // RSP

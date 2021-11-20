@@ -3,6 +3,7 @@
 #include <verilated_vcd_c.h>
 #include "verilated.h"
 #include "Vdcpu.h"
+#include "dcpu.h"
 
 using namespace std;
 
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
     }
 
     uint16_t prog[] = {
-        0x0000, 0x0000, 0x0000,
+        0x0001, 0x0002, ALU(ADD) | DST(DST_T),
     };
     memset(mem, 0, sizeof(prog));
     memcpy(mem, prog, sizeof(prog));
