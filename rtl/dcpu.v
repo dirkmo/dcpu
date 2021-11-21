@@ -163,7 +163,7 @@ always @(posedge i_clk)
         r_dsp <= w_dspn;
 
 // dstack
-reg [W-1:0] r_dstack[0:DSS**2];
+reg [W-1:0] r_dstack[0:DSS**2] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
         if (w_op_literal)
@@ -194,7 +194,7 @@ always @(posedge i_clk)
         r_rsp <= w_rspn;
 
 // rstack
-reg [W-1:0] r_rstack[0:RSS**2];
+reg [W-1:0] r_rstack[0:RSS**2] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
         r_rstack[w_rspn] <= w_op_rsp_RPC ? w_pcn :
@@ -209,7 +209,8 @@ always @(posedge i_clk)
     end
 
 
-wire w_mem_access = s_fetch || (s_execute && (w_op_dst_MEMT || w_op_dst_MEMR || w_op_alu_MEMT || w_op_alu_MEMR));
+wire w_op_mem_access = s_execute && (w_op_dst_MEMT || w_op_dst_MEMR || w_op_alu_MEMT || w_op_alu_MEMR);
+wire w_all_mem_accesses = s_fetch || w_op_mem_access;
 
 // state machine
 always @(posedge i_clk)
@@ -221,7 +222,7 @@ begin
             end
         end
         EXECUTE: begin
-            if (~w_mem_access || i_ack)
+            if (~w_all_mem_accesses || i_ack)
                 r_state <= FETCH;
         end
     endcase
@@ -235,9 +236,9 @@ assign o_addr = s_fetch ? r_pc :
           w_op_dst_MEMR ? R    :
           w_op_dst_MEMT ? T    : 0;
 
-assign o_cs = i_reset ? 0 : w_mem_access;
+assign o_cs = i_reset ? 0 : w_all_mem_accesses;
 
-assign o_we = w_mem_access && (w_op_dst_MEMT || w_op_dst_MEMR);
+assign o_we = w_op_mem_access && (w_op_dst_MEMT || w_op_dst_MEMR);
 
 assign o_dat = w_src;
 

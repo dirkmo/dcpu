@@ -9,6 +9,9 @@
 using namespace std;
 
 #define ARRSIZE(a) (sizeof(a) / sizeof(a[0]))
+#define RED "\033[31m"
+#define GREEN "\033[32m"
+#define NORMAL "\033[0m"
 
 VerilatedVcdC *pTrace = NULL;
 Vdcpu *pCore;
@@ -50,7 +53,7 @@ int handle(Vdcpu *pCore) {
         pCore->i_dat = mem[pCore->o_addr];
         if (pCore->o_we) {
             mem[pCore->o_addr] = pCore->o_dat;
-            printf("write [%04x] <- %04x\n", pCore->o_addr, pCore->o_addr);
+            printf("write [%04x] <- %04x\n", pCore->o_addr, pCore->o_dat);
         }
         if (pCore->i_dat == 0xffff && (pCore->dcpu->r_state == 0)) {
             return 1;
@@ -82,27 +85,46 @@ bool test(int count, const uint16_t *prog, int len, test_t *t) {
         i++;
     }
     tick();
-    printf("%d: pc: %04x, dsp: %x, T: %04x, N: %04x\n", i, pCore->dcpu->r_pc, pCore->dcpu->r_dsp, pCore->dcpu->T, pCore->dcpu->N);
-    bool res = true;
-    if (t->pc >= 0) 
-        res &= (t->pc == pCore->dcpu->r_pc);
-    if (t->t >= 0) 
-        res &= (t->t == pCore->dcpu->T);
-    if (t->n >= 0) 
-        res &= (t->n == pCore->dcpu->N);
-    if (t->r >= 0) 
-        res &= (t->r == pCore->dcpu->R);
-    if (t->dsp >= 0) 
-        res &= (t->dsp == pCore->dcpu->r_dsp);
-    if (t->rsp >= 0) 
-        res &= (t->rsp == pCore->dcpu->r_rsp);
-    
-    if (res) {
-        printf("ok.\n");
-    } else {
-        printf("FAIL.\n");
+    // printf("%d: pc: %04x, dsp: %x, T: %04x, N: %04x\n", i, pCore->dcpu->r_pc, pCore->dcpu->r_dsp, pCore->dcpu->T, pCore->dcpu->N);
+    printf("%d: ",i);
+    bool total = true;
+    bool res;
+    if (t->pc >= 0) {
+        total &= res = (t->pc == pCore->dcpu->r_pc);
     }
-    return res;
+    printf("%spc: %04x%s, ", res ? NORMAL : RED, pCore->dcpu->r_pc, NORMAL);
+
+    if (t->t >= 0) {
+        total &= res = (t->t == pCore->dcpu->T);
+    }
+    printf("%sT: %04x%s, ", res ? NORMAL : RED, pCore->dcpu->T, NORMAL);
+
+    if (t->n >= 0) {
+        total = res &= (t->n == pCore->dcpu->N);
+    }
+    printf("%sN: %04x%s, ", res ? NORMAL : RED, pCore->dcpu->N, NORMAL);
+
+    if (t->r >= 0) {
+        total &= res = (t->r == pCore->dcpu->R);
+    }
+    printf("%sR: %04x%s, ", res ? NORMAL : RED, pCore->dcpu->R, NORMAL);
+
+    if (t->dsp >= 0) {
+        total &= res = (t->dsp == pCore->dcpu->r_dsp);
+    }
+    printf("%sdsp: %04x%s, ", res ? NORMAL : RED, pCore->dcpu->r_dsp, NORMAL);
+
+    if (t->rsp >= 0) {
+        total &= res = (t->rsp == pCore->dcpu->r_rsp);
+    }
+    printf("%srsp: %04x%s\n", res ? NORMAL : RED, pCore->dcpu->r_rsp, NORMAL);
+    
+    if (total) {
+        printf("%sok%s.\n", GREEN, NORMAL);
+    } else {
+        printf("%sFAIL%s.\n", RED, NORMAL);
+    }
+    return total;
 }
 
 int main(int argc, char *argv[]) {
@@ -131,7 +153,7 @@ int main(int argc, char *argv[]) {
     {
         printf("push 2 literals, add -> T\n");
         uint16_t prog[] = { 1, 2, DST_T | ALU_ADD, 0xffff};
-        test_t t = { .pc = 3, .dsp = 2, .rsp = -1, .t = 3, .n = 1, .r = -1 };
+        test_t t = { .pc = 3, .dsp = 2, .rsp = 0, .t = 3, .n = 1, .r = -1 };
         res &= test(testcount++, prog, ARRSIZE(prog), &t);
         if (!res) goto done;
     }
@@ -139,7 +161,7 @@ int main(int argc, char *argv[]) {
     {
         printf("push 2 literals, add -> N\n");
         uint16_t prog[] = { 1, 2, DST_N | ALU_ADD, 0xffff};
-        test_t t = { .pc = 3, .dsp = 2, .rsp = -1, .t = 2, .n = 3, .r = -1 };
+        test_t t = { .pc = 3, .dsp = 2, .rsp = 0, .t = 2, .n = 3, .r = -1 };
         res &= test(testcount++, prog, ARRSIZE(prog), &t);
         if (!res) goto done;
     }
@@ -147,7 +169,7 @@ int main(int argc, char *argv[]) {
     {
         printf("push 2 literals, add -> R\n");
         uint16_t prog[] = { 1, 2, DST_R | ALU_ADD, 0xffff};
-        test_t t = { .pc = 3, .dsp = 2, .rsp = -1, .t = 2, .n = 1, .r = 3 };
+        test_t t = { .pc = 3, .dsp = 2, .rsp = 0, .t = 2, .n = 1, .r = 3 };
         res &= test(testcount++, prog, ARRSIZE(prog), &t);
         if (!res) goto done;
     }
@@ -155,20 +177,28 @@ int main(int argc, char *argv[]) {
     {
         printf("push 2 literals, add -> PC\n");
         uint16_t prog[] = { 3, 2, DST_PC | ALU_ADD, 0, 0, 0xffff};
-        test_t t = { .pc = 5, .dsp = 2, .rsp = -1, .t = 2, .n = 3, .r = -1 };
+        test_t t = { .pc = 5, .dsp = 2, .rsp = 0, .t = 2, .n = 3, .r = -1 };
         res &= test(testcount++, prog, ARRSIZE(prog), &t);
         if (!res) goto done;
     }
 
     {
         printf("push 2 literals, N -> [T]\n");
-        uint16_t prog[] = { 0, DST_T | ALU_INV, 5, DST_MEMT | ALU_N, 0, 0, 0xffff};
-        test_t t = { .pc = 5, .dsp = 2, .rsp = -1, .t = 5, .n = 0xffff, .r = -1 };
+        uint16_t prog[] = { 0, DST_T | ALU_INV, 5, DST_MEMT | ALU_N, 13, 0, 0xffff};
+        test_t t = { .pc = 5, .dsp = 3, .rsp = 0, .t = 13, .n = 5, .r = -1 };
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
+    }
+    
+    {
+        printf("push 2 literals, N -> [R]\n");
+        uint16_t prog[] = { 0, DST_T | ALU_INV, 6, DST_R, DST_MEMR | ALU_N | DSP_D, 13, 0, 0, 0xffff};
+        test_t t = { .pc = 6, .dsp = 3, .rsp = 0, .t = 13, .n = 0xffff, .r = 6 };
         res &= test(testcount++, prog, ARRSIZE(prog), &t);
         if (!res) goto done;
     }
 
-    // dsp +/-
+    // dsp+/- tests
     {
         printf("push 2 literals, add dsp+\n");
         uint16_t prog[] = { 0x10, 0x20, DST_T | ALU_ADD | DSP_I, 0xffff};
@@ -186,7 +216,7 @@ int main(int argc, char *argv[]) {
     }
 
 done:
-    printf("Test %s\n", res ? "successful" : "failed.");
+    printf("Test %s\n", res ? GREEN "successful" NORMAL : RED "failed." NORMAL);
 
     pCore->final();
 
