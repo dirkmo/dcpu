@@ -25,11 +25,11 @@ void opentrace(const char *vcdname) {
 }
 
 void tick() {
-    pCore->i_clk = 1;
+    pCore->i_clk = 0;
     pCore->eval();
     if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
     tickcount += ts / 2;
-    pCore->i_clk = 0;
+    pCore->i_clk = 1;
     pCore->eval();
     if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
     tickcount += ts / 2;
@@ -116,18 +116,24 @@ int main(int argc, char *argv[]) {
     }
 
     int testcount = 0;
-    {
-        uint16_t prog[] = { 0x1234, 0xffff};
-        test_t t = { .pc = 1, .dsp = 1, .rsp = -1, .t = 0x1234, .n = -1, .r = -1 };
-        test(testcount++, prog, ARRSIZE(prog), &t);
-    }
 
-    {
+    { // push 2 literals
         uint16_t prog[] = { 1, 2, 0xffff};
         test_t t = { .pc = 2, .dsp = 2, .rsp = -1, .t = 2, .n = 1, .r = -1 };
         test(testcount++, prog, ARRSIZE(prog), &t);
     }
 
+    { // push 2 literals, add
+        uint16_t prog[] = { 1, 2, ALU_ADD, 0xffff};
+        test_t t = { .pc = 3, .dsp = 2, .rsp = -1, .t = 3, .n = 1, .r = -1 };
+        test(testcount++, prog, ARRSIZE(prog), &t);
+    }
+
+    { // push 2 literals, add dsp+
+        uint16_t prog[] = { 0x10, 0x20, ALU_ADD | DSP_I, 0xffff};
+        test_t t = { .pc = 3, .dsp = 3, .rsp = -1, .t = 0x30, .n = 0x20, .r = -1 };
+        test(testcount++, prog, ARRSIZE(prog), &t);
+    }
 
 
     pCore->final();

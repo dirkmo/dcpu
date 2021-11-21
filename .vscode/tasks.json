@@ -6,11 +6,13 @@
         {
             "label": "build and simulate",
             "type": "shell",
-            "command": "make clean sim",
+            "command": "make clean top",
             "options": {
                 "cwd": "${workspaceFolder}/sim"
             },
-            "problemMatcher": ["$gcc"],
+            "problemMatcher": [
+                "$gcc"
+            ],
             "group": {
                 "kind": "build",
                 "isDefault": true

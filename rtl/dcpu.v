@@ -206,6 +206,9 @@ always @(posedge i_clk)
         N <= r_dstack[r_dsp - 1];
     end
 
+
+wire w_mem_access = s_fetch || (s_execute && (w_op_dst_MEMT || w_op_dst_MEMR || w_op_alu_MEMT || w_op_alu_MEMR));
+
 // state machine
 always @(posedge i_clk)
 begin
@@ -213,11 +216,11 @@ begin
         FETCH: begin
             if (i_ack) begin
                 r_state <= EXECUTE;
-                //if (i_dat == 16'hffff) $finish();
             end
         end
         EXECUTE: begin
-            r_state <= FETCH;
+            if (~w_mem_access || i_ack)
+                r_state <= FETCH;
         end
     endcase
     
@@ -228,7 +231,6 @@ end
 
 assign o_addr = s_fetch ? r_pc : 0;
 
-wire w_mem_access = s_fetch || (s_execute && (w_op_dst_MEMT || w_op_dst_MEMR || w_op_alu_MEMT || w_op_alu_MEMR));
 assign o_cs = i_reset ? 0 : w_mem_access;
 
 endmodule
