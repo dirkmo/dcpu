@@ -21,8 +21,8 @@ localparam
     FETCH = 0,
     EXECUTE = 1;
 
-reg r_state; // state machine
-reg [W-1:0] r_pc; // program counter
+reg r_state /* verilator public */; // state machine
+reg [W-1:0] r_pc /* verilator public */; // program counter
 
 wire s_fetch   = (r_state == FETCH);
 wire s_execute = (r_state == EXECUTE);
@@ -32,9 +32,9 @@ always @(posedge i_clk)
     if (s_fetch && i_ack)
         r_op <= i_dat;
 
-reg [W-1:0] T; // top of dstack
-reg [W-1:0] N; // 2nd on dstack
-reg [W-1:0] R; // top of rstack
+reg [W-1:0] T /* verilator public */; // top of dstack
+reg [W-1:0] N /* verilator public */; // 2nd on dstack
+reg [W-1:0] R /* verilator public */; // top of rstack
 
 /*
 Instruction types:
@@ -146,7 +146,7 @@ always @(posedge i_clk)
 
 
 // DSP
-reg [DSS-1:0] r_dsp;
+reg [DSS-1:0] r_dsp /* verilator public */;
 reg [DSS-1:0] w_dspn;
 always @(*)
     if (i_reset)
@@ -173,7 +173,7 @@ always @(posedge i_clk)
     end
 
 // RSP
-reg [RSS-1:0] r_rsp;
+reg [RSS-1:0] r_rsp /* verilator public */;
 reg [RSS-1:0] w_rspn;
 always @(*)
     casez ( { w_op_normal, w_op_rsp_inc, w_op_rsp_dec } )
@@ -208,8 +208,10 @@ always @(posedge i_clk)
 begin
     case (r_state)
         FETCH: begin
-            if (i_ack)
+            if (i_ack) begin
                 r_state <= EXECUTE;
+                //if (i_dat == 16'hffff) $finish();
+            end
         end
         EXECUTE: begin
             r_state <= FETCH;
@@ -223,6 +225,7 @@ end
 
 assign o_addr = s_fetch ? r_pc : 0;
 
-assign o_cs = s_fetch || (s_execute && (w_op_dst_MEMT || w_op_dst_MEMR || w_op_alu_MEMT || w_op_alu_MEMR));
+wire w_mem_access = s_fetch || (s_execute && (w_op_dst_MEMT || w_op_dst_MEMR || w_op_alu_MEMT || w_op_alu_MEMR));
+assign o_cs = i_reset ? 0 : w_mem_access;
 
 endmodule

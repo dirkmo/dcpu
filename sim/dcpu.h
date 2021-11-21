@@ -25,23 +25,23 @@
 
 #define ALU(n) (OP | ((n) << ALU_SHIFT))
 #define ALU_SHIFT 6
-#define T 0
-#define N 1
-#define R 2
-#define ADD 3
-#define SUB 4
-#define AND 5
-#define OR 6
-#define XOR 7
-#define INV 8
-#define LSHIFT 10
-#define RSHIFT 11
-#define MEMT 12
-#define MEMR 13
-#define CONDR 14
-#define CONDT 15
-#define LSHIFT8 16
-#define RSHIFT8 17
+#define ALU_T 0
+#define ALU_N 1
+#define ALU_R 2
+#define ALU_ADD 3
+#define ALU_SUB 4
+#define ALU_AND 5
+#define ALU_OR 6
+#define ALU_XOR 7
+#define ALU_INV 8
+#define ALU_LSHIFT 10
+#define ALU_RSHIFT 11
+#define ALU_MEMT 12
+#define ALU_MEMR 13
+#define ALU_CONDR 14
+#define ALU_CONDT 15
+#define ALU_LSHIFT8 16
+#define ALU_RSHIFT8 17
 
 #define PICK(n) (OP | ((1<<(ALU_SHIFT+5)) | n))
 

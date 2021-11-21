@@ -8,14 +8,14 @@ INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include
 
 DEFINES=+define+SIM=1
 
-VFLAGS = --cc -CFLAGS "$(CXXFLAGS)" --trace --exe $(INCDIR) --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
+VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" --trace --exe $(INCDIR) --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
 GTKWAVE := gtkwave
 ifeq ($(UNAME),Darwin)
 VFLAGS += --compiler clang
 GTKWAVE := /Applications/gtkwave.app/Contents/MacOS/gtkwave-bin
 endif
 
-CXXFLAGS=-g -Wall
+CXXFLAGS=-g -Wall -O0
 
 CPPSRC=sim.cpp
 VERILOGSRC=../rtl/dcpu.v
@@ -26,7 +26,7 @@ verilator: $(CPPSRC) $(VERILOGSRC)
 	verilator $(VFLAGS) $(VERILOGSRC) $(CPPSRC)
 
 top: verilator
-	make -C $(VERILATOR_OUTPUTDIR) -j -f Vdcpu.mk
+	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vdcpu.mk
 
 sim: top
 	$(VERILATOR_OUTPUTDIR)/Vdcpu -t
