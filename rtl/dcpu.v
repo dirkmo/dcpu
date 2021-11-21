@@ -2,14 +2,14 @@ module dcpu(
     input i_reset,
     input i_clk,
 
-    output [W-1:0] o_addr,
-    output [W-1:0] o_dat,
-    input  [W-1:0] i_dat,
-    input          i_ack,
-    output         o_we,
-    output         o_cs,
+    output     [W-1:0] o_addr,
+    output reg [W-1:0] o_dat,
+    input      [W-1:0] i_dat,
+    input              i_ack,
+    output             o_we,
+    output             o_cs,
 
-    input          i_irq
+    input              i_irq
 );
 
 parameter
@@ -169,9 +169,9 @@ always @(posedge i_clk)
         if (w_op_literal)
             r_dstack[w_dspn] <= r_op;
         else if (w_op_dst_T)
-            r_dstack[w_dspn] <= w_alu[15:0];
+            r_dstack[w_dspn] <= w_src[15:0];
         else if (w_op_dst_N)
-            r_dstack[w_dspn-1] <= w_alu[15:0];
+            r_dstack[w_dspn-1] <= w_src[15:0];
     end
 
 // RSP
@@ -231,8 +231,14 @@ begin
     end
 end
 
-assign o_addr = s_fetch ? r_pc : 0;
+assign o_addr = s_fetch ? r_pc :
+          w_op_dst_MEMR ? R    :
+          w_op_dst_MEMT ? T    : 0;
 
 assign o_cs = i_reset ? 0 : w_mem_access;
+
+assign o_we = w_mem_access && (w_op_dst_MEMT || w_op_dst_MEMR);
+
+assign o_dat = w_src;
 
 endmodule
