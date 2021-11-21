@@ -168,8 +168,10 @@ always @(posedge i_clk)
     if (s_execute) begin
         if (w_op_literal)
             r_dstack[w_dspn] <= r_op;
-        else if (w_op_dst_T || w_op_dst_N)
+        else if (w_op_dst_T)
             r_dstack[w_dspn] <= w_alu[15:0];
+        else if (w_op_dst_N)
+            r_dstack[w_dspn-1] <= w_alu[15:0];
     end
 
 // RSP

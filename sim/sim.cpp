@@ -116,25 +116,68 @@ int main(int argc, char *argv[]) {
     }
 
     int testcount = 0;
+    bool res = true;
 
     { // push 2 literals
         uint16_t prog[] = { 1, 2, 0xffff};
         test_t t = { .pc = 2, .dsp = 2, .rsp = -1, .t = 2, .n = 1, .r = -1 };
-        test(testcount++, prog, ARRSIZE(prog), &t);
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
     }
 
-    { // push 2 literals, add
-        uint16_t prog[] = { 1, 2, ALU_ADD, 0xffff};
+    // DST tests
+    { // push 2 literals, add -> T
+        uint16_t prog[] = { 1, 2, DST_T | ALU_ADD, 0xffff};
         test_t t = { .pc = 3, .dsp = 2, .rsp = -1, .t = 3, .n = 1, .r = -1 };
-        test(testcount++, prog, ARRSIZE(prog), &t);
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
     }
 
+    { // push 2 literals, add -> N
+        uint16_t prog[] = { 1, 2, DST_N | ALU_ADD, 0xffff};
+        test_t t = { .pc = 3, .dsp = 2, .rsp = -1, .t = 2, .n = 3, .r = -1 };
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
+    }
+
+    { // push 2 literals, add -> R
+        uint16_t prog[] = { 1, 2, DST_R | ALU_ADD, 0xffff};
+        test_t t = { .pc = 3, .dsp = 2, .rsp = -1, .t = 2, .n = 1, .r = 3 };
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
+    }
+
+    { // push 2 literals, add -> PC
+        uint16_t prog[] = { 3, 2, DST_PC | ALU_ADD, 0, 0, 0xffff};
+        test_t t = { .pc = 5, .dsp = 2, .rsp = -1, .t = 2, .n = 3, .r = -1 };
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
+    }
+
+    { // push 2 literals, N -> [T]
+        uint16_t prog[] = { 0, DST_T | ALU_INV, 5, DST_MEMT | ALU_N, 0, 0, 0xffff};
+        test_t t = { .pc = 5, .dsp = 2, .rsp = -1, .t = 5, .n = 0xffff, .r = -1 };
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
+    }
+
+    // dsp +/-
     { // push 2 literals, add dsp+
-        uint16_t prog[] = { 0x10, 0x20, ALU_ADD | DSP_I, 0xffff};
+        uint16_t prog[] = { 0x10, 0x20, DST_T | ALU_ADD | DSP_I, 0xffff};
         test_t t = { .pc = 3, .dsp = 3, .rsp = -1, .t = 0x30, .n = 0x20, .r = -1 };
-        test(testcount++, prog, ARRSIZE(prog), &t);
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
     }
 
+    { // push 2 literals, add dsp-
+        uint16_t prog[] = { 0x10, 0x20, DST_T | ALU_ADD | DSP_D, 0xffff};
+        test_t t = { .pc = 3, .dsp = 1, .rsp = -1, .t = 0x30, .n = 0, .r = -1 };
+        res &= test(testcount++, prog, ARRSIZE(prog), &t);
+        if (!res) goto done;
+    }
+
+done:
+    printf("Test %s\n", res ? "successful" : "failed.");
 
     pCore->final();
 
