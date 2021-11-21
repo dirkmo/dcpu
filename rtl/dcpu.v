@@ -149,7 +149,7 @@ always @(posedge i_clk)
 reg [DSS-1:0] r_dsp /* verilator public */;
 reg [DSS-1:0] w_dspn;
 always @(*)
-    casez ( { w_op_normal, w_op_dsp_inc, w_op_dsp_dec } )
+    casez ( { w_op_normal, w_op_dsp } )
         3'b0??:  w_dspn = r_dsp + 1; // literal
         3'b101:  w_dspn = r_dsp + 1;
         3'b110:  w_dspn = r_dsp - 1;
