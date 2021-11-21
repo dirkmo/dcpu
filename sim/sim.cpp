@@ -37,7 +37,8 @@ void tick() {
 
 void reset() {
     pCore->i_reset = 1;
-    tick();
+    pCore->i_dat = 0;
+    pCore->i_ack = 0;
     tick();
     pCore->i_reset = 0;
 }
@@ -68,8 +69,7 @@ typedef struct {
 
 bool test(int count, const uint16_t *prog, int len, test_t *t) {
     printf("Test %d\n", count);
-    memset(mem, 0, sizeof(prog));
-    memcpy(mem, prog, len);
+    memcpy(mem, prog, len*sizeof(*prog));
     reset();
     int i = 0;
     while(1) {
@@ -80,6 +80,8 @@ bool test(int count, const uint16_t *prog, int len, test_t *t) {
         printf("%d: pc: %04x, dsp: %x, T: %04x, N: %04x\n", i, pCore->dcpu->r_pc, pCore->dcpu->r_dsp, pCore->dcpu->T, pCore->dcpu->N);
         i++;
     }
+    tick();
+    printf("%d: pc: %04x, dsp: %x, T: %04x, N: %04x\n", i, pCore->dcpu->r_pc, pCore->dcpu->r_dsp, pCore->dcpu->T, pCore->dcpu->N);
     bool res = true;
     if (t->pc >= 0) 
         res &= (t->pc == pCore->dcpu->r_pc);
@@ -113,31 +115,20 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // uint16_t prog[] = {
-    //     0x0001, 0x0002, ALU(ADD) | DST(DST_T),
-    //     0xffff
-    // };
-    // memset(mem, 0, sizeof(prog));
-    // memcpy(mem, prog, sizeof(prog));
-
-    // reset();
-
-    // int old_clk = -1;
-    // while(!Verilated::gotFinish()) {
-    //     handle(pCore);
-    //     tick();
-
-    //     if (tickcount > ts * 100) {
-    //         printf("Ende\n");
-    //         break;
-    //     }
-    // }
     int testcount = 0;
     {
-        uint16_t prog[] = { 0, 0xffff};
-        test_t t = { .pc = 2, .dsp = 1, .rsp = -1, .t = -1, .n = -1, .r = -1 };
+        uint16_t prog[] = { 0x1234, 0xffff};
+        test_t t = { .pc = 1, .dsp = 1, .rsp = -1, .t = 0x1234, .n = -1, .r = -1 };
         test(testcount++, prog, ARRSIZE(prog), &t);
     }
+
+    {
+        uint16_t prog[] = { 1, 2, 0xffff};
+        test_t t = { .pc = 2, .dsp = 2, .rsp = -1, .t = 2, .n = 1, .r = -1 };
+        test(testcount++, prog, ARRSIZE(prog), &t);
+    }
+
+
 
     pCore->final();
 

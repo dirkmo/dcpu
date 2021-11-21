@@ -133,15 +133,15 @@ wire w_op_rsp_RPC = (w_op_rsp == 2'b11);
 // PC
 reg [W-1:0] w_pcn;
 always @(*)
-    if (i_reset)
-        w_pcn = 0;
-    else if (w_op_dst_PC)
+    if (w_op_dst_PC)
         w_pcn = w_src;
     else 
         w_pcn = r_pc + 1;
 
 always @(posedge i_clk)
-    if(s_execute)
+    if(i_reset)
+        r_pc <= 0;
+    else if(s_execute)
         r_pc <= w_pcn;
 
 
@@ -149,17 +149,17 @@ always @(posedge i_clk)
 reg [DSS-1:0] r_dsp /* verilator public */;
 reg [DSS-1:0] w_dspn;
 always @(*)
-    if (i_reset)
-        w_dspn = 0;
-    else casez ( { w_op_normal, w_op_dsp_inc, w_op_dsp_dec } )
-        3'b0??:  w_dspn = r_dsp + 1;
+    casez ( { w_op_normal, w_op_dsp_inc, w_op_dsp_dec } )
+        3'b0??:  w_dspn = r_dsp + 1; // literal
         3'b101:  w_dspn = r_dsp + 1;
         3'b110:  w_dspn = r_dsp - 1;
         default: w_dspn = r_dsp;
     endcase
 
 always @(posedge i_clk)
-    if(s_execute)
+    if (i_reset)
+        r_dsp <= 0;
+    else if(s_execute)
         r_dsp <= w_dspn;
 
 // dstack
@@ -176,7 +176,9 @@ always @(posedge i_clk)
 reg [RSS-1:0] r_rsp /* verilator public */;
 reg [RSS-1:0] w_rspn;
 always @(*)
-    casez ( { w_op_normal, w_op_rsp_inc, w_op_rsp_dec } )
+    if (i_reset)
+        w_rspn = 0;
+    else casez ( { w_op_normal, w_op_rsp_inc, w_op_rsp_dec } )
         3'b101:  w_rspn = r_rsp + 1;
         3'b110:  w_rspn = r_rsp - 1;
         3'b111:  w_rspn = r_rsp + 1;
@@ -184,7 +186,9 @@ always @(*)
     endcase
 
 always @(posedge i_clk)
-    if (s_execute)
+    if (i_reset)
+        r_rsp <= 0;
+    else if (s_execute)
         r_rsp <= w_rspn;
 
 // rstack
@@ -201,7 +205,6 @@ always @(posedge i_clk)
         T <= r_dstack[r_dsp];
         N <= r_dstack[r_dsp - 1];
     end
-
 
 // state machine
 always @(posedge i_clk)
