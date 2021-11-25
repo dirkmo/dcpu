@@ -12,16 +12,36 @@ module dcpu(
 
 reg [15:0] r_op;
 
-/*
-0 <imm:11> <dst:4>                  ld r0, #0x1ff lower 11 bits
+/* Implicit register loading
+
+Load 10 bit constant to register (upper 6 bits will be set 0):
+    
+    0 0 <imm:10> <dst:4>                ld r0, #0x2ff lower 10 bits
+
+For values greater than 4095, a second load instruction is needed.
+This will overwrite the upper 8 bits of the register, and won't change the lower 8 bits.
+
+    0 1 <imm:10> <dst:4>                ld r0, #0xff upper 8 bits (won't overwrite lower 8 bits)
 */
+wire  w_op_ld_imm = ~r_op[15];
+wire  w_op_ld_imm_l = w_op_ld_imm && ~r_op[14];
+wire  w_op_ld_imm_h = w_op_ld_imm &&  r_op[14];
+wire [9:0] w_ld_imm = r_op[13:4];
 
-wire     w_op_ld_imm = ~r_op[15];
-wire [10:0] w_ld_imm = r_op[14:4];
+/* Load/store instructions
 
-/*
-100   <offs:5> <src:4> <dst:4>      ld rd, (rs+offs)
-101   <offs:5> <src:4> <dst:4>      st (rs+offs), rd
+The only instructions that access memory via data bus.
+
+Load word from memory at address rs+offset to register rd.
+
+    100   <offs:5> <src:4> <dst:4>      ld rd, (rs+offs)
+
+Store word in register rd to address rs+offset. Here, rs is the destination register,
+and rd is the source register. 
+
+    101   <offs:5> <src:4> <dst:4>      st (rs+offs), rd
+
+Offset is a 2s complement number for negative offsets
 */
 
 wire [3:0] w_dst   = r_op[3:0];
@@ -36,7 +56,7 @@ wire w_op_st       = w_op_ldst &&  r_op[13];
 // ld rd, (rs+offs)
 // st (rs+offs), rd
 wire w_am_offs = ~r_op[13];
-wire [15:0]  w_offs_addr = (R[w_src] + {11'h0, w_offs}); // TODO: w_offs als signed number
+wire [15:0]  w_offs_addr = (R[w_src] + {11'h0, w_offs}); // TODO: w_offs als 2s complement number
 
 /*
 11* noch verfügar
@@ -73,8 +93,10 @@ always @(posedge i_clk)
     else if (s_fetch && i_ack) begin
         R[PC] <= R[PC] + 1;
     end else if (s_execute) begin
-        if (w_op_ld_imm)
-            R[w_dst] <= {5'h0, w_ld_imm};
+        if (w_op_ld_imm_l)
+            R[w_dst] <= {6'h0, w_ld_imm};
+        else if (w_op_ld_imm_h)
+            R[w_dst] <= {w_ld_imm[7:0], R[w_dst][7:0]};
     end
 
 always @(posedge i_clk)

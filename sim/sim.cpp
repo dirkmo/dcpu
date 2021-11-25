@@ -123,9 +123,9 @@ int main(int argc, char *argv[]) {
     int count = 0;    
     {
         printf("Test %d: LD implicit\n", count++);
-        uint16_t prog[] = { IMM(123) | DST(0), 0xffff };
+        uint16_t prog[] = { LDIMML(0x123,0), LDIMMH(0x34,0), 0xffff };
         test_t t = new_test();
-        t.r[0] = 123; t.r[15] = 2;
+        t.r[0] = 0x3423; t.r[15] = 3;
         test(prog, sizeof(prog), &t);
     }
 
