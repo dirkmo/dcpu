@@ -55,8 +55,8 @@ int handle(Vdcpu *pCore) {
             mem[pCore->o_addr] = pCore->o_dat;
             printf("write [%04x] <- %04x\n", pCore->o_addr, pCore->o_dat);
         }
-        // if (pCore->i_dat == 0xffff && (pCore->dcpu->r_state == 0)) {
-        if (Verilated::gotFinish()) {
+        // if (Verilated::gotFinish()) {
+        if ((pCore->i_dat == 0xffff) && (pCore->dcpu->r_state == 0)) {
             return 1;
         }
     } else {
@@ -71,6 +71,7 @@ typedef struct {
 } test_t;
 
 bool test(const uint16_t *prog, int len, test_t *t) {
+    memset(mem, 0, sizeof(mem));
     memcpy(mem, prog, len*sizeof(*prog));
     reset();
     int i = 0;
@@ -79,7 +80,12 @@ bool test(const uint16_t *prog, int len, test_t *t) {
             break;
         }
         tick();
-        printf("%d: pc: %04x\n", i, pCore->dcpu->R[15]);
+        printf("%d: pc:%04x ", i, pCore->dcpu->R[15]);
+        for ( int i = 0; i<15; i++) {
+            if (t->r[i]>=0)
+                printf("r%c:%04x ", '0'+i, pCore->dcpu->R[i]);
+        }
+        printf("\n");
         i++;
     }
 
@@ -93,11 +99,10 @@ bool test(const uint16_t *prog, int len, test_t *t) {
                 printf("%sR[%d]:%s%04x (%d)%s ", NORMAL, i, RED, pCore->dcpu->R[i], pCore->dcpu->R[i], NORMAL);
         }
     }
-    printf("\n");
     if (total) {
         printf("%sok%s.\n", GREEN, NORMAL);
     } else {
-        printf("%sFAIL%s.\n", RED, NORMAL);
+        printf("\n%sFAIL%s.\n", RED, NORMAL);
     }
     printf("\n");
     return total;
@@ -121,14 +126,38 @@ int main(int argc, char *argv[]) {
     }
 
     int count = 0;    
+
     {
-        printf("Test %d: LD implicit\n", count++);
-        uint16_t prog[] = { LDIMML(0x123,0), LDIMMH(0x34,0), 0xffff };
+        printf("Test %d: LD r0, 0x123 ; LDH r0,0x34\n", count++);
+        uint16_t prog[] = { LDIMML(0,0x123), LDIMMH(0,0x34), 0xffff, 0 };
         test_t t = new_test();
-        t.r[0] = 0x3423; t.r[15] = 3;
-        test(prog, sizeof(prog), &t);
+        t.r[0] = 0x3423; t.r[15] = 2;
+        if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: LD r4, (r0+5)\n", count++);
+        uint16_t prog[] = { LDIMML(0,3), LD(4,0,2), 0xffff, 0, 0, 0xabcd, 0 };
+        test_t t = new_test();
+        t.r[0] = 3; t.r[4] = 0xabcd; t.r[15] = 2;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+    
+    {
+        printf("Test %d: ST (r3+2), r7\n", count++);
+        uint16_t prog[] = {
+            LDIMML(3,2),      // r3 = 2
+            LDIMML(7,0xfff),  // r7 = 0x2ff
+            LDIMMH(7,0xff),   // r7 = 0xffff
+            ST(3,2,7),        // st (r3+2), r7
+            0,
+            0xffff };
+        test_t t = new_test();
+        t.r[3] = 2; t.r[7] = 0xffff; t.r[15] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+done:
     pCore->final();
 
     if (pTrace) {

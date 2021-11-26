@@ -2,7 +2,7 @@ module dcpu(
     input  i_clk,
     input  i_reset,
     input  [15:0] i_dat,
-    output [15:0] o_dat,
+    output reg [15:0] o_dat,
     output reg [15:0] o_addr,
     output reg o_we,
     output reg o_cs,
@@ -10,13 +10,13 @@ module dcpu(
     input  i_int
 );
 
-reg [15:0] r_op;
+reg [15:0] r_op /* verilator public */;
 
 /* Implicit register loading
 
 Load 10 bit constant to register (upper 6 bits will be set 0):
     
-    0 0 <imm:10> <dst:4>                ld r0, #0x2ff lower 10 bits
+    0 0 <imm:10> <dst:4>                ld r0, #0x3ff lower 10 bits
 
 For values greater than 4095, a second load instruction is needed.
 This will overwrite the upper 8 bits of the register, and won't change the lower 8 bits.
@@ -56,12 +56,13 @@ wire w_op_st       = w_op_ldst &&  r_op[13];
 // ld rd, (rs+offs)
 // st (rs+offs), rd
 wire w_am_offs = ~r_op[13];
-wire [15:0]  w_offs_addr = (R[w_src] + {11'h0, w_offs}); // TODO: w_offs als 2s complement number
+wire [15:0] w_offs_addr = (R[w_src] + {11'h0, w_offs});
 
 /*
 11* noch verfügar
 
 1100 <aluop:4> <src:4> <dst:4>   alu rd, rs
+        ld rd, rs  (rd <- rs)
 
 1101 0 <cond:3> <op:4> <dst:4>   jmp rd, branch rd. Conditions: none, c, z, nc, nz
 
@@ -97,6 +98,8 @@ always @(posedge i_clk)
             R[w_dst] <= {6'h0, w_ld_imm};
         else if (w_op_ld_imm_h)
             R[w_dst] <= {w_ld_imm[7:0], R[w_dst][7:0]};
+        else if (w_op_ld && i_ack)
+            R[w_dst] <= i_dat;
     end
 
 always @(posedge i_clk)
@@ -121,8 +124,9 @@ always @(posedge i_clk)
     else if (s_fetch && i_ack)
         r_op <= i_dat;
     else if (s_execute)
-        if (r_op == 16'hffff)
-            $finish();
+        if (r_op == 16'hffff) begin
+            // $finish();
+        end
 
 
 // o_addr
@@ -134,9 +138,16 @@ always @(*) begin
     end else begin
         o_addr = 0;
     end
-
 end
 
+// o_dat
+always @(*) begin
+    if (s_execute && w_op_st) begin
+        o_dat = R[w_dst];
+    end else begin
+        o_dat = 0;
+    end
+end
 
 // o_cs
 always @(*)
@@ -147,10 +158,7 @@ always @(*)
     
 // o_we
 always @(*)
-    if      (i_reset) o_we = 0;
-    else if (w_op_st) o_we = 1;
-    else              o_we = 0;
-
+    o_we = (s_execute && w_op_st);
 
 
 endmodule
