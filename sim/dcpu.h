@@ -3,10 +3,17 @@
 
 #define MASK(width) ((1<<width)-1)
 
-
 #define DST(r)    (r & MASK(4))
 #define SRC(r)   ((r & MASK(4)) << 4)
 #define OFFS5(o) ((o & MASK(5)) << 8)
+
+#define NONE 0
+#define ZERO 1
+#define NONZERO 2
+#define CARRY 3
+#define NOCARRY 4
+#define COMPLEMENT2(v,w) ( (((v)<0) ? ~(uint32_t)-(v+1) : v ) & MASK(w))
+#define RJPCOND(cond) (cond << 9)
 
 // load implicit lower 10 bits of register
 // ld rd, #0x3ff
@@ -24,5 +31,7 @@
 // st (rd+offs), rs (note: in verilog, dst is picked from src field)
 #define ST(rd, offs, rs) ((5<<13) | OFFS5(offs) | SRC(rd) | DST(rs))
 
+// relative jump with condition
+#define RJP(cond, offs) ((0xc<<12) | RJPCOND(cond) | COMPLEMENT2(offs-1,9))
 
 #endif

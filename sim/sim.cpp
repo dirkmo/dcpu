@@ -157,6 +157,19 @@ int main(int argc, char *argv[]) {
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: RJP #2\n", count++);
+        uint16_t prog[] = {
+            RJP(NONE,2),    // RJP #2
+            0xffff,
+            LDIMML(0,0x19d),
+            0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x19d; t.r[15] = 3;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+
 done:
     pCore->final();
 
