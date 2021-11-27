@@ -83,23 +83,25 @@ wire [15:0] w_offs_addr = (R[w_src] + {11'h0, w_offs});
 /* Relative jump
 
 If condition is true, jump to relative position. offs is a 2s complement number.
-    1100 <cond:3> <offs:9>   rjp offs, Conditions: none, c, z, nc, nz
+    1100 <offs:5> <cond:3> <offs:4>   rjp offs, Conditions: none, c, z, nc, nz
 */
-wire w_op_rjp = r_op[15:12] == 4'b1100;
-wire [2:0] w_op_rjp_cond = r_op[11:9];
-wire [8:0] w_rjp_offs = r_op[8:0];
-wire w_rjp_cond =  (w_op_rjp_cond == NONE) ||
-                  ((w_op_rjp_cond == ZERO)    &&  R[ST][FZ]) ||
-                  ((w_op_rjp_cond == NONZERO) && ~R[ST][FZ]) ||
-                  ((w_op_rjp_cond == CARRY)   &&  R[ST][FC]) ||
-                  ((w_op_rjp_cond == NOCARRY) && ~R[ST][FC]);
+wire w_op_rjp           = (r_op[15:12] == 4'b1100);
+wire [8:0] w_rjp_offs   = {r_op[11:7], r_op[3:0]};
+wire [2:0] w_op_jp_cond = r_op[6:4];
+wire w_jp_cond          =  (w_op_jp_cond == NONE) ||
+                          ((w_op_jp_cond == ZERO)    &&  R[ST][FZ]) ||
+                          ((w_op_jp_cond == NONZERO) && ~R[ST][FZ]) ||
+                          ((w_op_jp_cond == CARRY)   &&  R[ST][FC]) ||
+                          ((w_op_jp_cond == NOCARRY) && ~R[ST][FC]);
 
 wire [15:0] w_rjp_addr = R[PC] + { {8{w_rjp_offs[8]}}, w_rjp_offs[7:0] };
 
 /*
     1101 0000 <op:1> <cond:3> <dst:4>   jmp rd, branch rd. Conditions: none, c, z, nc, nz
 */
-
+wire w_op_jpbr = (r_op[15:8] == 8'b1101_0000);
+wire w_op_jp = ~r_op[7];
+wire w_op_br =  r_op[7];
 
 
 /*
@@ -134,7 +136,7 @@ always @(posedge i_clk)
             R[w_dst] <= {w_ld_imm[7:0], R[w_dst][7:0]};
         else if (w_op_ld && i_ack)
             R[w_dst] <= i_dat;
-        else if (w_op_rjp && w_rjp_cond)
+        else if (w_op_rjp && w_jp_cond)
             R[15] <= w_rjp_addr;
     end
 

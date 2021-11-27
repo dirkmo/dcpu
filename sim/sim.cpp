@@ -233,7 +233,19 @@ int main(int argc, char *argv[]) {
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
-
+    {
+        printf("Test %d: RJ -2\n", count++);
+        uint16_t prog[] = {
+            /*0*/ RJP(NONE,3),    // RJP +3
+            /*1*/ LDIMML(0,0x2af),
+            /*2*/ 0xffff,
+            /*3*/ LDIMML(1,0x19d),
+            /*4*/ RJP(NONE,-3),   // RJP -3
+            /*5*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x2af & MASK(10); t.r[1] = 0x19d & MASK(10); t.r[15] = 2;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
 
 
 
