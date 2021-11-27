@@ -103,9 +103,9 @@ wire [15:0] w_rjp_addr = R[PC] + { {8{w_rjp_offs[8]}}, w_rjp_offs[7:0] };
 wire w_op_jpbr = (r_op[15:8] == 8'b1101_0000);
 wire w_op_jp = ~r_op[7];
 wire w_op_br =  r_op[7];
-wire w_op_ret = (w_op_jp_cond == RETURN);
 
-wire w_fetch_return_address = w_op_jpbr && w_op_ret;
+
+wire w_op_ret = w_op_jpbr && (w_op_jp_cond == RETURN); // TODO: improve opcode
 
 /*
 1101 <aluop:4> <src:4> <dst:4>   alu rd, rs
@@ -142,15 +142,13 @@ always @(posedge i_clk)
             R[w_dst] <= i_dat;
         else if (w_op_rjp && w_jp_cond)
             R[PC] <= w_rjp_addr;
-        else if (w_op_jpbr) begin
-            if (w_jp_cond) begin
-                R[PC] <= R[w_dst];
-                if (w_op_br)
-                    R[SP] <= R[SP] + 1;
-            end else if (w_op_ret && i_ack) begin
-                R[SP] <= w_sp_minus_1;
-                R[PC] <= i_dat;
-            end
+        else if (w_op_jpbr && w_jp_cond) begin
+            R[PC] <= R[w_dst];
+            if (w_op_br)
+                R[SP] <= R[SP] + 1;
+        end else if (w_op_ret && i_ack) begin
+            R[SP] <= w_sp_minus_1;
+            R[PC] <= i_dat;
         end
     end
 
@@ -183,23 +181,21 @@ always @(posedge i_clk)
 
 // o_addr
 always @(*) begin
-    if (s_fetch)
-        o_addr = R[PC];
-    else if (w_op_ldst)
-        o_addr = w_offs_addr;
-    else if (w_fetch_return_address)
-        o_addr = w_sp_minus_1;
-    else
-        o_addr = 0;
+    if (s_fetch)        o_addr = R[PC];
+    else if (w_op_ldst) o_addr = w_offs_addr;
+    else if (w_op_ret)  o_addr = w_sp_minus_1;
+    else if (w_op_jpbr &&
+             w_op_br)   o_addr = R[SP];
+    else                o_addr = 0;
 end
 
 // o_dat
 always @(*) begin
-    if (s_execute && w_op_st) begin
-        o_dat = R[w_dst];
-    end else begin
-        o_dat = 0;
-    end
+    if (s_execute) begin
+        if (w_op_st)      o_dat = R[w_dst];
+        else if (w_op_br) o_dat = R[PC];
+        else              o_dat = 0;
+    end else              o_dat = 0;
 end
 
 // o_cs
@@ -207,12 +203,14 @@ always @(*)
     if      (i_reset)   o_cs = 0;
     else if (s_fetch)   o_cs = 1;
     else if (w_op_ldst) o_cs = 1;
-    else if (w_fetch_return_address)  o_cs = 1;
+    else if (w_op_ret)  o_cs = 1;
+    else if (w_op_jpbr && 
+             w_op_br)   o_cs = 1;
     else                o_cs = 0;
     
 // o_we
 always @(*)
-    o_we = (s_execute && w_op_st);
+    o_we = (s_execute && (w_op_st || (w_op_jpbr && w_op_br)));
 
 
 endmodule

@@ -68,6 +68,7 @@ int handle(Vdcpu *pCore) {
 
 typedef struct {
     int r[16];
+    int mem[0x10000];
 } test_t;
 
 bool test(const uint16_t *prog, int len, test_t *t) {
@@ -99,6 +100,15 @@ bool test(const uint16_t *prog, int len, test_t *t) {
                 printf("%sR[%d]:%s%04x (%d)%s ", NORMAL, i, RED, pCore->dcpu->R[i], pCore->dcpu->R[i], NORMAL);
         }
     }
+
+    for ( i = 0; i<ARRSIZE(mem); i++) {
+        if (t->mem[i] >= 0 && t->mem[i] != mem[i]) {
+            printf("%sBad memory value at address %04x: %04x%s\n", RED, i, mem[i], NORMAL);
+            total = false;
+        }
+    }
+
+
     if (total) {
         printf("%sok%s.\n", GREEN, NORMAL);
     } else {
@@ -111,6 +121,7 @@ bool test(const uint16_t *prog, int len, test_t *t) {
 test_t new_test(void) {
     test_t t;
     for (int i = 0; i<16; t.r[i++] = -1);
+    for (int i = 0; i<ARRSIZE(t.mem); t.mem[i++] = -1);
     return t;
 }
 
@@ -153,7 +164,7 @@ int main(int argc, char *argv[]) {
             0,
             0xffff };
         test_t t = new_test();
-        t.r[3] = 2; t.r[7] = 0xffff; t.r[15] = 4;
+        t.r[3] = 2; t.r[7] = 0xffff; t.r[15] = 4; t.mem[4] = 0xffff;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -272,7 +283,7 @@ int main(int argc, char *argv[]) {
             /*5*/ LDIMML(3, 0xc1), // r3 = 0xc1
             /*6*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0xc1; t.r[15] = 6;
+        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0xc1; t.r[15] = 6; t.mem[0] = 3;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
