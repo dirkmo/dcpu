@@ -134,7 +134,7 @@ always @(posedge i_clk)
             R[w_dst] <= {w_ld_imm[7:0], R[w_dst][7:0]};
         else if (w_op_ld && i_ack)
             R[w_dst] <= i_dat;
-        else if (w_op_rjp)
+        else if (w_op_rjp && w_rjp_cond)
             R[15] <= w_rjp_addr;
     end
 

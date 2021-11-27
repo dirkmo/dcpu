@@ -158,7 +158,7 @@ int main(int argc, char *argv[]) {
     }
 
     {
-        printf("Test %d: RJP #2\n", count++);
+        printf("Test %d: RJ #2\n", count++);
         uint16_t prog[] = {
             RJP(NONE,2),    // RJP #2
             0xffff,
@@ -168,6 +168,73 @@ int main(int argc, char *argv[]) {
         t.r[0] = 0x19d; t.r[15] = 3;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
+
+    {
+        printf("Test %d: RJ.Z #2\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(13, 0),  // clear zero flag
+            /*1*/ RJP(ZERO,4),    // RJ.Z #4
+            /*2*/ LDIMML(0, 0x123), // LD r0, 0x123
+            /*3*/ LDIMML(13, 1),  // set zero flag
+            /*4*/ RJP(ZERO,2),    // RJ.Z #2
+            /*5*/ 0xffff,
+            /*6*/ LDIMML(1,0x555),
+            /*7*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 1; t.r[15] = 7;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: RJ.NZ #2\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(13, 1),  // set zero flag
+            /*1*/ RJP(NONZERO,4),    // RJ.NZ #4
+            /*2*/ LDIMML(0, 0x123), // LD r0, 0x123
+            /*3*/ LDIMML(13, 0),  // clear zero flag
+            /*4*/ RJP(NONZERO,2),    // RJ.NZ #2
+            /*5*/ 0xffff,
+            /*6*/ LDIMML(1,0x555),
+            /*7*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[15] = 7;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: RJ.C #2\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(13, 0),  // clear carry flag
+            /*1*/ RJP(CARRY,4),    // RJ.C #4
+            /*2*/ LDIMML(0, 0x123), // LD r0, 0x123
+            /*3*/ LDIMML(13, 2),  // set carry flag
+            /*4*/ RJP(CARRY,2),    // RJC #2
+            /*5*/ 0xffff,
+            /*6*/ LDIMML(1,0x555),
+            /*7*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 2; t.r[15] = 7;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: RJ.NC #2\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(13, 2),  // set carry flag
+            /*1*/ RJP(NOCARRY,4),    // RJ.NC #4
+            /*2*/ LDIMML(0, 0x123), // LD r0, 0x123
+            /*3*/ LDIMML(13, 0),  // clear carry flag
+            /*4*/ RJP(NOCARRY,2),    // RJ.NC #2
+            /*5*/ 0xffff,
+            /*6*/ LDIMML(1,0x555),
+            /*7*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[15] = 7;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+
+
 
 
 done:
