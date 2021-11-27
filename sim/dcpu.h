@@ -45,4 +45,9 @@
 // jp.cond r0
 #define JMP(dst, cond) ((0xd<<12) | JPCOND(cond) | DST(dst))
 
+// absolute branch to register
+// br.cond r0
+#define BR(dst, cond) ((0xd<<12) | (1<<7) | JPCOND(cond) | DST(dst))
+
+
 #endif

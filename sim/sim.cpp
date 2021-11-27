@@ -261,6 +261,20 @@ int main(int argc, char *argv[]) {
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: BR r0\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(0, 5),  // r0 = 5
+            /*1*/ LDIMML(14, 0), // SP = 0
+            /*2*/ BR(NONE, 0),  // BR r0
+            /*3*/ LDIMML(3, 0x8c), // r3 = 0x8c
+            /*4*/ 0xffff,
+            /*5*/ LDIMML(3, 0xc1), // r3 = 0xc1
+            /*6*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0xc1; t.r[15] = 6;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
 
 done:
     pCore->final();

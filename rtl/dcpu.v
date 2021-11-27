@@ -29,7 +29,8 @@ localparam
     ZERO    = 3'd1,
     NONZERO = 3'd2,
     CARRY   = 3'd3,
-    NOCARRY = 3'd4;
+    NOCARRY = 3'd4,
+    RETURN  = 3'd7; // special meaning: return
 
 reg [15:0] R[0:15] /* verilator public */;
 
@@ -102,7 +103,9 @@ wire [15:0] w_rjp_addr = R[PC] + { {8{w_rjp_offs[8]}}, w_rjp_offs[7:0] };
 wire w_op_jpbr = (r_op[15:8] == 8'b1101_0000);
 wire w_op_jp = ~r_op[7];
 wire w_op_br =  r_op[7];
+wire w_op_ret = (w_op_jp_cond == RETURN);
 
+wire w_fetch_return_address = w_op_jpbr && w_op_ret;
 
 /*
 1101 <aluop:4> <src:4> <dst:4>   alu rd, rs
@@ -122,6 +125,7 @@ reg  r_state /* verilator public */;
 wire s_fetch   = (r_state == FETCH);
 wire s_execute = (r_state == EXECUTE);
 
+wire [15:0] w_sp_minus_1 = R[SP] - 1;
 
 // R[]
 always @(posedge i_clk)
@@ -138,10 +142,15 @@ always @(posedge i_clk)
             R[w_dst] <= i_dat;
         else if (w_op_rjp && w_jp_cond)
             R[PC] <= w_rjp_addr;
-        else if (w_op_jpbr && w_jp_cond) begin
-            R[PC] <= R[w_dst];
-            if (w_op_br)
-                R[SP] <= R[SP] + 1;
+        else if (w_op_jpbr) begin
+            if (w_jp_cond) begin
+                R[PC] <= R[w_dst];
+                if (w_op_br)
+                    R[SP] <= R[SP] + 1;
+            end else if (w_op_ret && i_ack) begin
+                R[SP] <= w_sp_minus_1;
+                R[PC] <= i_dat;
+            end
         end
     end
 
@@ -176,11 +185,12 @@ always @(posedge i_clk)
 always @(*) begin
     if (s_fetch)
         o_addr = R[PC];
-    else if (w_op_ldst) begin
+    else if (w_op_ldst)
         o_addr = w_offs_addr;
-    end else begin
+    else if (w_fetch_return_address)
+        o_addr = w_sp_minus_1;
+    else
         o_addr = 0;
-    end
 end
 
 // o_dat
@@ -197,6 +207,7 @@ always @(*)
     if      (i_reset)   o_cs = 0;
     else if (s_fetch)   o_cs = 1;
     else if (w_op_ldst) o_cs = 1;
+    else if (w_fetch_return_address)  o_cs = 1;
     else                o_cs = 0;
     
 // o_we
