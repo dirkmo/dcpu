@@ -326,7 +326,17 @@ int main(int argc, char *argv[]) {
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
-
+    {
+        printf("Test %d: ld r0, r1\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(0, 0xff),
+            /*1*/ LDIMML(1, 0xee),
+            /*2*/ ALU(0,1,COPY),
+            /*3*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0xee; t.r[1] = 0xee; t.r[15] = 3;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
 
 
 done:

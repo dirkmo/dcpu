@@ -115,10 +115,32 @@ wire w_op_special = (r_op[15:8] == 8'b1101_0001);
 wire w_op_ret     = w_op_special && (r_op[7:4] == 4'h0);
 wire w_op_push    = w_op_special && (r_op[7:4] == 4'h1);
 wire w_op_pop     = w_op_special && (r_op[7:4] == 4'h2);
-/*
-1101 <aluop:4> <src:4> <dst:4>   alu rd, rs
+
+/* ALU
+1110 <aluop:4> <src:4> <dst:4>   alu rd, rs
         ld rd, rs  (rd <- rs)
 */
+wire w_op_alu = (r_op[15:12] == 4'b1110);
+wire [3:0] w_alu_op = r_op[11:8];
+
+reg [15:0] r_alu;
+reg carry;
+wire zero = (r_alu == 16'h0000);
+always @(*)
+    case (w_alu_op)
+        4'h0: r_alu = R[w_src]; // ld rd, rs
+        4'h1: {carry, r_alu} = {1'b0, R[w_src]} + {1'b0, R[w_dst]} + {15'h0, R[ST][FC]};
+        4'h2: {carry, r_alu} = {1'b0, R[w_src]} - {1'b0, R[w_dst]} - {15'h0, R[ST][FC]}; // TODO: check
+        4'h3: r_alu = R[w_src] & R[w_dst];
+        4'h4: r_alu = R[w_src] | R[w_dst];
+        4'h5: r_alu = R[w_src] ^ R[w_dst];
+        4'h6: r_alu = {1'b0, R[w_src][15:1]}; // rs >> 1
+        4'h7: r_alu = {R[w_src][14:0], 1'b0}; // rs << 1
+        4'h8: r_alu = {R[w_src][7:0], 8'h00}; // rs << 8
+        4'h9: r_alu = {8'h00, R[w_src][15:8]}; // rs >> 8
+        default: r_alu = 0;
+    endcase
+
 
 parameter
     FETCH   = 0,
@@ -158,6 +180,9 @@ always @(posedge i_clk)
         end else if (w_op_pop && i_ack) begin
             R[SP] <= w_sp_minus_1;
             R[w_dst] <= i_dat;
+        end else if (w_op_alu) begin
+            R[SP][1:0] <= {carry, zero};
+            R[w_dst] <= r_alu;
         end
     end
 

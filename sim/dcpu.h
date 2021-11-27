@@ -15,6 +15,17 @@
 #define RETURN 7
 #define JPCOND(cond) (cond << 4)
 
+#define COPY 0
+#define ADD 1
+#define SUB 2
+#define AND 3
+#define OR  4
+#define XOR 5
+#define LSR 6
+#define LSL 7
+#define WLSR 8
+#define WLSL 9
+
 // helper macros for 2s complement
 #define COMPLEMENT2(v,w) ( (((v)<0) ? ~(uint32_t)-(v+1) : v ) & MASK(w))
 #define C(offs) COMPLEMENT2(offs-1,9)
@@ -62,5 +73,6 @@
 // pop r0
 #define POP(dst) (0xd100 | (2<<4) | (DST(dst)))
 
+#define ALU(rd, rs, op) (0xe000 | (op << 8) | SRC(rs) | DST(rd))
 
 #endif
