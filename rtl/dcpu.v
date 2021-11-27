@@ -29,8 +29,7 @@ localparam
     ZERO    = 3'd1,
     NONZERO = 3'd2,
     CARRY   = 3'd3,
-    NOCARRY = 3'd4,
-    RETURN  = 3'd7; // special meaning: return
+    NOCARRY = 3'd4;
 
 reg [15:0] R[0:15] /* verilator public */;
 
@@ -53,7 +52,7 @@ wire [9:0] w_ld_imm = r_op[13:4];
 
 /* Load/store instructions
 
-The only instructions that access memory via data bus.
+The only instructions that access memory via data bus (except PUSH/POP/BR/RET).
 
 Load word from memory at address rs+offset to register rd.
 
