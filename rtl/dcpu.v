@@ -137,9 +137,12 @@ always @(posedge i_clk)
         else if (w_op_ld && i_ack)
             R[w_dst] <= i_dat;
         else if (w_op_rjp && w_jp_cond)
-            R[15] <= w_rjp_addr;
-        else if (w_op_jpbr)
-            R[15] <= R[w_dst];
+            R[PC] <= w_rjp_addr;
+        else if (w_op_jpbr && w_jp_cond) begin
+            R[PC] <= R[w_dst];
+            if (w_op_br)
+                R[SP] <= R[SP] + 1;
+        end
     end
 
 always @(posedge i_clk)

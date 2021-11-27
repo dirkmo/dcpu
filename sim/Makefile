@@ -37,6 +37,9 @@ wave: sim
 iverilog:
 	iverilog -Wall $(VERILOGSRC)
 
+yosys:
+	yosys -Wall -p synth_ice40 $(VERILOGSRC)
+
 clean:
 	rm -f trace.vcd a.out
 	rm -f $(VERILATOR_OUTPUTDIR)/*
