@@ -12,11 +12,14 @@
 #define NONZERO 2
 #define CARRY 3
 #define NOCARRY 4
+#define JPCOND(cond) (cond << 4)
+
+// helper macros for 2s complement
 #define COMPLEMENT2(v,w) ( (((v)<0) ? ~(uint32_t)-(v+1) : v ) & MASK(w))
-#define RJPCOND(cond) (cond << 4)
 #define C(offs) COMPLEMENT2(offs-1,9)
 // RJP: 1100 <offs:5> <cond:3> <offs:4>
 #define RJPOFFSET(offs) ( ((C(offs) & 0x1f0) << 3) | (C(offs) & 0xf) )
+
 
 // load implicit lower 10 bits of register
 // ld rd, #0x3ff
@@ -35,6 +38,11 @@
 #define ST(rd, offs, rs) ((5<<13) | OFFS5(offs) | SRC(rd) | DST(rs))
 
 // relative jump with condition
-#define RJP(cond, offs) ((0xc<<12) | RJPCOND(cond) | RJPOFFSET(offs))
+// rj.cond -100
+#define RJP(cond, offs) ((0xc<<12) | JPCOND(cond) | RJPOFFSET(offs))
+
+// absolute jmp to register
+// jp.cond r0
+#define JMP(dst, cond) ((0xd<<12) | JPCOND(cond) | DST(dst))
 
 #endif

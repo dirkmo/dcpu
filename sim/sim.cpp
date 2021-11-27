@@ -83,7 +83,7 @@ bool test(const uint16_t *prog, int len, test_t *t) {
         printf("%d: pc:%04x ", i, pCore->dcpu->R[15]);
         for ( int i = 0; i<15; i++) {
             if (t->r[i]>=0)
-                printf("r%c:%04x ", '0'+i, pCore->dcpu->R[i]);
+                printf("r%d:%04x ", i, pCore->dcpu->R[i]);
         }
         printf("\n");
         i++;
@@ -247,6 +247,19 @@ int main(int argc, char *argv[]) {
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: JP r10\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(10, 4),
+            /*1*/ JMP(10, NONE),
+            /*2*/ 0xffff,
+            /*3*/ LDIMML(10, 0x82),
+            /*4*/ LDIMML(12, 0xaf),
+            /*5*/ 0xffff };
+        test_t t = new_test();
+        t.r[10] = 4; t.r[12] = 0xaf; t.r[15] = 5;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
 
 
 done:
