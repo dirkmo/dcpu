@@ -12,6 +12,7 @@
 #define NONZERO 2
 #define CARRY 3
 #define NOCARRY 4
+#define RETURN 7
 #define JPCOND(cond) (cond << 4)
 
 // helper macros for 2s complement
@@ -48,6 +49,18 @@
 // absolute branch to register
 // br.cond r0
 #define BR(dst, cond) ((0xd<<12) | (1<<7) | JPCOND(cond) | DST(dst))
+
+// return
+// ret
+#define RET (0xd100 | (0<<4))
+
+// push
+// push r0
+#define PUSH(dst) (0xd100 | (1<<4) | (DST(dst)))
+
+// pop
+// pop r0
+#define POP(dst) (0xd100 | (2<<4) | (DST(dst)))
 
 
 #endif

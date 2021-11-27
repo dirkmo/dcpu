@@ -97,24 +97,27 @@ wire w_jp_cond          =  (w_op_jp_cond == NONE) ||
 
 wire [15:0] w_rjp_addr = R[PC] + { {8{w_rjp_offs[8]}}, w_rjp_offs[7:0] };
 
-/*
+/* Jump / branch to absolute
     1101 0000 <op:1> <cond:3> <dst:4>   jmp rd, branch rd. Conditions: none, c, z, nc, nz
 */
 wire w_op_jpbr = (r_op[15:8] == 8'b1101_0000);
 wire w_op_jp = ~r_op[7];
 wire w_op_br =  r_op[7];
 
+/* Special opcodes group
+    1101 0001 <op:4> <dst:4>
 
-wire w_op_ret = w_op_jpbr && (w_op_jp_cond == RETURN); // TODO: improve opcode
-
+    op = 0: ret
+    op = 1: push
+    op = 2: pop
+*/
+wire w_op_special = (r_op[15:8] == 8'b1101_0001);
+wire w_op_ret     = w_op_special && (r_op[7:4] == 4'h0);
+wire w_op_push    = w_op_special && (r_op[7:4] == 4'h1);
+wire w_op_pop     = w_op_special && (r_op[7:4] == 4'h2);
 /*
 1101 <aluop:4> <src:4> <dst:4>   alu rd, rs
         ld rd, rs  (rd <- rs)
-
-
-push pop
-
-ret
 */
 
 parameter
@@ -125,6 +128,7 @@ reg  r_state /* verilator public */;
 wire s_fetch   = (r_state == FETCH);
 wire s_execute = (r_state == EXECUTE);
 
+wire [15:0] w_sp_plus_1  = R[SP] + 1;
 wire [15:0] w_sp_minus_1 = R[SP] - 1;
 
 // R[]
@@ -145,10 +149,15 @@ always @(posedge i_clk)
         else if (w_op_jpbr && w_jp_cond) begin
             R[PC] <= R[w_dst];
             if (w_op_br)
-                R[SP] <= R[SP] + 1;
+                R[SP] <= w_sp_plus_1;
         end else if (w_op_ret && i_ack) begin
             R[SP] <= w_sp_minus_1;
             R[PC] <= i_dat;
+        end else if (w_op_push && i_ack) begin
+            R[SP] <= w_sp_plus_1;
+        end else if (w_op_pop && i_ack) begin
+            R[SP] <= w_sp_minus_1;
+            R[w_dst] <= i_dat;
         end
     end
 
@@ -186,16 +195,19 @@ always @(*) begin
     else if (w_op_ret)  o_addr = w_sp_minus_1;
     else if (w_op_jpbr &&
              w_op_br)   o_addr = R[SP];
+    else if (w_op_push) o_addr = R[SP];
+    else if (w_op_pop)  o_addr = w_sp_minus_1;
     else                o_addr = 0;
 end
 
 // o_dat
 always @(*) begin
     if (s_execute) begin
-        if (w_op_st)      o_dat = R[w_dst];
-        else if (w_op_br) o_dat = R[PC];
-        else              o_dat = 0;
-    end else              o_dat = 0;
+        if (w_op_st)        o_dat = R[w_dst];
+        else if (w_op_push) o_dat = R[w_dst];
+        else if (w_op_br)   o_dat = R[PC];
+        else                o_dat = 0;
+    end else                o_dat = 0;
 end
 
 // o_cs
@@ -206,11 +218,14 @@ always @(*)
     else if (w_op_ret)  o_cs = 1;
     else if (w_op_jpbr && 
              w_op_br)   o_cs = 1;
+    else if (w_op_push) o_cs = 1;
+    else if (w_op_pop)  o_cs = 1;
     else                o_cs = 0;
     
 // o_we
 always @(*)
-    o_we = (s_execute && (w_op_st || (w_op_jpbr && w_op_br)));
+    o_we = s_execute && 
+        ( w_op_st || w_op_push || (w_op_jpbr && w_op_br) );
 
 
 endmodule

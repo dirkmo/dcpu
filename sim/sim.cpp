@@ -71,23 +71,29 @@ typedef struct {
     int mem[0x10000];
 } test_t;
 
+void printregs(int count, test_t *t) {
+    printf("%d: pc:%04x ", count, pCore->dcpu->R[15]);
+    for ( int i = 0; i<15; i++) {
+        if (t->r[i]>=0)
+            printf("r%d:%04x ", i, pCore->dcpu->R[i]);
+    }
+    printf("\n");
+}
+
 bool test(const uint16_t *prog, int len, test_t *t) {
     memset(mem, 0, sizeof(mem));
     memcpy(mem, prog, len*sizeof(*prog));
     reset();
     int i = 0;
     while(i < 50) {
+        if(!pCore->dcpu->r_state) {
+            printregs(i, t);
+            i++;
+        }
         if(handle(pCore)) {
             break;
         }
         tick();
-        printf("%d: pc:%04x ", i, pCore->dcpu->R[15]);
-        for ( int i = 0; i<15; i++) {
-            if (t->r[i]>=0)
-                printf("r%d:%04x ", i, pCore->dcpu->R[i]);
-        }
-        printf("\n");
-        i++;
     }
 
     bool total = true;
@@ -286,6 +292,42 @@ int main(int argc, char *argv[]) {
         t.r[0] = 5; t.r[14] = 1; t.r[3] = 0xc1; t.r[15] = 6; t.mem[0] = 3;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
+
+    {
+        printf("Test %d: ret\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(0, 5),  // r0 = 5
+            /*1*/ LDIMML(14, 0), // SP = 0
+            /*2*/ BR(NONE, 0),   // BR r0
+            /*3*/ LDIMML(3, 0x8c), // r3 = 0x8c
+            /*4*/ 0xffff,
+            /*5*/ LDIMML(4, 0xc1), // r3 = 0xc1
+            /*6*/ RET,
+            /*7*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0x8c; t.r[4] = 0xc1; t.r[14] = 0; t.r[15] = 4; t.mem[0] = 3;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: push pop\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(0, 0xff),
+            /*1*/ LDIMML(1, 0xee),
+            /*2*/ LDIMML(14, 0x10),
+            /*3*/ PUSH(0),
+            /*4*/ PUSH(1),
+            /*5*/ POP(0),
+            /*6*/ POP(1),
+            /*7*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0xee; t.r[1] = 0xff; t.r[14] = 0x10; t.r[15] = 7;
+        t.mem[0x10] = 0xff; t.mem[0x11] = 0xee;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+
+
 
 done:
     pCore->final();
