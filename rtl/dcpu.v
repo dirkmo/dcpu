@@ -136,10 +136,10 @@ always @(*) begin
         4'h4: {r_carry, r_alu} = {1'b0, R[w_dst] | R[w_src]};
         4'h5: {r_carry, r_alu} = {1'b0, R[w_dst] ^ R[w_src]};
         4'h6: {r_carry, r_alu} = {1'b0, R[w_dst]}; // for CMP
-        4'h7: {r_carry, r_alu} = {R[w_src][0], 1'b0, R[w_src][15:1]}; // rs >> 1, r_carry=rs[0]
-        4'h8: {r_carry, r_alu} = {R[w_src][15:0], 1'b0}; // rs << 1
-        4'h9: {r_carry, r_alu} = {1'b0, R[w_src][7:0], 8'h00}; // rs << 8
-        4'ha: {r_carry, r_alu} = {9'h00, R[w_src][15:8]}; // rs >> 8
+        4'h7: {r_carry, r_alu} = {R[w_dst][0], 1'b0, R[w_src][15:1]}; // rs >> 1, r_carry=rs[0]
+        4'h8: {r_carry, r_alu} = {R[w_dst][15:0], 1'b0}; // rs << 1
+        4'h9: {r_carry, r_alu} = {9'h00, R[w_dst][15:8]}; // rs >> 8
+        4'ha: {r_carry, r_alu} = {1'b0, R[w_dst][7:0], 8'h00}; // rs << 8
         default: r_alu = 0;
     endcase
 end

@@ -419,6 +419,45 @@ int main(int argc, char *argv[]) {
     }
 
     {
+        printf("Test %d: and r0, r1\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0xff),
+            /*2*/ LDIMML(1, 0x17),
+            /*3*/ ALU(0,1,AND),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x17; t.r[1] = 0x17; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: or r0, r1\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0x100),
+            /*2*/ LDIMML(1, 0xfa),
+            /*3*/ ALU(0,1,OR),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x1fa; t.r[1] = 0xfa; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: xor r0, r1\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0xf0),
+            /*2*/ LDIMML(1, 0x0f),
+            /*3*/ ALU(0,1,XOR),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0xff; t.r[1] = 0x0f; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
         printf("Test %d: CMP r0, r1\n", count++);
         uint16_t prog[] = {
             /*0*/ LDIMML(0, 0x1),
@@ -444,7 +483,56 @@ int main(int argc, char *argv[]) {
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: lsr r0\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0x11),
+            /*2*/ ALU(0,0,LSR),
+            /*3*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x8;t. r[REG_ST] = 2; t.r[REG_PC] = 3;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
 
+    {
+        printf("Test %d: lsl r0\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0x01),
+            /*2*/ LDIMMH(0, 0x80),
+            /*3*/ ALU(0,0,LSL),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x2;t. r[REG_ST] = 2; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: lsr.w r0\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0x33),
+            /*2*/ LDIMMH(0, 0xad),
+            /*3*/ ALU(0,0,WLSR),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0xad;t. r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: lsl.w r0\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0x33),
+            /*2*/ LDIMMH(0, 0xad),
+            /*3*/ ALU(0,0,WLSL),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x3300;t. r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
 
 done:
     pCore->final();
