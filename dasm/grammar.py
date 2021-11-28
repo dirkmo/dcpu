@@ -1,9 +1,7 @@
 grammar = '''
 ?start: _line*
 
-_line: LABEL? [_op | _dir | _COMMENT]
-
-_NL: NEWLINE
+_line: LABEL? [_op | _dir] _COMMENT? _NL
 
 _op: ldimm
     | reljmp
@@ -11,17 +9,33 @@ _op: ldimm
     | op1
     | op2
 
-op0: OP0 _NL
+op0: RET
 
-op1: OP1 REG _NL
+op1:  "push"i REG  -> push
+    | "pop"i REG   -> pop
+    | "sl"i REG    -> sl
+    | "sr"i REG    -> sr
+    | "nsl"i REG   -> nsl
+    | "nsr"i REG   -> nsr
+    | "j" ["p"|"z"|"nz"|"c"|"nc"]
+    | "b" ["r"|"z"|"nz"|"c"|"nc"]
 
-op2: OP2 REG "," REG _NL
+op2: OP2 REG "," REG
 
-ldimm: "ld.l"i REG "," NUMBER _NL
-    | "ld.h"i REG "," NUMBER _NL
-    | "ld"i REG "," NUMBER _NL
+ldimm: "ld.l"i REG "," NUMBER -> ldimml
+    | "ld.h"i REG "," NUMBER  -> ldimmh
+    | "ld"i REG "," NUMBER    -> ldimm
 
-reljmp: "j" ["p"|"z"|"nz"|"c"|"nc"] [CNAME|NUMBER] _NL
+reljmp: "jp" CNAME    -> jp_label
+    | "jz" CNAME      -> jpz_label
+    | "jnz" CNAME     -> jnz_label
+    | "jc" CNAME      -> jc_label
+    | "jnc" CNAME     -> jnc_label
+    | "jp" NUMBER     -> jp_offset
+    | "jz" NUMBER     -> jz_offset
+    | "jnz" NUMBER    -> jnz_offset
+    | "jc" NUMBER     -> jc_offset
+    | "jnc" NUMBER    -> jnc_offset
 
 _dir: equ
     | org
@@ -29,11 +43,11 @@ _dir: equ
     | ascii
     | word
 
-equ: ".equ"i CNAME "," NUMBER _NL
-org: ".org"i NUMBER _NL
-asciiz: ".asciiz"i STRING _NL
-ascii: ".ascii"i STRING _NL
-word: ".word"i NUMBER ("," NUMBER)* _NL
+equ: ".equ"i CNAME "," NUMBER
+org: ".org"i NUMBER
+asciiz: ".asciiz"i STRING
+ascii: ".ascii"i STRING
+word: ".word"i NUMBER ("," NUMBER)*
 
 REG:  "r1"i "0".."5"
     | "r"i "0".."9"
@@ -41,16 +55,7 @@ REG:  "r1"i "0".."5"
     | "st"i
     | "sp"i
 
-OP0: "ret"i
-
-OP1:  "push"i
-    | "pop"i
-    | "sl"i
-    | "sr"i
-    | "nsl"i
-    | "nsr"i
-    | "j" ["p"|"z"|"nz"|"c"|"nc"]
-    | "b" ["r"|"z"|"nz"|"c"|"nc"]
+RET: "ret"i
 
 OP2: "ld"i 
     | "st"
@@ -71,6 +76,8 @@ NUMBER: SIGNED_INT | HEX
 CHAR: "'" /./ "'"
 
 _COMMENT: SH_COMMENT | CPP_COMMENT
+
+_NL: NEWLINE
 
 // see common.lark
 %import common.WS
