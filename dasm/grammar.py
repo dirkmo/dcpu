@@ -1,9 +1,7 @@
 grammar = '''
 start: _line*
 
-_line: _op
-    | _dir
-    | _COMMENT
+_line: LABEL* [_op | _dir | _COMMENT]
 
 _NL: NEWLINE
 
@@ -19,11 +17,15 @@ op2: OP1 REG "," REG _NL
 
 _dir: equ
     | org
-    | assciz
+    | asciiz
+    | ascii
+    | word
 
 equ: ".equ"i CNAME "," NUMBER _NL
 org: ".org"i NUMBER _NL
-assciz: ".asciiz"i ESCAPED_STRING _NL
+asciiz: ".asciiz"i STRING _NL
+ascii: ".ascii"i STRING _NL
+word: ".word"i NUMBER ("," NUMBER)* _NL
 
 REG:  "r1"i "0".."5"
     | "r"i "0".."9"
@@ -51,6 +53,8 @@ OP2: "ld"i
     | "xor"i
     | "cmp"i
 
+LABEL: CNAME ":"
+
 SIGNED_INT: ["+"|"-"] INT
 HEX: "$" HEXDIGIT+
 
@@ -68,7 +72,7 @@ _COMMENT: SH_COMMENT | CPP_COMMENT
 %import common.DIGIT
 %import common.HEXDIGIT
 %import common.INT
-%import common.ESCAPED_STRING
+%import common.ESCAPED_STRING -> STRING
 
 %ignore WS
 %ignore NEWLINE
