@@ -5,11 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "cwd": "${fileDirname}",
+            "args": ["test.asm"],
+            "console": "integratedTerminal"
+        },
+        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "${workspaceFolder}/sim/verilator/Vdcpu",
-            "args": ["-t"],
+            "args": [
+                "-t"
+            ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/sim",
             "environment": [],
