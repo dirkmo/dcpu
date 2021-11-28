@@ -72,7 +72,7 @@ typedef struct {
 } test_t;
 
 void printregs(int count, test_t *t) {
-    printf("%d: pc:%04x ", count, pCore->dcpu->R[15]);
+    printf("%d: pc:%04x ", count, pCore->dcpu->R[REG_PC]);
     for ( int i = 0; i<15; i++) {
         if (t->r[i]>=0)
             printf("r%d:%04x ", i, pCore->dcpu->R[i]);
@@ -148,7 +148,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: LD r0, 0x123 ; LDH r0,0x34\n", count++);
         uint16_t prog[] = { LDIMML(0,0x123), LDIMMH(0,0x34), 0xffff, 0 };
         test_t t = new_test();
-        t.r[0] = 0x3423; t.r[15] = 2;
+        t.r[0] = 0x3423; t.r[REG_PC] = 2;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: LD r4, (r0+5)\n", count++);
         uint16_t prog[] = { LDIMML(0,3), LD(4,0,2), 0xffff, 0, 0, 0xabcd, 0 };
         test_t t = new_test();
-        t.r[0] = 3; t.r[4] = 0xabcd; t.r[15] = 2;
+        t.r[0] = 3; t.r[4] = 0xabcd; t.r[REG_PC] = 2;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
     
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) {
             0,
             0xffff };
         test_t t = new_test();
-        t.r[3] = 2; t.r[7] = 0xffff; t.r[15] = 4; t.mem[4] = 0xffff;
+        t.r[3] = 2; t.r[7] = 0xffff; t.r[REG_PC] = 4; t.mem[4] = 0xffff;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -182,7 +182,7 @@ int main(int argc, char *argv[]) {
             LDIMML(0,0x19d),
             0xffff };
         test_t t = new_test();
-        t.r[0] = 0x19d; t.r[15] = 3;
+        t.r[0] = 0x19d; t.r[REG_PC] = 3;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
             /*6*/ LDIMML(1,0x555),
             /*7*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 1; t.r[15] = 7;
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 1; t.r[REG_PC] = 7;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
             /*6*/ LDIMML(1,0x555),
             /*7*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[15] = 7;
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[REG_PC] = 7;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -230,7 +230,7 @@ int main(int argc, char *argv[]) {
             /*6*/ LDIMML(1,0x555),
             /*7*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 2; t.r[15] = 7;
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 2; t.r[REG_PC] = 7;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -246,7 +246,7 @@ int main(int argc, char *argv[]) {
             /*6*/ LDIMML(1,0x555),
             /*7*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[15] = 7;
+        t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[REG_PC] = 7;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -260,7 +260,7 @@ int main(int argc, char *argv[]) {
             /*4*/ RJP(NONE,-3),   // RJP -3
             /*5*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 0x2af & MASK(10); t.r[1] = 0x19d & MASK(10); t.r[15] = 2;
+        t.r[0] = 0x2af & MASK(10); t.r[1] = 0x19d & MASK(10); t.r[REG_PC] = 2;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -274,7 +274,7 @@ int main(int argc, char *argv[]) {
             /*4*/ LDIMML(12, 0xaf),
             /*5*/ 0xffff };
         test_t t = new_test();
-        t.r[10] = 4; t.r[12] = 0xaf; t.r[15] = 5;
+        t.r[10] = 4; t.r[12] = 0xaf; t.r[REG_PC] = 5;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -289,7 +289,7 @@ int main(int argc, char *argv[]) {
             /*5*/ LDIMML(3, 0xc1), // r3 = 0xc1
             /*6*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0xc1; t.r[15] = 6; t.mem[0] = 3;
+        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0xc1; t.r[REG_PC] = 6; t.mem[0] = 3;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -305,7 +305,7 @@ int main(int argc, char *argv[]) {
             /*6*/ RET,
             /*7*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0x8c; t.r[4] = 0xc1; t.r[14] = 0; t.r[15] = 4; t.mem[0] = 3;
+        t.r[0] = 5; t.r[14] = 1; t.r[3] = 0x8c; t.r[4] = 0xc1; t.r[14] = 0; t.r[REG_PC] = 4; t.mem[0] = 3;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
@@ -321,11 +321,12 @@ int main(int argc, char *argv[]) {
             /*6*/ POP(1),
             /*7*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 0xee; t.r[1] = 0xff; t.r[14] = 0x10; t.r[15] = 7;
+        t.r[0] = 0xee; t.r[1] = 0xff; t.r[14] = 0x10; t.r[REG_PC] = 7;
         t.mem[0x10] = 0xff; t.mem[0x11] = 0xee;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
 
+    // ALU tests
     {
         printf("Test %d: ld r0, r1\n", count++);
         uint16_t prog[] = {
@@ -334,9 +335,115 @@ int main(int argc, char *argv[]) {
             /*2*/ ALU(0,1,COPY),
             /*3*/ 0xffff };
         test_t t = new_test();
-        t.r[0] = 0xee; t.r[1] = 0xee; t.r[15] = 3;
+        t.r[0] = 0xee; t.r[1] = 0xee; t.r[REG_PC] = 3;
         if (!test(prog, sizeof(prog), &t)) goto done;
     }
+
+    {
+        printf("Test %d: add r0, r1, no resulting carry flag\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0xff),
+            /*2*/ LDIMML(1, 0xee),
+            /*3*/ ALU(0,1,ADD),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0xee + 0xff; t.r[1] = 0xee; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: add r0, r1, resulting carry+zero flag\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0x2ff),
+            /*2*/ LDIMMH(0, 0xff),
+            /*3*/ LDIMML(1, 0x1),
+            /*4*/ ALU(0,1,ADD),
+            /*5*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0; t.r[1] = 1; t.r[REG_ST] = 3; t.r[REG_PC] = 5;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: add r0, r1, using carry flag\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 2),
+            /*1*/ LDIMML(0, 0x2),
+            /*2*/ LDIMML(1, 0x1),
+            /*3*/ ALU(0,1,ADD),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 4; t.r[1] = 1; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: sub r0, r1, no resulting carry flag\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0xff),
+            /*2*/ LDIMML(1, 0xee),
+            /*3*/ ALU(0,1,SUB),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0xff - 0xee; t.r[1] = 0xee; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: sub r0, r1, with resulting carry flag\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 0),
+            /*1*/ LDIMML(0, 0x1),
+            /*2*/ LDIMML(1, 0x2),
+            /*3*/ ALU(0,1,SUB),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = uint16_t(1-2); t.r[1] = 2; t.r[REG_ST] = 2; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: sub r0, r1, using carry flag\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(REG_ST, 2),
+            /*1*/ LDIMML(0, 10),
+            /*2*/ LDIMML(1, 1),
+            /*3*/ ALU(0,1,SUB),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 8; t.r[1] = 1; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: CMP r0, r1\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(0, 0x1),
+            /*1*/ LDIMML(1, 0x1),
+            /*2*/ LDIMML(REG_ST, 0), // clear st
+            /*3*/ ALU(0,1,CMP),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 1; t.r[1] = 1; t.r[REG_ST] = 1; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: CMP r0, r1\n", count++);
+        uint16_t prog[] = {
+            /*0*/ LDIMML(0, 0x15),
+            /*1*/ LDIMML(1, 0x1),
+            /*2*/ LDIMML(REG_ST, 0), // clear st
+            /*3*/ ALU(0,1,CMP),
+            /*4*/ 0xffff };
+        test_t t = new_test();
+        t.r[0] = 0x15; t.r[1] = 1; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
+        if (!test(prog, sizeof(prog), &t)) goto done;
+    }
+
 
 
 done:

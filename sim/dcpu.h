@@ -1,6 +1,10 @@
 #ifndef __DCPU_H
 #define __DCPU_H
 
+#define REG_ST 13
+#define REG_SP 14
+#define REG_PC 15
+
 #define MASK(width) ((1<<width)-1)
 
 #define DST(r)    (r & MASK(4))
@@ -21,10 +25,11 @@
 #define AND 3
 #define OR  4
 #define XOR 5
-#define LSR 6
-#define LSL 7
-#define WLSR 8
-#define WLSL 9
+#define CMP 6
+#define LSR 7
+#define LSL 8
+#define WLSR 9
+#define WLSL 10
 
 // helper macros for 2s complement
 #define COMPLEMENT2(v,w) ( (((v)<0) ? ~(uint32_t)-(v+1) : v ) & MASK(w))
