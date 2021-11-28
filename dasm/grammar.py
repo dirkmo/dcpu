@@ -5,7 +5,8 @@ _line: LABEL* [_op | _dir | _COMMENT]
 
 _NL: NEWLINE
 
-_op: op0
+_op: ldimm
+    | op0
     | op1
     | op2
 
@@ -14,6 +15,10 @@ op0: OP0 _NL
 op1: OP1 REG _NL
 
 op2: OP1 REG "," REG _NL
+
+ldimm: "ld.l"i REG "," NUMBER _NL
+    | "ld.h"i REG "," NUMBER _NL
+    | "ld"i REG "," NUMBER _NL
 
 _dir: equ
     | org
