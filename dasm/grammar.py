@@ -1,5 +1,5 @@
 grammar = '''
-start: _line*
+?start: _line*
 
 _line: LABEL? [_op | _dir | _COMMENT]
 
@@ -15,7 +15,7 @@ op0: OP0 _NL
 
 op1: OP1 REG _NL
 
-op2: OP1 REG "," REG _NL
+op2: OP2 REG "," REG _NL
 
 ldimm: "ld.l"i REG "," NUMBER _NL
     | "ld.h"i REG "," NUMBER _NL
@@ -60,6 +60,7 @@ OP2: "ld"i
     | "or"i
     | "xor"i
     | "cmp"i
+
 
 LABEL: CNAME ":"
 
