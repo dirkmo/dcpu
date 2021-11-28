@@ -1,11 +1,12 @@
 grammar = '''
 start: _line*
 
-_line: LABEL* [_op | _dir | _COMMENT]
+_line: LABEL? [_op | _dir | _COMMENT]
 
 _NL: NEWLINE
 
 _op: ldimm
+    | reljmp
     | op0
     | op1
     | op2
@@ -19,6 +20,8 @@ op2: OP1 REG "," REG _NL
 ldimm: "ld.l"i REG "," NUMBER _NL
     | "ld.h"i REG "," NUMBER _NL
     | "ld"i REG "," NUMBER _NL
+
+reljmp: "j" ["p"|"z"|"nz"|"c"|"nc"] [CNAME|NUMBER] _NL
 
 _dir: equ
     | org

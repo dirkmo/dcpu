@@ -13,3 +13,5 @@ MSG: .asciiz "hallo"
 ld r0, 1
 ld.l r0, 2
 ld.h r0, 3
+jp start
+jp 123
