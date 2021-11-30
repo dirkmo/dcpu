@@ -8,6 +8,7 @@ MSG: .asciiz "hallo"
 ld r0, 1
 ld.l r0, 2
 ld.h r0, 3
+ld r0, (r1+4)
 jp start
 jp 123 #comment
 and r1, r2

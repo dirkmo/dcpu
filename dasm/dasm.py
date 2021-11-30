@@ -21,6 +21,7 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
+    lines = "st (r1+1), r2\n"
     contents = "".join(lines)
 
     t = l.parse(contents)

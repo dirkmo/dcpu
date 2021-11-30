@@ -1,53 +1,76 @@
 grammar = '''
-?start: _line*
+start: _line*
 
-_line: LABEL? [_op | _dir] _COMMENT? _NL
+_line: label? [_op | dir] _COMMENT? _NL
 
 _op: ldimm
-    | reljmp
+    | reljmp_label
+    | reljmp_offset
     | op0
     | op1
     | op2
+    | ld
+    | st
+
+label: CNAME ":"
 
 op0: RET
 
-op1:  "push"i REG  -> push
-    | "pop"i REG   -> pop
-    | "sl"i REG    -> sl
-    | "sr"i REG    -> sr
-    | "nsl"i REG   -> nsl
-    | "nsr"i REG   -> nsr
-    | "j" ["p"|"z"|"nz"|"c"|"nc"]
-    | "b" ["r"|"z"|"nz"|"c"|"nc"]
+op1:  PUSH REG
+    | POP REG
+    | JP REG
+    | JZ REG
+    | JNZ REG
+    | JC REG
+    | JNC REG
+    | BR REG
+    | BZ REG
+    | BNZ REG
+    | BC REG
+    | BNC REG
+    
+op2:  ADD REG "," REG
+    | SUB REG "," REG
+    | AND REG "," REG
+    | OR REG "," REG
+    | XOR REG "," REG
+    | CMP REG "," REG
 
-op2: OP2 REG "," REG
+st:   ST "(" REG ")" ","  REG
+    | ST "(" REG "+" NUMBER ")" ","  REG -> st_posoffset
+    | ST "(" REG "-" NUMBER ")" ","  REG -> st_negoffset
 
-ldimm: "ld.l"i REG "," NUMBER -> ldimml
-    | "ld.h"i REG "," NUMBER  -> ldimmh
-    | "ld"i REG "," NUMBER    -> ldimm
+ld:   LD REG "," "(" REG ")"
+    | LD REG "," "(" REG "+" INT ")" -> ld_posoffset
+    | LD REG "," "(" REG "-" INT ")" -> ld_negoffset
 
-reljmp: "jp" CNAME    -> jp_label
-    | "jz" CNAME      -> jpz_label
-    | "jnz" CNAME     -> jnz_label
-    | "jc" CNAME      -> jc_label
-    | "jnc" CNAME     -> jnc_label
-    | "jp" NUMBER     -> jp_offset
-    | "jz" NUMBER     -> jz_offset
-    | "jnz" NUMBER    -> jnz_offset
-    | "jc" NUMBER     -> jc_offset
-    | "jnc" NUMBER    -> jnc_offset
+ldimm: LDI REG "," NUMBER -> ldimml
+     | LDIL REG "," NUMBER  -> ldimmh
+     | LDIH REG "," NUMBER    -> ldimm
 
-_dir: equ
+reljmp_label: JP CNAME
+    | JZ CNAME
+    | JNZ CNAME
+    | JC CNAME
+    | JNC CNAME
+
+reljmp_offset: JP NUMBER
+    | JZ NUMBER
+    | JNZ NUMBER
+    | JC NUMBER
+    | JNC NUMBER
+
+dir: equ
     | org
     | asciiz
     | ascii
     | word
 
-equ: ".equ"i CNAME "," NUMBER
-org: ".org"i NUMBER
-asciiz: ".asciiz"i STRING
-ascii: ".ascii"i STRING
-word: ".word"i NUMBER ("," NUMBER)*
+?equ: EQU CNAME "," NUMBER
+?org: ORG NUMBER
+?asciiz: ASCIIZ STRING
+?ascii: ASCII STRING
+?word: WORD NUMBER ("," NUMBER)*
 
 REG:  "r1"i "0".."5"
     | "r"i "0".."9"
@@ -55,24 +78,47 @@ REG:  "r1"i "0".."5"
     | "st"i
     | "sp"i
 
-RET: "ret"i
+PUSH: "push"i
+POP:  "pop"i
+JP:   "jp"i
+JZ:   "jz"i
+JNZ:  "jnz"i
+JC:   "jc"i
+JNC:  "jnc"i
+BR:   "br"i
+BZ:   "bz"i
+BNZ:  "bnz"i
+BC:   "bc"i
+BNC:  "bnc"i
+RET:  "ret"i
+LD:   "ld"i
+LDI:  "ldi"i
+LDIL: "ldi.l"i
+LDIH: "ldi.h"i
+ST:   "st"i
+ADD:  "add"i
+SUB:  "sub"i
+AND:  "and"i
+OR:   "or"i
+XOR:  "xor"i
+CMP:  "cmp"i
+SHL:  "shl"i
+SHR:  "shr"i
+SHLW: "shl.w"i
+SHRW: "shr.w"i
+EQU:  ".equ"i
+ORG:  ".org"i
+WORD: ".word"i
+ASCII: ".ascii"i
+ASCIIZ: ".asciiz"i
 
-OP2: "ld"i 
-    | "st"
-    | "add"i
-    | "sub"i
-    | "and"i
-    | "or"i
-    | "xor"i
-    | "cmp"i
 
-
-LABEL: CNAME ":"
 
 SIGNED_INT: ["+"|"-"] INT
 HEX: "$" HEXDIGIT+
+SIGNED_HEX: ["+"|"-"] HEX
 
-NUMBER: SIGNED_INT | HEX
+NUMBER: SIGNED_INT | SIGNED_HEX
 CHAR: "'" /./ "'"
 
 _COMMENT: SH_COMMENT | CPP_COMMENT
