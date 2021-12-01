@@ -1,16 +1,16 @@
 grammar = '''
 start: _line*
 
-_line: label? [_op | dir] _COMMENT? _NL
+_line: label? [_op | _dir] _COMMENT? _NL
 
 _op: ldimm
-    | reljmp_label
-    | reljmp_offset
     | op0
     | op1
     | op2
     | ld
     | st
+    | reljmp_label
+    | reljmp_offset
 
 label: CNAME ":"
 
@@ -37,16 +37,14 @@ op2:  ADD REG "," REG
     | CMP REG "," REG
 
 st:   ST "(" REG ")" ","  REG
-    | ST "(" REG "+" NUMBER ")" ","  REG -> st_posoffset
-    | ST "(" REG "-" NUMBER ")" ","  REG -> st_negoffset
+    | ST "(" REG OFFSET ")" ","  REG -> stoffset
 
 ld:   LD REG "," "(" REG ")"
-    | LD REG "," "(" REG "+" INT ")" -> ld_posoffset
-    | LD REG "," "(" REG "-" INT ")" -> ld_negoffset
+ldoffset: LD REG "," "(" REG OFFSET ")"
 
-ldimm: LDI REG "," NUMBER -> ldimml
-     | LDIL REG "," NUMBER  -> ldimmh
-     | LDIH REG "," NUMBER    -> ldimm
+ldimm: LDI  REG "," NUMBER -> ldimm
+     | LDIL REG "," NUMBER -> ldimml
+     | LDIH REG "," NUMBER -> ldimmh
 
 reljmp_label: JP CNAME
     | JZ CNAME
@@ -60,17 +58,17 @@ reljmp_offset: JP NUMBER
     | JC NUMBER
     | JNC NUMBER
 
-dir: equ
+_dir: equ
     | org
     | asciiz
     | ascii
     | word
 
-?equ: EQU CNAME "," NUMBER
-?org: ORG NUMBER
-?asciiz: ASCIIZ STRING
-?ascii: ASCII STRING
-?word: WORD NUMBER ("," NUMBER)*
+equ: EQU CNAME "," NUMBER
+org: ORG NUMBER
+asciiz: ASCIIZ STRING
+ascii: ASCII STRING
+word: WORD NUMBER ("," NUMBER)*
 
 REG:  "r1"i "0".."5"
     | "r"i "0".."9"
@@ -117,6 +115,8 @@ ASCIIZ: ".asciiz"i
 SIGNED_INT: ["+"|"-"] INT
 HEX: "$" HEXDIGIT+
 SIGNED_HEX: ["+"|"-"] HEX
+
+OFFSET: ("+"|"-")(HEX|INT)
 
 NUMBER: SIGNED_INT | SIGNED_HEX
 CHAR: "'" /./ "'"

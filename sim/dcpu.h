@@ -16,7 +16,6 @@
 #define NONZERO 2
 #define CARRY 3
 #define NOCARRY 4
-#define RETURN 7
 #define JPCOND(cond) (cond << 4)
 
 #define COPY 0
