@@ -5,6 +5,7 @@ _line: label? [_op | _dir] _COMMENT? _NL
 
 _op: ldimm
     | op0
+    | op1_jpbr
     | op1
     | op2
     | ld
@@ -18,7 +19,8 @@ op0: RET
 
 op1:  PUSH REG
     | POP REG
-    | JP REG
+
+op1_jpbr: JP REG
     | JZ REG
     | JNZ REG
     | JC REG
@@ -28,7 +30,7 @@ op1:  PUSH REG
     | BNZ REG
     | BC REG
     | BNC REG
-    
+
 op2:  ADD REG "," REG
     | SUB REG "," REG
     | AND REG "," REG
@@ -42,9 +44,9 @@ st:   ST "(" REG ")" ","  REG
 ld:   LD REG "," "(" REG ")"
 ldoffset: LD REG "," "(" REG OFFSET ")"
 
-ldimm: LDI  REG "," NUMBER -> ldimm
-     | LDIL REG "," NUMBER -> ldimml
-     | LDIH REG "," NUMBER -> ldimmh
+ldimm: LDI  REG "," NUMBER
+     | LDIL REG "," NUMBER
+     | LDIH REG "," NUMBER
 
 reljmp_label: JP CNAME
     | JZ CNAME
