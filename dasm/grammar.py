@@ -31,18 +31,17 @@ op1_jpbr: JP REG
     | BC REG
     | BNC REG
 
-op2:  ADD REG "," REG
+op2:  LD REG "," REG
+    | ADD REG "," REG
     | SUB REG "," REG
     | AND REG "," REG
     | OR REG "," REG
     | XOR REG "," REG
     | CMP REG "," REG
 
-st:   ST "(" REG ")" ","  REG
-    | ST "(" REG OFFSET ")" ","  REG -> stoffset
+st: ST "(" REG OFFSET? ")" ","  REG
 
-ld:   LD REG "," "(" REG ")"
-ldoffset: LD REG "," "(" REG OFFSET ")"
+ld: LD REG "," "(" REG OFFSET? ")"
 
 ldimm: LDI  REG "," NUMBER
      | LDIL REG "," NUMBER

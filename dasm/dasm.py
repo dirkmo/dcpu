@@ -93,11 +93,24 @@ def InstLdi(t, rd, imm):
         ops = [opcodes[t] | (convert_to_number(imm) << 4) | RegIdx(rd)]
     return ops
 
+def InstLd(t, rd, rs, offset):
+    offs = convert_to_number(offset)
+    src = RegIdx(rs)
+    dst = RegIdx(rd)
+    op = 0x8000 | (offs<<8) | (src << 4) | dst
+    return op
+
 def convert_to_number(s):
+    sign = 1
+    if s[0] == '+':
+        s = s[1:]
+    elif s[0] == '-':
+        sign = -1
+        s = s[1:]
     if s[0] == '$': num = int(s[1:],16)
     elif s[0:1].upper() == "0X": int(s[2:], 16)
     else: num = int(s)
-    return num
+    return sign*num
 
 class dcpuTransformer(lark.Transformer):
     pos = 0
@@ -120,23 +133,19 @@ class dcpuTransformer(lark.Transformer):
         self.program[self.pos] = InstOp2(a[0].type, a[1].value, a[2].value)
         self.pos = self.pos + 1
     
-    def st(self, a):
-        print(a)
-        pass
-
-    def stoffset(self, a):
-        print(a)
-        pass
-
-    def st(self, a):
-        print(a)
-        pass
-
     def ld(self, a):
-        print(a)
-        pass
+        offs = '0'
+        if len(a) == 4: offs = a[3].value
+        self.program[self.pos] = InstLd(a[0].type, a[1].value, a[2].value, offs)
+        self.pos = self.pos + 1
 
     def ldoffset(self, a):
+        print(a)
+
+    def st(self, a):
+        print(a)
+
+    def stoffset(self, a):
         print(a)
 
     def ldimm(self, a):
@@ -189,7 +198,7 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = "ldi.l r2, $10\nldi.h r7, 20\nldi r1, 65534\n"
+    lines = "ld r2, (r5-$10)\nld r1, (r2)\n"
     contents = "".join(lines)
 
     t = l.parse(contents)
