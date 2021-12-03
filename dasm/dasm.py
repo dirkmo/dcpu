@@ -37,16 +37,8 @@ def InstOp1JpBr(t, r):
         "BC":  0xd030 | 0x80,
         "BNC": 0xd040 | 0x80,
     }
-    cond = {
-        "P":  0, # JP
-        "R":  0, # BR
-        "Z":  1, # JZ, BZ
-        "NZ": 2, # JNZ, BNZ
-        "C":  3, # JC, BC
-        "NC": 4  # JNC, BNC
-    }
     if not t in opcodes: return -1
-    op = opcodes[t] | (cond[t[1:]] << 4) | RegIdx(r)
+    op = opcodes[t] | RegIdx(r)
     return op
 
 def InstOp1(t, r):
@@ -100,6 +92,33 @@ def InstLd(t, rd, rs, offset):
     op = 0x8000 | (offs<<8) | (src << 4) | dst
     return op
 
+def InstSt(t, rs, offset, rd):
+    offs = convert_to_number(offset)
+    src = RegIdx(rs)
+    dst = RegIdx(rd)
+    op = 0xa000 | (offs<<8) | (src << 4) | dst
+    return op
+
+def InstReljmp_offset(t, offset):
+    opcodes = {
+        "JP":  0xc000,
+        "JZ":  0xc010,
+        "JNZ": 0xc020,
+        "JC":  0xc030,
+        "JNC": 0xc040,
+    }
+    offs = convert_to_number(offset)
+    if not t in opcodes: return -1
+    # RJP: 1100 <offs:5> <cond:3> <offs:4>
+    if offs > 0xff or offs < -0x100:
+        return -1
+    if offs < 0:
+        2er komplement bilden
+    offs1 = offs & 0xf
+    offs2 = (offs & 0x1f0) << 3
+    op = opcodes[t] | offs2 | offs1
+    return op
+
 def convert_to_number(s):
     sign = 1
     if s[0] == '+':
@@ -117,55 +136,50 @@ class dcpuTransformer(lark.Transformer):
     program = {}
     symbols = {}
 
-    def op0(self, a):
-        self.program[self.pos] = InstOp0(a[0])
+    def insertOp(self, op):
+        self.program[self.pos] = op
         self.pos = self.pos + 1
     
+    def op0(self, a):
+        self.insertOp(InstOp0(a[0]))
+    
     def op1(self, a):
-        self.program[self.pos] = InstOp1(a[0].type, a[1].value)
-        self.pos = self.pos + 1
+        self.insertOp(InstOp1(a[0].type, a[1].value))
 
     def op1_jpbr(self, a):
-        self.program[self.pos] = InstOp1JpBr(a[0].type, a[1].value)
-        self.pos = self.pos + 1
+        self.insertOp(InstOp1JpBr(a[0].type, a[1].value))
 
     def op2(self, a):
-        self.program[self.pos] = InstOp2(a[0].type, a[1].value, a[2].value)
-        self.pos = self.pos + 1
+        self.insertOp(InstOp2(a[0].type, a[1].value, a[2].value))
     
     def ld(self, a):
         offs = '0'
         if len(a) == 4: offs = a[3].value
-        self.program[self.pos] = InstLd(a[0].type, a[1].value, a[2].value, offs)
-        self.pos = self.pos + 1
-
-    def ldoffset(self, a):
-        print(a)
+        self.insertOp(InstLd(a[0].type, a[1].value, a[2].value, offs))
 
     def st(self, a):
-        print(a)
-
-    def stoffset(self, a):
-        print(a)
+        offs = '0'
+        if len(a) == 4: # InstSt(t, rs, offset, rd):
+            self.insertOp(InstSt(a[0].type, a[1].value, a[2].value, a[3].value))
+        else:
+            self.insertOp(InstSt(a[0].type, a[1].value, "0", a[2].value))
 
     def ldimm(self, a):
         ops = InstLdi(a[0].type, a[1].value, a[2].value)
         for op in ops:
-            self.program[self.pos] = op
-            self.pos = self.pos + 1
+            self.insertOp(op)
 
     def reljmp_label(self, a):
-        print(a)
+        pass
 
-    def relmp_offset(self, a):
-        print(a)
+    def reljmp_offset(self, a):
+        ops = InstReljmp_offset(a[0].type, a[1].value)
 
     def equ(self, a):
         print(a)
 
     def org(self, a):
         pos = convert_to_number(a[1])
-        print(a)
 
     def asciiz(self, a):
         print(a)
@@ -198,11 +212,11 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = "ld r2, (r5-$10)\nld r1, (r2)\n"
+    lines = "jz 100\n"
     contents = "".join(lines)
 
     t = l.parse(contents)
-    # print(t.pretty())
+    print(t.pretty())
     # print(t)
 
     n = dcpuTransformer().transform(t)
