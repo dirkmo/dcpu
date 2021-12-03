@@ -110,10 +110,10 @@ def InstReljmp_offset(t, offset):
     offs = convert_to_number(offset)
     if not t in opcodes: return -1
     # RJP: 1100 <offs:5> <cond:3> <offs:4>
-    if offs > 0xff or offs < -0x100:
+    if (offs > 0xff) or (offs < -0x100):
         return -1
     if offs < 0:
-        2er komplement bilden
+        offs = (1 << 9) - offs
     offs1 = offs & 0xf
     offs2 = (offs & 0x1f0) << 3
     op = opcodes[t] | offs2 | offs1
