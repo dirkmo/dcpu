@@ -113,7 +113,7 @@ def InstReljmp_offset(t, offset):
     if (offs > 0xff) or (offs < -0x100):
         return -1
     if offs < 0:
-        offs = (1 << 9) - offs
+        offs = (1 << 9) + offs
     offs1 = offs & 0xf
     offs2 = (offs & 0x1f0) << 3
     op = opcodes[t] | offs2 | offs1
@@ -170,30 +170,47 @@ class dcpuTransformer(lark.Transformer):
             self.insertOp(op)
 
     def reljmp_label(self, a):
-        pass
+        try: addr = self.symbols[a[1].value]
+        except: raise ValueError(f"Symbol '{a[1].value}' not found.")
+        offs = addr - self.pos - 1
+        self.insertOp(InstReljmp_offset(a[0].type, str(offs)))
 
     def reljmp_offset(self, a):
-        ops = InstReljmp_offset(a[0].type, a[1].value)
+        self.insertOp(InstReljmp_offset(a[0].type, a[1].value))
 
     def equ(self, a):
-        print(a)
+        if a[1].value in self.symbols:
+            raise ValueError(f"Symbol '{a[1].value}' already defined.")
+        self.symbols[a[1].value] = convert_to_number(a[2].value)
+
+    def label(self, a):
+        if (a[0].value in self.symbols):
+            raise ValueError(f"Line {a[0].line}:{a[0].column}: Symbol '{a[0].value}' already defined")
+        self.symbols[a[0].value] = self.pos
 
     def org(self, a):
-        pos = convert_to_number(a[1])
+        self.pos = convert_to_number(a[1])
 
-    def asciiz(self, a):
-        print(a)
+    def word(self, a):
+        i = 1
+        while i < len(a):
+            try:
+                v = convert_to_number(a[i].value)
+                self.insertOp(v)
+            except:
+                if a[i].value in self.symbols:
+                    v = self.symbols[a[i].value]
+                    self.insertOp(v)
+                else:
+                    raise ValueError(f"Line {a[i].line}:{a[i].column}: Symbol '{a[i].value}' not found")
+            i = i + 1
 
     def ascii(self, a):
         print(a)
 
-    def word(self, a):
+    def asciiz(self, a):
         print(a)
-    
-    def label(self, a):
-        if (a[0].value in self.symbols):
-            print(f"Error: Label {a[0].type} already defined")
-        self.symbols[a[0].value] = self.pos
+
 
 
 def main():
@@ -212,7 +229,7 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = "jz 100\n"
+    lines = "msg: .word $1000, msg\n"
     contents = "".join(lines)
 
     t = l.parse(contents)

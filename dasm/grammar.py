@@ -65,11 +65,11 @@ _dir: equ
     | ascii
     | word
 
-equ: EQU CNAME "," NUMBER
+equ: EQU CNAME NUMBER
 org: ORG NUMBER
 asciiz: ASCIIZ STRING
 ascii: ASCII STRING
-word: WORD NUMBER ("," NUMBER)*
+word: WORD [NUMBER|CNAME] ("," [NUMBER|CNAME])*
 
 REG:  "r1"i "0".."5"
     | "r"i "0".."9"
