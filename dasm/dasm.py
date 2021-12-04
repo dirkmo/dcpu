@@ -21,8 +21,9 @@ def InstOp0(t):
     opcodes = {
         "RET": 0xd100,
     }
-    if not t in opcodes: return -1
-    return opcodes[t]
+    if not t.type in opcodes:
+        raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
+    return opcodes[t.type]
 
 def InstOp1JpBr(t, r):
     opcodes = {
@@ -37,8 +38,9 @@ def InstOp1JpBr(t, r):
         "BC":  0xd030 | 0x80,
         "BNC": 0xd040 | 0x80,
     }
-    if not t in opcodes: return -1
-    op = opcodes[t] | RegIdx(r)
+    if not t.type in opcodes:
+        raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
+    op = opcodes[t.type] | RegIdx(r.value)
     return op
 
 def InstOp1(t, r):
@@ -46,8 +48,9 @@ def InstOp1(t, r):
         "PUSH": 0xd110,
         "POP":  0xd120,
     }
-    if not t in opcodes: return -1
-    op = opcodes[t] | RegIdx(r)
+    if not t.type in opcodes:
+        raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
+    op = opcodes[t.type] | RegIdx(r.value)
     return op
 
 def InstOp2(t, rd, rs):
@@ -64,8 +67,9 @@ def InstOp2(t, rd, rs):
         "WSHR": 0xe900,
         "WSHL": 0xea00,
     }
-    if not t in opcodes: return -1
-    op = opcodes[t] | (RegIdx(rs) << 4) | RegIdx(rd)
+    if not t.type in opcodes:
+        raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
+    op = opcodes[t.type] | (RegIdx(rs.value) << 4) | RegIdx(rd.value)
     return op
 
 def InstLdi(t, rd, imm):
@@ -74,28 +78,29 @@ def InstLdi(t, rd, imm):
         "LDIL": 0x0000,
         "LDIH": 0x4000,
     }
-    if t == "LDI":
+    if t.type == "LDI":
         ops = []
         if value & 0x2ff:
-            ops.append(opcodes["LDIL"] | ((value&0x2ff) << 4) | RegIdx(rd))
+            ops.append(opcodes["LDIL"] | ((value&0x2ff) << 4) | RegIdx(rd.value))
         if value > 0x2ff:
-            ops.append(opcodes["LDIH"] | ((value >> 4) & 0x0ff0) | RegIdx(rd))
+            ops.append(opcodes["LDIH"] | ((value >> 4) & 0x0ff0) | RegIdx(rd.value))
     else:
-        if not t in opcodes: return -1
-        ops = [opcodes[t] | (convert_to_number(imm) << 4) | RegIdx(rd)]
+        if not t.type in opcodes:
+            raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
+        ops = [opcodes[t.type] | (convert_to_number(imm) << 4) | RegIdx(rd.value)]
     return ops
 
 def InstLd(t, rd, rs, offset):
     offs = convert_to_number(offset)
-    src = RegIdx(rs)
-    dst = RegIdx(rd)
+    src = RegIdx(rs.value)
+    dst = RegIdx(rd.value)
     op = 0x8000 | (offs<<8) | (src << 4) | dst
     return op
 
 def InstSt(t, rs, offset, rd):
     offs = convert_to_number(offset)
-    src = RegIdx(rs)
-    dst = RegIdx(rd)
+    src = RegIdx(rs.value)
+    dst = RegIdx(rd.value)
     op = 0xa000 | (offs<<8) | (src << 4) | dst
     return op
 
@@ -108,10 +113,11 @@ def InstReljmp_offset(t, offset):
         "JNC": 0xc040,
     }
     offs = convert_to_number(offset)
-    if not t in opcodes: return -1
+    if not t.type in opcodes:
+        raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
     # RJP: 1100 <offs:5> <cond:3> <offs:4>
     if (offs > 0xff) or (offs < -0x100):
-        return -1
+        raise ValueError(f"Line {t.line}:{t.column}: Offset out of range '{offset}'")
     if offs < 0:
         offs = (1 << 9) + offs
     offs1 = offs & 0xf
@@ -144,28 +150,28 @@ class dcpuTransformer(lark.Transformer):
         self.insertOp(InstOp0(a[0]))
     
     def op1(self, a):
-        self.insertOp(InstOp1(a[0].type, a[1].value))
+        self.insertOp(InstOp1(a[0], a[1]))
 
     def op1_jpbr(self, a):
-        self.insertOp(InstOp1JpBr(a[0].type, a[1].value))
+        self.insertOp(InstOp1JpBr(a[0], a[1]))
 
     def op2(self, a):
-        self.insertOp(InstOp2(a[0].type, a[1].value, a[2].value))
+        self.insertOp(InstOp2(a[0], a[1], a[2]))
     
     def ld(self, a):
         offs = '0'
         if len(a) == 4: offs = a[3].value
-        self.insertOp(InstLd(a[0].type, a[1].value, a[2].value, offs))
+        self.insertOp(InstLd(a[0].type, a[1], a[2], offs))
 
     def st(self, a):
         offs = '0'
         if len(a) == 4: # InstSt(t, rs, offset, rd):
-            self.insertOp(InstSt(a[0].type, a[1].value, a[2].value, a[3].value))
+            self.insertOp(InstSt(a[0], a[1], a[2], a[3]))
         else:
-            self.insertOp(InstSt(a[0].type, a[1].value, "0", a[2].value))
+            self.insertOp(InstSt(a[0], a[1], "0", a[2]))
 
     def ldimm(self, a):
-        ops = InstLdi(a[0].type, a[1].value, a[2].value)
+        ops = InstLdi(a[0], a[1], a[2])
         for op in ops:
             self.insertOp(op)
 
@@ -173,10 +179,10 @@ class dcpuTransformer(lark.Transformer):
         try: addr = self.symbols[a[1].value]
         except: raise ValueError(f"Symbol '{a[1].value}' not found.")
         offs = addr - self.pos - 1
-        self.insertOp(InstReljmp_offset(a[0].type, str(offs)))
+        self.insertOp(InstReljmp_offset(a[0], str(offs)))
 
     def reljmp_offset(self, a):
-        self.insertOp(InstReljmp_offset(a[0].type, a[1].value))
+        self.insertOp(InstReljmp_offset(a[0], a[1]))
 
     def equ(self, a):
         if a[1].value in self.symbols:
@@ -236,7 +242,7 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = ".asciiz \"Hallo\"\n"
+    lines = "or r1, r2\n"
     contents = "".join(lines)
 
     t = l.parse(contents)
