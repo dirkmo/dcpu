@@ -206,11 +206,18 @@ class dcpuTransformer(lark.Transformer):
             i = i + 1
 
     def ascii(self, a):
-        print(a)
+        s = a[1].value[1:-1].encode('ascii','ignore')
+        i = 0
+        while i < len(s):
+            v = s[i]
+            if i+1 < len(s):
+                v = v | (s[i+1] << 8)
+            self.insertOp(v)
+            i = i+2
 
     def asciiz(self, a):
-        print(a)
-
+        ascii(a)
+        self.insertOp(0)
 
 
 def main():
@@ -229,7 +236,7 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = "msg: .word $1000, msg\n"
+    lines = ".asciiz \"Hallo\"\n"
     contents = "".join(lines)
 
     t = l.parse(contents)
