@@ -131,76 +131,94 @@ def convert_to_number(s):
     else: num = int(s)
     return sign*num
 
-class dcpuTransformer(lark.Transformer):
+class Program:
     pos = 0
     program = {}
     symbols = {}
 
-    def insertOp(self, op):
-        self.program[self.pos] = op
-        self.pos = self.pos + 1
-    
+    @classmethod
+    def insertOp(cls, op):
+        cls.program[cls.pos] = op
+        cls.pos = cls.pos + 1
+
+    @classmethod
+    def getOffsetAndWords(cls):
+        sorted_prog = sorted(cls.program)
+        i = 0
+        pos = sorted_prog[i]
+        words = []
+        for p in sorted_prog:
+            while pos < p:
+                words.append(0)
+                pos = pos + 1
+            words.append(cls.program[sorted_prog[p]])
+            pos = pos + 1
+        return (sorted_prog[0], words)
+
+
+class dcpuTransformer(lark.Transformer):
+   
     def op0(self, a):
-        self.insertOp(InstOp0(a[0]))
+        Program.insertOp(InstOp0(a[0]))
     
     def op1(self, a):
-        self.insertOp(InstOp1(a[0].type, a[1].value))
+        Program.insertOp(InstOp1(a[0].type, a[1].value))
 
     def op1_jpbr(self, a):
-        self.insertOp(InstOp1JpBr(a[0].type, a[1].value))
+        Program.insertOp(InstOp1JpBr(a[0].type, a[1].value))
 
     def op2(self, a):
-        self.insertOp(InstOp2(a[0].type, a[1].value, a[2].value))
+        Program.insertOp(InstOp2(a[0].type, a[1].value, a[2].value))
     
     def ld(self, a):
         offs = '0'
         if len(a) == 4: offs = a[3].value
-        self.insertOp(InstLd(a[0].type, a[1].value, a[2].value, offs))
+        Program.insertOp(InstLd(a[0].type, a[1].value, a[2].value, offs))
 
     def st(self, a):
         offs = '0'
         if len(a) == 4: # InstSt(t, rs, offset, rd):
-            self.insertOp(InstSt(a[0].type, a[1].value, a[2].value, a[3].value))
+            Program.insertOp(InstSt(a[0].type, a[1].value, a[2].value, a[3].value))
         else:
-            self.insertOp(InstSt(a[0].type, a[1].value, "0", a[2].value))
+            Program.insertOp(InstSt(a[0].type, a[1].value, "0", a[2].value))
 
     def ldimm(self, a):
         ops = InstLdi(a[0].type, a[1].value, a[2].value)
         for op in ops:
-            self.insertOp(op)
+            Program.insertOp(op)
 
     def reljmp_label(self, a):
-        try: addr = self.symbols[a[1].value]
+        try: addr = Program.symbols[a[1].value]
         except: raise ValueError(f"Symbol '{a[1].value}' not found.")
         offs = addr - self.pos - 1
-        self.insertOp(InstReljmp_offset(a[0].type, str(offs)))
+        Program.insertOp(InstReljmp_offset(a[0].type, str(offs)))
 
     def reljmp_offset(self, a):
-        self.insertOp(InstReljmp_offset(a[0].type, a[1].value))
+        Program.insertOp(InstReljmp_offset(a[0].type, a[1].value))
 
     def equ(self, a):
-        if a[1].value in self.symbols:
+        if a[1].value in Program.symbols:
             raise ValueError(f"Symbol '{a[1].value}' already defined.")
-        self.symbols[a[1].value] = convert_to_number(a[2].value)
+        Program.symbols[a[1].value] = convert_to_number(a[2].value)
 
     def label(self, a):
-        if (a[0].value in self.symbols):
+        if (a[0].value in Program.symbols):
             raise ValueError(f"Line {a[0].line}:{a[0].column}: Symbol '{a[0].value}' already defined")
-        self.symbols[a[0].value] = self.pos
+        Program.symbols[a[0].value] = Program.pos
 
     def org(self, a):
-        self.pos = convert_to_number(a[1])
+        Program.pos = convert_to_number(a[1])
 
     def word(self, a):
         i = 1
         while i < len(a):
             try:
                 v = convert_to_number(a[i].value)
-                self.insertOp(v)
+                Program.insertOp(v)
             except:
-                if a[i].value in self.symbols:
-                    v = self.symbols[a[i].value]
-                    self.insertOp(v)
+                if a[i].value in Program.symbols:
+                    v = Program.symbols[a[i].value]
+                    Program.insertOp(v)
                 else:
                     raise ValueError(f"Line {a[i].line}:{a[i].column}: Symbol '{a[i].value}' not found")
             i = i + 1
@@ -212,13 +230,47 @@ class dcpuTransformer(lark.Transformer):
             v = s[i]
             if i+1 < len(s):
                 v = v | (s[i+1] << 8)
-            self.insertOp(v)
+            Program.insertOp(v)
             i = i+2
 
     def asciiz(self, a):
-        ascii(a)
-        self.insertOp(0)
+        self.ascii(a)
+        Program.insertOp(0)
 
+def write_program_as_bin(prog, fn, endianess='big'):
+    with open(fn ,"wb") as f:
+        for p in prog:
+            f.write(p.to_bytes(2, byteorder=endianess))
+
+def write_program_as_memfile(prog, fn, endianess='big'):
+    with open(fn ,"wt") as f:
+        for c,p in enumerate(prog):
+            f.write(f"{p:04x}")
+            if (c % 8) == 7:
+                f.write("\n")
+            else:
+                f.write(" ")
+            
+def write_program_as_cfile(prog, fn, endianess='big'):
+    with open(fn ,"wt") as f:
+        f.write("uint16_t program[] = {\n")
+        for c,p in enumerate(prog):
+            if (c % 8) == 0:
+                f.write("    ")
+            f.write(f"0x{p:04x}, ")
+            if (c % 8) == 7:
+                f.write("\n")
+        if (len(prog) % 8):
+            f.write("\n")
+        f.write("};")
+
+def write_program_as_hexdump(prog, offset, fn, endianess='big'):
+    with open(fn ,"wt") as f:
+        for i in range(len(prog)):
+            addr = i + offset
+            if (addr % 8) == 0:
+                f.write(f"{addr:04x}")
+        # todo
 
 def main():
     print("dasm: Simple dcpu assembler\n")
@@ -236,14 +288,23 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = ".asciiz \"Hallo\"\n"
+    lines = ".asciiz \"Hallo Welt!!!!\"\n"
     contents = "".join(lines)
 
     t = l.parse(contents)
-    print(t.pretty())
+    #print(t.pretty())
     # print(t)
 
     n = dcpuTransformer().transform(t)
+
+    fn_noext = os.path.splitext(fn)[0]
+    # write_program(Program.program, fn_raw)
+    (offset, words) = Program.getOffsetAndWords()
+
+    write_program_as_bin(words, fn_noext+".bin")
+    write_program_as_memfile(words, fn_noext+".mem")
+    write_program_as_cfile(words, fn_noext+".c")
+    write_program_as_hexdump(words, offset, fn_noext+".hexdump")
 
 if __name__ == "__main__":
     sys.exit(main())

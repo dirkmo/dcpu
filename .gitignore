@@ -1,3 +1,6 @@
 sim/verilator
 sim/trace.vcd
 dasm/__pycache__/grammar.cpython-39.pyc
+dasm/test.bin
+dasm/test.c
+dasm/test.mem
