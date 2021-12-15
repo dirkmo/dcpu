@@ -23,9 +23,10 @@ def InstOp0(t):
     }
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
-    return opcodes[t.type]
+    return (opcodes[t.type], t.line, t.column)
 
 def InstOp1JpBr(t, r):
+    #print(t.line)
     opcodes = {
         "JP":  0xd000,
         "JZ":  0xd010,
@@ -41,7 +42,7 @@ def InstOp1JpBr(t, r):
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
     op = opcodes[t.type] | RegIdx(r.value)
-    return op
+    return (op, t.line, t.column)
 
 def InstOp1(t, r):
     opcodes = {
@@ -51,7 +52,7 @@ def InstOp1(t, r):
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
     op = opcodes[t.type] | RegIdx(r.value)
-    return op
+    return (op, t.line, t.column)
 
 def InstOp2(t, rd, rs):
     opcodes = {
@@ -70,7 +71,7 @@ def InstOp2(t, rd, rs):
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
     op = opcodes[t.type] | (RegIdx(rs.value) << 4) | RegIdx(rd.value)
-    return op
+    return (op, t.line, t.column)
 
 def InstLdi(t, rd, imm):
     value = convert_to_number(imm)
@@ -81,13 +82,16 @@ def InstLdi(t, rd, imm):
     if t.type == "LDI":
         ops = []
         if value & 0x2ff:
-            ops.append(opcodes["LDIL"] | ((value&0x2ff) << 4) | RegIdx(rd.value))
+            op = opcodes["LDIL"] | ((value&0x2ff) << 4) | RegIdx(rd.value)
+            ops.append( (op, t.line, t.column) )
         if value > 0x2ff:
-            ops.append(opcodes["LDIH"] | ((value >> 4) & 0x0ff0) | RegIdx(rd.value))
+            op = opcodes["LDIH"] | ((value >> 4) & 0x0ff0) | RegIdx(rd.value)
+            ops.append( (op, t.line, t.column) )
     else:
         if not t.type in opcodes:
             raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
-        ops = [opcodes[t.type] | (convert_to_number(imm) << 4) | RegIdx(rd.value)]
+        op = opcodes[t.type] | (convert_to_number(imm) << 4) | RegIdx(rd.value)
+        ops = [(op, t.line, t.column)]
     return ops
 
 def InstLd(t, rd, rs, offset):
@@ -95,14 +99,14 @@ def InstLd(t, rd, rs, offset):
     src = RegIdx(rs.value)
     dst = RegIdx(rd.value)
     op = 0x8000 | (offs<<8) | (src << 4) | dst
-    return op
+    return (op, t.line, t.column)
 
 def InstSt(t, rs, offset, rd):
     offs = convert_to_number(offset)
     src = RegIdx(rs.value)
     dst = RegIdx(rd.value)
     op = 0xa000 | (offs<<8) | (src << 4) | dst
-    return op
+    return (op, t.line, t.column)
 
 def InstReljmp_offset(t, offset):
     opcodes = {
@@ -123,7 +127,7 @@ def InstReljmp_offset(t, offset):
     offs1 = offs & 0xf
     offs2 = (offs & 0x1f0) << 3
     op = opcodes[t] | offs2 | offs1
-    return op
+    return (op, t.line, t.column)
 
 def convert_to_number(s):
     sign = 1
@@ -168,25 +172,25 @@ class dcpuTransformer(lark.Transformer):
         Program.insertOp(InstOp0(a[0]))
     
     def op1(self, a):
-        self.insertOp(InstOp1(a[0], a[1]))
+        Program.insertOp(InstOp1(a[0], a[1]))
 
     def op1_jpbr(self, a):
-        self.insertOp(InstOp1JpBr(a[0], a[1]))
+        Program.insertOp(InstOp1JpBr(a[0], a[1]))
 
     def op2(self, a):
-        self.insertOp(InstOp2(a[0], a[1], a[2]))
+        Program.insertOp(InstOp2(a[0], a[1], a[2]))
     
     def ld(self, a):
         offs = '0'
         if len(a) == 4: offs = a[3].value
-        self.insertOp(InstLd(a[0].type, a[1], a[2], offs))
+        Program.insertOp(InstLd(a[0].type, a[1], a[2], offs))
 
     def st(self, a):
         offs = '0'
         if len(a) == 4: # InstSt(t, rs, offset, rd):
-            self.insertOp(InstSt(a[0], a[1], a[2], a[3]))
+            Program.insertOp(InstSt(a[0], a[1], a[2], a[3]))
         else:
-            self.insertOp(InstSt(a[0], a[1], "0", a[2]))
+            Program.insertOp(InstSt(a[0], a[1], "0", a[2]))
 
     def ldimm(self, a):
         ops = InstLdi(a[0], a[1], a[2])
@@ -197,10 +201,10 @@ class dcpuTransformer(lark.Transformer):
         try: addr = Program.symbols[a[1].value]
         except: raise ValueError(f"Symbol '{a[1].value}' not found.")
         offs = addr - self.pos - 1
-        self.insertOp(InstReljmp_offset(a[0], str(offs)))
+        Program.insertOp(InstReljmp_offset(a[0], str(offs)))
 
     def reljmp_offset(self, a):
-        self.insertOp(InstReljmp_offset(a[0], a[1]))
+        Program.insertOp(InstReljmp_offset(a[0], a[1]))
 
     def equ(self, a):
         if a[1].value in Program.symbols:
@@ -246,12 +250,12 @@ class dcpuTransformer(lark.Transformer):
 def write_program_as_bin(prog, fn, endianess='big'):
     with open(fn ,"wb") as f:
         for p in prog:
-            f.write(p.to_bytes(2, byteorder=endianess))
+            f.write(p[0].to_bytes(2, byteorder=endianess))
 
 def write_program_as_memfile(prog, fn, endianess='big'):
     with open(fn ,"wt") as f:
         for c,p in enumerate(prog):
-            f.write(f"{p:04x}")
+            f.write(f"{p[0]:04x}")
             if (c % 8) == 7:
                 f.write("\n")
             else:
@@ -263,7 +267,7 @@ def write_program_as_cfile(prog, fn, endianess='big'):
         for c,p in enumerate(prog):
             if (c % 8) == 0:
                 f.write("    ")
-            f.write(f"0x{p:04x}, ")
+            f.write(f"0x{p[0]:04x}, ")
             if (c % 8) == 7:
                 f.write("\n")
         if (len(prog) % 8):
@@ -294,7 +298,7 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = ".asciiz \"Hallo Welt!!!!\"\n"
+    lines = "ret\njp r1\n"
     contents = "".join(lines)
 
     t = l.parse(contents)
