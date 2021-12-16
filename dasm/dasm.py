@@ -126,7 +126,7 @@ def InstReljmp_offset(t, offset):
         offs = (1 << 9) + offs
     offs1 = offs & 0xf
     offs2 = (offs & 0x1f0) << 3
-    op = opcodes[t] | offs2 | offs1
+    op = opcodes[t.type] | offs2 | offs1
     return (op, t.line, t.column)
 
 def convert_to_number(s):
@@ -274,13 +274,13 @@ def write_program_as_cfile(prog, fn, endianess='big'):
             f.write("\n")
         f.write("};")
 
-def write_program_as_hexdump(prog, offset, fn, endianess='big'):
+def write_program_as_hexdump(prog, offset, lines, fn, endianess='big'):
     with open(fn ,"wt") as f:
         for i in range(len(prog)):
             addr = i + offset
-            if (addr % 8) == 0:
-                f.write(f"{addr:04x}")
-        # todo
+            l = prog[i][1] - 1
+            f.write("# " + lines[l].strip() + "\n")
+            f.write(f"{addr:04x}: {prog[i][0]:4x}\n")
 
 def main():
     print("dasm: Simple dcpu assembler\n")
@@ -298,7 +298,14 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = "ret\njp r1\n"
+    lines = '''#test
+    ret
+    jp r1
+    ldi r0, 1
+    and r1, r2
+    jnz 5
+    push r7
+    '''
     contents = "".join(lines)
 
     t = l.parse(contents)
@@ -314,7 +321,7 @@ def main():
     write_program_as_bin(words, fn_noext+".bin")
     write_program_as_memfile(words, fn_noext+".mem")
     write_program_as_cfile(words, fn_noext+".c")
-    write_program_as_hexdump(words, offset, fn_noext+".hexdump")
+    write_program_as_hexdump(words, offset, lines.split("\n"), fn_noext+".hexdump")
 
 if __name__ == "__main__":
     sys.exit(main())
