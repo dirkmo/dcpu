@@ -5,6 +5,27 @@ import copy
 import lark
 import grammar
 
+class Operation:
+    OPCODE = 0
+    DATA = 1
+
+    def __init__(self, opcode, line, col, type=0):
+        self.opcode = opcode
+        self.line = line
+        self.col = col
+        self.type = type
+
+    def data(self):
+        if self.type == self.OPCODE:
+            return [self.opcode]
+        elif self.type == self.DATA:
+            return self.opcode
+
+    def len(self):
+        if self.type == self.DATA:
+            return len(self.opcode)
+        return 1
+
 def RegIdx(reg):
     r = reg.upper()
     if r == "ST": r = "R13"
@@ -23,7 +44,7 @@ def InstOp0(t):
     }
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
-    return (opcodes[t.type], t.line, t.column)
+    return Operation(opcodes[t.type], t.line, t.column)
 
 def InstOp1JpBr(t, r):
     #print(t.line)
@@ -42,7 +63,7 @@ def InstOp1JpBr(t, r):
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
     op = opcodes[t.type] | RegIdx(r.value)
-    return (op, t.line, t.column)
+    return Operation(op, t.line, t.column)
 
 def InstOp1(t, r):
     opcodes = {
@@ -52,7 +73,7 @@ def InstOp1(t, r):
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
     op = opcodes[t.type] | RegIdx(r.value)
-    return (op, t.line, t.column)
+    return Operation(op, t.line, t.column)
 
 def InstOp2(t, rd, rs):
     opcodes = {
@@ -71,7 +92,7 @@ def InstOp2(t, rd, rs):
     if not t.type in opcodes:
         raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
     op = opcodes[t.type] | (RegIdx(rs.value) << 4) | RegIdx(rd.value)
-    return (op, t.line, t.column)
+    return Operation(op, t.line, t.column)
 
 def InstLdi(t, rd, imm):
     value = convert_to_number(imm)
@@ -83,15 +104,15 @@ def InstLdi(t, rd, imm):
         ops = []
         if value & 0x2ff:
             op = opcodes["LDIL"] | ((value&0x2ff) << 4) | RegIdx(rd.value)
-            ops.append( (op, t.line, t.column) )
+            ops.append( Operation(op, t.line, t.column) )
         if value > 0x2ff:
             op = opcodes["LDIH"] | ((value >> 4) & 0x0ff0) | RegIdx(rd.value)
-            ops.append( (op, t.line, t.column) )
+            ops.append( Operation(op, t.line, t.column) )
     else:
         if not t.type in opcodes:
             raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
         op = opcodes[t.type] | (convert_to_number(imm) << 4) | RegIdx(rd.value)
-        ops = [(op, t.line, t.column)]
+        ops = [Operation(op, t.line, t.column)]
     return ops
 
 def InstLd(t, rd, rs, offset):
@@ -99,14 +120,14 @@ def InstLd(t, rd, rs, offset):
     src = RegIdx(rs.value)
     dst = RegIdx(rd.value)
     op = 0x8000 | (offs<<8) | (src << 4) | dst
-    return (op, t.line, t.column)
+    return Operation(op, t.line, t.column)
 
 def InstSt(t, rs, offset, rd):
     offs = convert_to_number(offset)
     src = RegIdx(rs.value)
     dst = RegIdx(rd.value)
     op = 0xa000 | (offs<<8) | (src << 4) | dst
-    return (op, t.line, t.column)
+    return Operation(op, t.line, t.column)
 
 def InstReljmp_offset(t, offset):
     opcodes = {
@@ -127,7 +148,7 @@ def InstReljmp_offset(t, offset):
     offs1 = offs & 0xf
     offs2 = (offs & 0x1f0) << 3
     op = opcodes[t.type] | offs2 | offs1
-    return (op, t.line, t.column)
+    return Operation(op, t.line, t.column)
 
 def convert_to_number(s):
     sign = 1
@@ -147,9 +168,9 @@ class Program:
     symbols = {}
 
     @classmethod
-    def insertOp(cls, op):
-        cls.program[cls.pos] = op
-        cls.pos = cls.pos + 1
+    def insert(cls, operation):
+        cls.program[cls.pos] = operation
+        cls.pos = cls.pos + operation.len()
 
     @classmethod
     def getOffsetAndWords(cls):
@@ -167,44 +188,44 @@ class Program:
 
 
 class dcpuTransformer(lark.Transformer):
-   
+
     def op0(self, a):
-        Program.insertOp(InstOp0(a[0]))
-    
+        Program.insert(InstOp0(a[0]))
+
     def op1(self, a):
-        Program.insertOp(InstOp1(a[0], a[1]))
+        Program.insert(InstOp1(a[0], a[1]))
 
     def op1_jpbr(self, a):
-        Program.insertOp(InstOp1JpBr(a[0], a[1]))
+        Program.insert(InstOp1JpBr(a[0], a[1]))
 
     def op2(self, a):
-        Program.insertOp(InstOp2(a[0], a[1], a[2]))
-    
+        Program.insert(InstOp2(a[0], a[1], a[2]))
+
     def ld(self, a):
         offs = '0'
         if len(a) == 4: offs = a[3].value
-        Program.insertOp(InstLd(a[0].type, a[1], a[2], offs))
+        Program.insert(InstLd(a[0].type, a[1], a[2], offs))
 
     def st(self, a):
         offs = '0'
         if len(a) == 4: # InstSt(t, rs, offset, rd):
-            Program.insertOp(InstSt(a[0], a[1], a[2], a[3]))
+            Program.insert(InstSt(a[0], a[1], a[2], a[3]))
         else:
-            Program.insertOp(InstSt(a[0], a[1], "0", a[2]))
+            Program.insert(InstSt(a[0], a[1], "0", a[2]))
 
     def ldimm(self, a):
         ops = InstLdi(a[0], a[1], a[2])
         for op in ops:
-            Program.insertOp(op)
+            Program.insert(op)
 
     def reljmp_label(self, a):
         try: addr = Program.symbols[a[1].value]
         except: raise ValueError(f"Symbol '{a[1].value}' not found.")
         offs = addr - self.pos - 1
-        Program.insertOp(InstReljmp_offset(a[0], str(offs)))
+        Program.insert(InstReljmp_offset(a[0], str(offs)))
 
     def reljmp_offset(self, a):
-        Program.insertOp(InstReljmp_offset(a[0], a[1]))
+        Program.insert(InstReljmp_offset(a[0], a[1]))
 
     def equ(self, a):
         if a[1].value in Program.symbols:
@@ -221,17 +242,21 @@ class dcpuTransformer(lark.Transformer):
 
     def word(self, a):
         i = 1
+        data = []
         while i < len(a):
             try:
                 v = convert_to_number(a[i].value)
-                Program.insertOp(v)
+                data.append(v)
             except:
                 if a[i].value in Program.symbols:
                     v = Program.symbols[a[i].value]
-                    Program.insertOp(v)
+                    # Program.insert(v)
+                    data.append(v)
                 else:
                     raise ValueError(f"Line {a[i].line}:{a[i].column}: Symbol '{a[i].value}' not found")
             i = i + 1
+        op = Operation(data, a[0].line, a[0].column, Operation.DATA)
+        Program.insert(op)
 
     def ascii(self, a):
         s = a[1].value[1:-1].encode('ascii','ignore')
@@ -240,36 +265,44 @@ class dcpuTransformer(lark.Transformer):
             v = s[i]
             if i+1 < len(s):
                 v = v | (s[i+1] << 8)
-            Program.insertOp(v)
+            Program.insert(v)
             i = i+2
 
     def asciiz(self, a):
         self.ascii(a)
-        Program.insertOp(0)
+        Program.insert(0)
+
+
+
 
 def write_program_as_bin(prog, fn, endianess='big'):
     with open(fn ,"wb") as f:
         for p in prog:
-            f.write(p[0].to_bytes(2, byteorder=endianess))
+            for d in p.data():
+                f.write(d.to_bytes(2, byteorder=endianess))
 
 def write_program_as_memfile(prog, fn, endianess='big'):
     with open(fn ,"wt") as f:
         for c,p in enumerate(prog):
-            f.write(f"{p[0]:04x}")
-            if (c % 8) == 7:
-                f.write("\n")
-            else:
-                f.write(" ")
-            
+            for d in p.data():
+                f.write(f"{d:04x}")
+                if (c % 8) == 7:
+                    f.write("\n")
+                else:
+                    f.write(" ")
+                c = c + 1
+
 def write_program_as_cfile(prog, fn, endianess='big'):
     with open(fn ,"wt") as f:
         f.write("uint16_t program[] = {\n")
         for c,p in enumerate(prog):
-            if (c % 8) == 0:
-                f.write("    ")
-            f.write(f"0x{p[0]:04x}, ")
-            if (c % 8) == 7:
-                f.write("\n")
+            for d in p.data():
+                if (c % 8) == 0:
+                    f.write("    ")
+                f.write(f"0x{d:04x}, ")
+                if (c % 8) == 7:
+                    f.write("\n")
+                c = c + 1
         if (len(prog) % 8):
             f.write("\n")
         f.write("};")
@@ -278,9 +311,11 @@ def write_program_as_hexdump(prog, offset, lines, fn, endianess='big'):
     with open(fn ,"wt") as f:
         for i in range(len(prog)):
             addr = i + offset
-            l = prog[i][1] - 1
+            l = prog[i].line - 1
             f.write("# " + lines[l].strip() + "\n")
-            f.write(f"{addr:04x}: {prog[i][0]:4x}\n")
+            f.write(f"{addr:04x}: {prog[i].opcode:4x}\n")
+
+
 
 def main():
     print("dasm: Simple dcpu assembler\n")
@@ -305,6 +340,7 @@ def main():
     and r1, r2
     jnz 5
     push r7
+    .word 1,2,3,4
     '''
     contents = "".join(lines)
 
