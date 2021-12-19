@@ -25,6 +25,13 @@ class Operation:
         if self.type == self.DATA:
             return len(self.opcode)
         return 1
+    
+    def data_hexdump(self):
+        data = self.data()
+        s = f"{data[0]:04x}"
+        for i in range(1, len(data)):
+            s = s + f", {data[i]:04x}"
+        return s
 
 def RegIdx(reg):
     r = reg.upper()
@@ -180,9 +187,9 @@ class Program:
         words = []
         for p in sorted_prog:
             while pos < p:
-                words.append(0)
+                words.append(Operation(0,0,0,0))
                 pos = pos + 1
-            words.append(cls.program[sorted_prog[p]])
+            words.append(cls.program[p])
             pos = pos + 1
         return (sorted_prog[0], words)
 
@@ -309,11 +316,17 @@ def write_program_as_cfile(prog, fn, endianess='big'):
 
 def write_program_as_hexdump(prog, offset, lines, fn, endianess='big'):
     with open(fn ,"wt") as f:
-        for i in range(len(prog)):
-            addr = i + offset
-            l = prog[i].line - 1
+        for i,p in enumerate(prog):
+            addr = offset + i
+            l = p.line - 1
             f.write("# " + lines[l].strip() + "\n")
-            f.write(f"{addr:04x}: {prog[i].opcode:4x}\n")
+            f.write(f"{addr:04x}: {prog[i].data_hexdump()}\n")
+        
+        #for i in range(len(prog)):
+        #    addr = i + offset
+        #    l = prog[i].line - 1
+        #    f.write("# " + lines[l].strip() + "\n")
+        #    f.write(f"{addr:04x}: {prog[i].opcode:4x}\n")
 
 
 
@@ -334,13 +347,15 @@ def main():
         return 2
 
     lines = '''#test
+    .org 8
+    .word 1,2,3,4
+    .org 0
     ret
     jp r1
     ldi r0, 1
     and r1, r2
     jnz 5
     push r7
-    .word 1,2,3,4
     '''
     contents = "".join(lines)
 
