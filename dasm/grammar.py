@@ -3,7 +3,8 @@ start: _line*
 
 _line: label? [_op | _dir] _COMMENT? _NL
 
-_op: ldimm
+_op: ld_imm
+    | ld_label
     | op0
     | op1_jpbr
     | op1
@@ -43,9 +44,13 @@ st: ST "(" REG OFFSET? ")" ","  REG
 
 ld: LD REG "," "(" REG OFFSET? ")"
 
-ldimm: LDI  REG "," NUMBER
+ld_imm: LDI  REG "," NUMBER
      | LDIL REG "," NUMBER
      | LDIH REG "," NUMBER
+     
+ld_label: LDI  REG "," CNAME
+     | LDIL REG "," CNAME
+     | LDIH REG "," CNAME
 
 reljmp_label: JP CNAME
     | JZ CNAME
@@ -61,14 +66,12 @@ reljmp_offset: JP NUMBER
 
 _dir: equ
     | org
-    | asciiz
     | ascii
     | word
 
 equ: EQU CNAME NUMBER
 org: ORG NUMBER
-asciiz: ASCIIZ STRING
-ascii: ASCII STRING
+ascii: (ASCII|ASCIIZ) STRING
 word: WORD [NUMBER|CNAME] ("," [NUMBER|CNAME])*
 
 REG:  "r1"i "0".."5"

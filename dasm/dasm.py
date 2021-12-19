@@ -211,7 +211,7 @@ class dcpuTransformer(lark.Transformer):
     def ld(self, a):
         offs = '0'
         if len(a) == 4: offs = a[3].value
-        Program.insert(InstLd(a[0].type, a[1], a[2], offs))
+        Program.insert(InstLd(a[0], a[1], a[2], offs))
 
     def st(self, a):
         offs = '0'
@@ -220,15 +220,23 @@ class dcpuTransformer(lark.Transformer):
         else:
             Program.insert(InstSt(a[0], a[1], "0", a[2]))
 
-    def ldimm(self, a):
+    def ld_imm(self, a):
         ops = InstLdi(a[0], a[1], a[2])
+        for op in ops:
+            Program.insert(op)
+
+    def ld_label(self, a):
+        try: v = Program.symbols[a[2].value]
+        except: raise ValueError(f"Symbol '{a[1].value}' not found.")
+        vtok = lark.lexer.Token("NUMBER", f"{v}")
+        ops = InstLdi(a[0], a[1], vtok)
         for op in ops:
             Program.insert(op)
 
     def reljmp_label(self, a):
         try: addr = Program.symbols[a[1].value]
         except: raise ValueError(f"Symbol '{a[1].value}' not found.")
-        offs = addr - self.pos - 1
+        offs = addr - Program.pos - 1
         Program.insert(InstReljmp_offset(a[0], str(offs)))
 
     def reljmp_offset(self, a):
@@ -268,18 +276,16 @@ class dcpuTransformer(lark.Transformer):
     def ascii(self, a):
         s = a[1].value[1:-1].encode('ascii','ignore')
         i = 0
+        data = []
         while i < len(s):
             v = s[i]
             if i+1 < len(s):
                 v = v | (s[i+1] << 8)
-            Program.insert(v)
             i = i+2
-
-    def asciiz(self, a):
-        self.ascii(a)
-        Program.insert(0)
-
-
+            data.append(v)
+        if a[0].type == "ASCIIZ":
+            data.append(0)
+        Program.insert(Operation(data, a[0].line, a[0].column, Operation.DATA))
 
 
 def write_program_as_bin(prog, fn, endianess='big'):
@@ -321,14 +327,6 @@ def write_program_as_hexdump(prog, offset, lines, fn, endianess='big'):
             l = p.line - 1
             f.write("# " + lines[l].strip() + "\n")
             f.write(f"{addr:04x}: {prog[i].data_hexdump()}\n")
-        
-        #for i in range(len(prog)):
-        #    addr = i + offset
-        #    l = prog[i].line - 1
-        #    f.write("# " + lines[l].strip() + "\n")
-        #    f.write(f"{addr:04x}: {prog[i].opcode:4x}\n")
-
-
 
 def main():
     print("dasm: Simple dcpu assembler\n")
@@ -346,33 +344,21 @@ def main():
         print(f"ERROR: Cannot open file {fn}")
         return 2
 
-    lines = '''#test
-    .org 8
-    .word 1,2,3,4
-    .org 0
-    ret
-    jp r1
-    ldi r0, 1
-    and r1, r2
-    jnz 5
-    push r7
-    '''
     contents = "".join(lines)
 
     t = l.parse(contents)
-    #print(t.pretty())
+    print(t.pretty())
     # print(t)
 
     n = dcpuTransformer().transform(t)
 
     fn_noext = os.path.splitext(fn)[0]
-    # write_program(Program.program, fn_raw)
     (offset, words) = Program.getOffsetAndWords()
 
     write_program_as_bin(words, fn_noext+".bin")
     write_program_as_memfile(words, fn_noext+".mem")
     write_program_as_cfile(words, fn_noext+".c")
-    write_program_as_hexdump(words, offset, lines.split("\n"), fn_noext+".hexdump")
+    write_program_as_hexdump(words, offset, lines, fn_noext+".hexdump")
 
 if __name__ == "__main__":
     sys.exit(main())
