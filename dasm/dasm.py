@@ -227,7 +227,7 @@ class dcpuTransformer(lark.Transformer):
 
     def ld_label(self, a):
         try: v = Program.symbols[a[2].value]
-        except: raise ValueError(f"Symbol '{a[1].value}' not found.")
+        except: raise ValueError(f"Symbol '{a[2].value}' not found.")
         vtok = lark.lexer.Token("NUMBER", f"{v}")
         ops = InstLdi(a[0], a[1], vtok)
         for op in ops:
@@ -238,6 +238,7 @@ class dcpuTransformer(lark.Transformer):
         except: raise ValueError(f"Symbol '{a[1].value}' not found.")
         offs = addr - Program.pos - 1
         Program.insert(InstReljmp_offset(a[0], str(offs)))
+        return 1
 
     def reljmp_offset(self, a):
         Program.insert(InstReljmp_offset(a[0], a[1]))
