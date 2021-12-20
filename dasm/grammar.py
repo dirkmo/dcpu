@@ -4,15 +4,13 @@ start: _line*
 _line: label? [_op | _dir] _COMMENT? _NL
 
 _op: ld_imm
-    | ld_label
     | op0
     | op1_jpbr
     | op1
     | op2
     | ld
     | st
-    | reljmp_label
-    | reljmp_offset
+    | reljmp
 
 label: CNAME ":"
 
@@ -39,30 +37,24 @@ op2:  LD REG "," REG
     | OR REG "," REG
     | XOR REG "," REG
     | CMP REG "," REG
+    | SL REG "," REG
+    | SR REG "," REG
+    | SLW REG "," REG
+    | SRW REG "," REG
 
 st: ST "(" REG OFFSET? ")" ","  REG
 
 ld: LD REG "," "(" REG OFFSET? ")"
 
-ld_imm: LDI  REG "," NUMBER
-     | LDIL REG "," NUMBER
-     | LDIH REG "," NUMBER
-     
-ld_label: LDI  REG "," CNAME
-     | LDIL REG "," CNAME
-     | LDIH REG "," CNAME
+ld_imm: LDI  REG "," (NUMBER | CNAME)
+     |  LDIL REG "," (NUMBER | CNAME)
+     |  LDIH REG "," (NUMBER | CNAME)
 
-reljmp_label: JP CNAME
-    | JZ CNAME
-    | JNZ CNAME
-    | JC CNAME
-    | JNC CNAME
-
-reljmp_offset: JP NUMBER
-    | JZ NUMBER
-    | JNZ NUMBER
-    | JC NUMBER
-    | JNC NUMBER
+reljmp: JP (CNAME | NUMBER)
+    |   JZ (CNAME | NUMBER)
+    |  JNZ (CNAME | NUMBER)
+    |   JC (CNAME | NUMBER)
+    |  JNC (CNAME | NUMBER)
 
 _dir: equ
     | org
@@ -104,10 +96,10 @@ AND:  "and"i
 OR:   "or"i
 XOR:  "xor"i
 CMP:  "cmp"i
-SHL:  "shl"i
-SHR:  "shr"i
-SHLW: "shl.w"i
-SHRW: "shr.w"i
+SL:  "sl"i
+SR:  "sr"i
+SLW: "slw"i
+SRW: "srw"i
 EQU:  ".equ"i
 ORG:  ".org"i
 WORD: ".word"i

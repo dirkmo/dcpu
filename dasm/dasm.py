@@ -62,36 +62,25 @@ class dcpuTransformer(lark.Transformer):
             return InstructionSt(a[0], a[1], "0", a[2])
 
     def ld_imm(self, a):
-        global symbols
-        return InstructionLdi(a[0], a[1], a[2], symbols)
+        return InstructionLdi(a[0], a[1], a[2])
 
     def reljmp(self, a):
-        global symbols
-        return InstructionRelJmp(a[0], a[1], symbols)
+        return InstructionRelJmp(a[0], a[1])
 
     def equ(self, a):
-        global symbols
-        if a[1].value in symbols:
-            raise ValueError(f"Symbol '{a[1].value}' already defined.")
-        symbols[a[1].value] = Instruction.convert_to_number(a[2].value)
+        return DirectiveEqu(a[0], a[1], a[2])
 
     def label(self, a):
-        global symbols
-        global program
-        if (a[0].value in symbols):
-            raise ValueError(f"Line {a[0].line}:{a[0].column}: Symbol '{a[0].value}' already defined")
-        symbols[a[0].value] = program.pos
-        return DirectiveLabel(a)
+        return DirectiveLabel(a[0])
 
     def org(self, a):
         return DirectiveOrg(a[1])
 
     def word(self, a):
-        global symbols
-        return DirectiveWord(a, symbols)
+        return DirectiveWord(a)
 
     def ascii(self, a):
-        return DirectiveAscii(a)
+        return DirectiveAscii(a[0], a[1])
 
 
 def write_program_as_bin(prog, fn, endianess='big'):
@@ -160,6 +149,10 @@ def main():
     program = Program()
 
     n = dcpuTransformer().transform(t)
+    print(n)
+
+    for c in n.children:
+        print(c)
 
     fn_noext = os.path.splitext(fn)[0]
     (offset, words) = Program.getOffsetAndWords()

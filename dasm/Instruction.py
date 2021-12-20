@@ -3,6 +3,7 @@ class Instruction:
     DATA = 1
     ORG = 2
     LABEL = 3
+    EQU = 4
 
     @staticmethod
     def RegIdx(reg):
@@ -66,6 +67,9 @@ class InstructionOp0(Instruction):
 
     def data(self, pos=0):
         return [self._opcodes[self.token.type]]
+    
+    def __str__(self):
+        return self.token.type
 
 
 class InstructionOp1JpBr(Instruction):
@@ -92,6 +96,9 @@ class InstructionOp1JpBr(Instruction):
         op = self._opcodes[self.token.type] | Instruction.RegIdx(self.register.value)
         return [op]
 
+    def __str__(self):
+        return f"{self.token.type} {self.register.value}"
+
 
 class InstructionOp1(Instruction):
     _opcodes = {
@@ -109,6 +116,9 @@ class InstructionOp1(Instruction):
         op = self._opcodes[self.token.type] | Instruction.RegIdx(self.register.value)
         return [op]
 
+    def __str__(self):
+        return f"{self.token.type} {self.register.value}"
+
 
 class InstructionOp2(Instruction):
     _opcodes = {
@@ -119,10 +129,10 @@ class InstructionOp2(Instruction):
         "OR":   0xe400,
         "XOR":  0xe500,
         "CMP":  0xe600,
-        "SHR":  0xe700,
-        "SHL":  0xe800,
-        "WSHR": 0xe900,
-        "WSHL": 0xea00,
+        "SR":  0xe700,
+        "SL":  0xe800,
+        "SRW": 0xe900,
+        "SLW": 0xea00,
     }
 
     def __init__(self, t, rd, rs):
@@ -138,6 +148,9 @@ class InstructionOp2(Instruction):
         rd = Instruction.RegIdx(self.rd.value)
         return [op | rs | rd]
 
+    def __str__(self):
+        return f"{self.token.type} {self.rd.value}, {self.rs.value}"
+
 
 class InstructionLdi(Instruction):
     _opcodes = {
@@ -146,21 +159,21 @@ class InstructionLdi(Instruction):
         "LDIH": 0x4000,
     }
 
-    def __init__(self, t, rd, imm, symbols):
+    def __init__(self, t, rd, imm):
         if not t.type in self._opcodes:
             raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
         super().__init__(t, Instruction.OPCODE)
         self.rd = rd
         self.immediate = imm
-        self.symbols = symbols
 
-    def data(self, pos=0):
-        try:
+    def data(self, symbols):
+        if self.immediate.type == "NUMBER":
             imm = Instruction.convert_to_number(self.immediate)
-        except:
-            if not self.immediate in self.symbols:
+        else:
+            try:
+                imm = self.symbols[self.immediate]
+            except:
                 raise ValueError(f"Line {self.immediate.line}:{self.immediate.column}: Symbol '{self.immediate.value}' not found")
-            imm = self.symbols[self.immediate]
         rd = Instruction.RegIdx(self.rd.value)
         ops = []
         if self.token.type == "LDI":
@@ -177,6 +190,9 @@ class InstructionLdi(Instruction):
         if self.token.type == "LDI":
             return 2
         return 1
+
+    def __str__(self):
+        return f"{self.token.type} {self.rd.value}, {self.immediate.value}"
 
 
 class InstructionLd(Instruction):
@@ -197,13 +213,16 @@ class InstructionLd(Instruction):
         op = self._opcodes[self.token.type] | (offs << 8) | (src << 4) | dst
         return [op]
 
+    def __str__(self):
+        return f"{self.token.type} {self.rd.value}, ({self.rs.value}{self.offset})"
+
 
 class InstructionSt(Instruction):
     _opcodes = {
         "ST": 0xa000,
     }
 
-    def __init__(self, t, rs, offset, rd):
+    def __init__(self, t, rd, offset, rs):
         super().__init__(t, Instruction.OPCODE)
         self.rs = rs
         self.offset = offset
@@ -211,10 +230,13 @@ class InstructionSt(Instruction):
 
     def data(self, pos=0):
         offset = Instruction.convert_to_number(self.offset)
-        src = Instruction.RegIdx(self.rs.value)
-        dst = Instruction.RegIdx(self.rd.value)
+        src = Instruction.RegIdx(self.rd.value)
+        dst = Instruction.RegIdx(self.rs.value)
         op = self._opcodes[self.token.type] | (offset << 8) | (src << 4) | dst
         return [op]
+
+    def __str__(self):
+        return f"{self.token.type} ({self.rd.value}{self.offset}), {self.rs.value}"
 
 
 class InstructionRelJmp(Instruction):
@@ -226,12 +248,11 @@ class InstructionRelJmp(Instruction):
         "JNC": 0xc040,
     }
 
-    def __init__(self, t, offset, symbols):
+    def __init__(self, t, offset):
         if not t.type in self._opcodes:
             raise ValueError(f"Line {t.line}:{t.column}: Unknown opcode '{t.value}'")
         super().__init__(t, Instruction.OPCODE)
         self.offset = offset
-        self.symbols = symbols
 
     def data(self, pos=0):
         try:
@@ -249,9 +270,12 @@ class InstructionRelJmp(Instruction):
         op = self._opcodes[t.type] | offs2 | offs1
         return [op]
 
+    def __str__(self):
+        return f"{self.token.type} {self.offset}"
+
 
 class DirectiveWord(Instruction):
-    def __init__(self, a, symbols):
+    def __init__(self, a):
         super().__init__(a[0], Instruction.DATA)
         self._data = a
 
@@ -274,14 +298,17 @@ class DirectiveWord(Instruction):
     def len(self):
         return len(self._data) - 1
 
+    def __str__(self):
+        return f"{self._data}"
+
 
 class DirectiveAscii(Instruction):
-    def __init__(self, a):
-        super().__init__(a[0], Instruction.DATA)
-        self._data = a
+    def __init__(self, t, str):
+        super().__init__(t, Instruction.DATA)
+        self._data = str
 
     def data(self, pos=0):
-        s = self._data[1].value[1:-1].encode('ascii','ignore')
+        s = self._data.value[1:-1].encode('ascii','ignore')
         i = 0
         d = []
         while i < len(s):
@@ -290,13 +317,15 @@ class DirectiveAscii(Instruction):
                 v = v | (s[i+1] << 8)
             i = i+2
             d.append(v)
-        if self._data[0].type == "ASCIIZ":
+        if self.token.type == "ASCIIZ":
             d.append(0)
         return d
 
     def len(self):
         return len(self.data())
 
+    def __str__(self):
+        return f".{self.token.type} {self._data.value}"
 
 class DirectiveOrg(Instruction):
     def __init__(self, a):
@@ -309,14 +338,35 @@ class DirectiveOrg(Instruction):
     def len(self):
         return 0
 
+    def __str__(self):
+        return f".ORG {self.org}"
 
 class DirectiveLabel(Instruction):
     def __init__(self, a):
         super().__init__(a, Instruction.LABEL)
-        self.org = a
 
     def data(self):
         return None
 
     def len(self):
         return 0
+
+    def __str__(self):
+        return f"{self.token.value}:"
+
+
+class DirectiveEqu(Instruction):
+    def __init__(self, t, name, value):
+        super().__init__(t, Instruction.EQU)
+        self.name = name
+        self.value = value
+
+    def data(self):
+        return None
+
+    def len(self):
+        return 0
+
+    def __str__(self):
+        return f".EQU {self.name.value} {self.value.value}"
+    

@@ -1,9 +1,11 @@
 .equ UART_TX $fff0
 .equ UART_ST $fff1
+msg: .asciiz "Hallo Welt!"
 
     ldi r0, 123
     ldi r0, msg
     ld r0, (r0)
+    ld r0, (r0+4)
 
 
 uart_byte_tx:
@@ -16,6 +18,12 @@ uart_byte_tx:
     ret
 
 ende:
+    and r1, r2
     jp ende
 
-msg: .asciiz "Hallo Welt!"
+st (r1+3), r10
+
+BR r0
+sub r2, r5
+sl r1, r2
+srw r2, r4
