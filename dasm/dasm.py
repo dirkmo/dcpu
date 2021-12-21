@@ -39,48 +39,61 @@ class Program:
 class dcpuTransformer(lark.Transformer):
 
     def op0(self, a):
-        return InstructionOp0(a[0])
+        a.append(InstructionOp0(a[0]))
+        return a
 
     def op1(self, a):
-        return InstructionOp1(a[0], a[1])
+        a.append(InstructionOp1(a[0], a[1]))
+        return a
 
     def op1_jpbr(self, a):
-        return InstructionOp1JpBr(a[0], a[1])
+        a.append(InstructionOp1JpBr(a[0], a[1]))
+        return a
 
     def op2(self, a):
-        return InstructionOp2(a[0], a[1], a[2])
+        a.append(InstructionOp2(a[0], a[1], a[2]))
+        return a
 
     def ld(self, a):
         offs = '0'
         if len(a) == 4: offs = a[3].value
-        return InstructionLd(a[0], a[1], a[2], offs)
+        a.append(InstructionLd(a[0], a[1], a[2], offs))
+        return a
 
     def st(self, a):
         if len(a) == 4:
-            return InstructionSt(a[0], a[1], a[2], a[3])
+            a.append(InstructionSt(a[0], a[1], a[2], a[3]))
         else:
-            return InstructionSt(a[0], a[1], "0", a[2])
+            a.append(InstructionSt(a[0], a[1], "0", a[2]))
+        return a
 
     def ld_imm(self, a):
-        return InstructionLdi(a[0], a[1], a[2])
+        a.append(InstructionLdi(a[0], a[1], a[2]))
+        return a
 
     def reljmp(self, a):
-        return InstructionRelJmp(a[0], a[1])
+        a.append(InstructionRelJmp(a[0], a[1]))
+        return a
 
     def equ(self, a):
-        return DirectiveEqu(a[0], a[1], a[2])
+        a.append(DirectiveEqu(a[0], a[1], a[2]))
+        return a
 
     def label(self, a):
-        return DirectiveLabel(a[0])
+        a.append(DirectiveLabel(a[0]))
+        return a
 
     def org(self, a):
-        return DirectiveOrg(a[1])
+        a.append(DirectiveOrg(a[1]))
+        return a
 
     def word(self, a):
-        return DirectiveWord(a)
+        a.append(DirectiveWord(a))
+        return a
 
     def ascii(self, a):
-        return DirectiveAscii(a[0], a[1])
+        a.append(DirectiveAscii(a[0], a[1]))
+        return a
 
 
 def write_program_as_bin(prog, fn, endianess='big'):
