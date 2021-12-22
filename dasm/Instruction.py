@@ -70,6 +70,9 @@ class InstructionOp0(Instruction):
     
     def __str__(self):
         return self.token.type
+    
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
 
 
 class InstructionOp1JpBr(Instruction):
@@ -99,6 +102,9 @@ class InstructionOp1JpBr(Instruction):
     def __str__(self):
         return f"{self.token.type} {self.register.value}"
 
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
+
 
 class InstructionOp1(Instruction):
     _opcodes = {
@@ -118,6 +124,9 @@ class InstructionOp1(Instruction):
 
     def __str__(self):
         return f"{self.token.type} {self.register.value}"
+
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
 
 
 class InstructionOp2(Instruction):
@@ -150,6 +159,9 @@ class InstructionOp2(Instruction):
 
     def __str__(self):
         return f"{self.token.type} {self.rd.value}, {self.rs.value}"
+
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
 
 
 class InstructionLdi(Instruction):
@@ -194,6 +206,9 @@ class InstructionLdi(Instruction):
     def __str__(self):
         return f"{self.token.type} {self.rd.value}, {self.immediate.value}"
 
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
+
 
 class InstructionLd(Instruction):
     _opcodes = {
@@ -216,6 +231,9 @@ class InstructionLd(Instruction):
     def __str__(self):
         return f"{self.token.type} {self.rd.value}, ({self.rs.value}{self.offset})"
 
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
+
 
 class InstructionSt(Instruction):
     _opcodes = {
@@ -237,6 +255,9 @@ class InstructionSt(Instruction):
 
     def __str__(self):
         return f"{self.token.type} ({self.rd.value}{self.offset}), {self.rs.value}"
+
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
 
 
 class InstructionRelJmp(Instruction):
@@ -273,6 +294,9 @@ class InstructionRelJmp(Instruction):
     def __str__(self):
         return f"{self.token.type} {self.offset}"
 
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
+
 
 class DirectiveWord(Instruction):
     def __init__(self, a):
@@ -301,6 +325,9 @@ class DirectiveWord(Instruction):
     def __str__(self):
         return f"{self._data}"
 
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
+
 
 class DirectiveAscii(Instruction):
     def __init__(self, t, str):
@@ -327,6 +354,10 @@ class DirectiveAscii(Instruction):
     def __str__(self):
         return f".{self.token.type} {self._data.value}"
 
+    def __repr__(self):
+        return f"{type(self)}({self.__str__()})"
+
+
 class DirectiveOrg(Instruction):
     def __init__(self, a):
         super().__init__(a, Instruction.ORG)
@@ -340,6 +371,7 @@ class DirectiveOrg(Instruction):
 
     def __str__(self):
         return f".ORG {self.org}"
+
 
 class DirectiveLabel(Instruction):
     def __init__(self, a):
@@ -369,4 +401,4 @@ class DirectiveEqu(Instruction):
 
     def __str__(self):
         return f".EQU {self.name.value} {self.value.value}"
-    
+
