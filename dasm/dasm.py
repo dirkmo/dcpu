@@ -13,28 +13,37 @@ program = None
 
 
 class Program:
-    def __init__(self):
-        self.program = {}
-        self.pos = 0
+    def __init__(self, tokens):
+        pos = 0
+        self.tokens = tokens
+        self.symbols = {}
+        self.start_address = -1
+        self.end_address = -1
+        for t in tokens:
+            entry = t[-1]
+            if entry.type in [Instruction.OPCODE, Instruction.DATA]:
+                entry.pos = pos
+                pos = pos + entry.len()
+            elif entry.type == Instruction.ORG:
+                pos = entry.address()
+            elif entry.type == Instruction.LABEL:
+                self.symbols[entry.label()] = pos
+            elif entry.type == Instruction.EQU:
+                    self.symbols[entry.name.value] = Instruction.convert_to_number(entry.value.value)
+        
+        # TODO: Second run to resolve symbols
+        self.data = [-1] * 65536
+        # TODO: Create raw memory
 
-    def insert(self, data):
-        if self.pos in self.program:
-            raise ValueError(f"Overlapping data!")
-        self.program[self.pos] = data
-        self.pos = self.pos + data.len()
 
-    def getOffsetAndWords(self):
-        i = 0
-        sorted_prog = sorted(self.program)
-        pos = sorted_prog[i]
-        words = []
-        for p in sorted_prog:
-            while pos < p:
-                words.append(Instruction(pos, lark.lexer.Token("NULL", 0), Instruction.DATA))
-                pos = pos + 1
-            words.append(self.program[p])
-            pos = pos + 1
-        return (sorted_prog[0], words)
+    def write_as_bin(self, fn, endianess='big'):
+        with open(fn ,"wb") as f:
+            for addr in range(self.start_address, self.end_address + 1):
+                d = self.data[addr]
+                if d < 0:
+                    d = 0
+                f.write(d.to_bytes(2, byteorder=endianess))
+
 
 class dcpuTransformer(lark.Transformer):
 
@@ -96,12 +105,6 @@ class dcpuTransformer(lark.Transformer):
         return a
 
 
-def write_program_as_bin(prog, fn, endianess='big'):
-    with open(fn ,"wb") as f:
-        for p in prog:
-            for d in p.data():
-                f.write(d.to_bytes(2, byteorder=endianess))
-
 def write_program_as_memfile(prog, fn, endianess='big'):
     with open(fn ,"wt") as f:
         for c,p in enumerate(prog):
@@ -158,19 +161,18 @@ def main():
     print(t.pretty())
     # print(t)
 
-    global program
-    program = Program()
-
     n = dcpuTransformer().transform(t)
     print(n)
 
     for c in n.children:
         print(c)
+         
 
     fn_noext = os.path.splitext(fn)[0]
-    (offset, words) = Program.getOffsetAndWords()
+    program = Program(n.children)
 
-    write_program_as_bin(words, fn_noext+".bin")
+    program.write_as_bin(fn_noext+".bin")
+    
     write_program_as_memfile(words, fn_noext+".mem")
     write_program_as_cfile(words, fn_noext+".c")
     write_program_as_hexdump(words, offset, lines, fn_noext+".hexdump")

@@ -361,13 +361,16 @@ class DirectiveAscii(Instruction):
 class DirectiveOrg(Instruction):
     def __init__(self, a):
         super().__init__(a, Instruction.ORG)
-        self.org = a[1]
+        self.org = a.value
 
     def data(self):
         return None
 
     def len(self):
         return 0
+
+    def address(self):
+        return Instruction.convert_to_number(self.org)
 
     def __str__(self):
         return f".ORG {self.org}"
@@ -382,6 +385,9 @@ class DirectiveLabel(Instruction):
 
     def len(self):
         return 0
+
+    def label(self):
+        return self.token.value
 
     def __str__(self):
         return f"{self.token.value}:"
