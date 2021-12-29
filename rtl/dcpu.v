@@ -10,6 +10,10 @@ module dcpu(
     input  i_int
 );
 
+parameter ADDRESS_INTERRUPT = 16'hFFF0;
+
+`define OP_INTERRUPT 16'b1101_0000_1000_0000 // interrupt is a normal branch instruction
+
 reg [15:0] r_op /* verilator public */;
 
 // register indices
@@ -100,8 +104,8 @@ wire [15:0] w_rjp_addr = R[PC] + { {8{w_rjp_offs[8]}}, w_rjp_offs[7:0] };
     1101 0000 <op:1> <cond:3> <dst:4>   jmp rd, branch rd. Conditions: none, c, z, nc, nz
 */
 wire w_op_jpbr = (r_op[15:8] == 8'b1101_0000);
-wire w_op_jp = ~r_op[7];
-wire w_op_br =  r_op[7];
+wire w_op_jp = w_op_jpbr && ~r_op[7];
+wire w_op_br = w_op_jpbr &&  r_op[7];
 
 /* Special opcodes group
     1101 0001 <op:4> <dst:4>
@@ -147,13 +151,19 @@ always @(*) begin
 end
 
 
-// interrupt handling
-reg r_int;
+/// interrupt handling
+// When an interrupt occurs, r_int is set 1 and reset when reti is executed.
+// When fetching a new instruction from memory and r_int is set, a branch instruction is
+// inserted to address ADDRESS_INTERRUPT.
+reg r_int_tick, r_int;
 always @(posedge i_clk) begin
+    r_int_tick <= 1'b0;
     if (w_op_reti)
         r_int <= 1'b0; // interrupt flag cleared by reti instruction
-    else if (i_int)
+    else if (i_int) begin
         r_int <= 1'b1;
+        r_int_tick <= 1'b1;
+    end
 end
 
 parameter
@@ -184,12 +194,12 @@ always @(posedge i_clk)
         else if (w_op_rjp && w_jp_cond)
             R[PC] <= w_rjp_addr;
         else if (w_op_jpbr && w_jp_cond) begin
-            R[PC] <= R[w_dst];
+            R[PC] <= (w_op_br && r_int) ? ADDRESS_INTERRUPT : R[w_dst];
             if (w_op_br)
                 R[SP] <= w_sp_plus_1;
         end else if ((w_op_ret || w_op_reti) && i_ack) begin
             R[SP] <= w_sp_minus_1;
-            R[PC] <= i_dat;
+            R[PC] <= w_op_ret ? i_dat : (i_dat - 1); // note: on RETI, the return address is decremented by 1
         end else if (w_op_push && i_ack) begin
             R[SP] <= w_sp_plus_1;
         end else if (w_op_pop && i_ack) begin
@@ -222,7 +232,7 @@ always @(posedge i_clk)
     if (i_reset)
         r_op <= 0;
     else if (s_fetch && i_ack)
-        r_op <= i_dat;
+        r_op <= r_int ? `OP_INTERRUPT : i_dat;
     else if (s_execute)
         if (r_op == 16'hffff) begin
             // $finish();
@@ -235,8 +245,7 @@ always @(*) begin
     else if (w_op_ldst) o_addr = w_offs_addr;
     else if (w_op_ret ||
              w_op_reti) o_addr = w_sp_minus_1;
-    else if (w_op_jpbr &&
-             w_op_br)   o_addr = R[SP];
+    else if (w_op_br)   o_addr = R[SP];
     else if (w_op_push) o_addr = R[SP];
     else if (w_op_pop)  o_addr = w_sp_minus_1;
     else                o_addr = 0;
@@ -247,8 +256,7 @@ always @(*) begin
     if (s_execute) begin
         if (w_op_st)        o_dat = R[w_dst];
         else if (w_op_push) o_dat = R[w_dst];
-        else if (w_op_jpbr &&
-                 w_op_br)   o_dat = R[PC];
+        else if (w_op_br)   o_dat = R[PC];
         else                o_dat = 0;
     end else                o_dat = 0;
 end
@@ -260,8 +268,7 @@ always @(*)
     else if (w_op_ldst) o_cs = 1;
     else if (w_op_ret ||
              w_op_reti) o_cs = 1;
-    else if (w_op_jpbr && 
-             w_op_br)   o_cs = 1;
+    else if (w_op_br)   o_cs = 1;
     else if (w_op_push) o_cs = 1;
     else if (w_op_pop)  o_cs = 1;
     else                o_cs = 0;
@@ -269,7 +276,7 @@ always @(*)
 // o_we
 always @(*)
     o_we = s_execute && 
-        ( w_op_st || w_op_push || (w_op_jpbr && w_op_br) );
+        ( w_op_st || w_op_push || w_op_br );
 
 
 endmodule
