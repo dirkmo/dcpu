@@ -31,10 +31,15 @@ class Program:
             elif entry.type == Instruction.EQU:
                     self.symbols[entry.name.value] = Instruction.convert_to_number(entry.value.value)
         
-        # TODO: Second run to resolve symbols
+        # Create raw memory
         self.data = [-1] * 65536
-        # TODO: Create raw memory
-
+        for t in tokens:
+            entry = t[-1]
+            if entry.type in [Instruction.OPCODE, Instruction.DATA]:
+                data = entry.data(self.symbols)
+                pos = entry.pos
+                for c,d in enumerate(data):
+                    self.data[pos+c] = d
 
     def write_as_bin(self, fn, endianess='big'):
         with open(fn ,"wb") as f:

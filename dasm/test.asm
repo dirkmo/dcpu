@@ -20,11 +20,5 @@ ende:
     and r1, r2
     jp ende
 
-.org 100
+.org 16
 msg: .asciiz "Hallo Welt!"
-st (r1+3), r10
-
-BR r0
-sub r2, r5
-sl r1, r2
-srw r2, r4
