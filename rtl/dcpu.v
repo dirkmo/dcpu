@@ -107,8 +107,9 @@ wire w_op_br =  r_op[7];
     1101 0001 <op:4> <dst:4>
 
     op = 0: ret
-    op = 1: push
-    op = 2: pop
+    op = 1: reti
+    op = 2: push
+    op = 3: pop
 */
 wire w_op_special = (r_op[15:8] == 8'b1101_0001);
 wire w_op_ret     = w_op_special && (r_op[7:4] == 4'h0);
@@ -145,23 +146,23 @@ always @(*) begin
     endcase
 end
 
+
+// interrupt handling
+reg r_int;
+always @(posedge i_clk) begin
+    if (w_op_reti)
+        r_int <= 1'b0; // interrupt flag cleared by reti instruction
+    else if (i_int)
+        r_int <= 1'b1;
+end
+
 parameter
     FETCH   = 0,
     EXECUTE = 1;
 
-reg r_int;
-always @(posedge i_clk) begin
-    if (s_execute)
-        r_int <= 1'b0;
-    if (i_int) begin
-        r_int <= 1'b1;
-    end
-end
-
-
 reg  r_state /* verilator public */;
-wire s_fetch   = (r_state == FETCH) && ~r_int;
-wire s_int     = (r_state == FETCH) &&  r_int;
+wire s_fetch   = (r_state == FETCH);
+wire s_int     = (r_state == FETCH) && r_int;
 wire s_execute = (r_state == EXECUTE);
 
 wire [15:0] w_sp_plus_1  = R[SP] + 1;
@@ -186,7 +187,7 @@ always @(posedge i_clk)
             R[PC] <= R[w_dst];
             if (w_op_br)
                 R[SP] <= w_sp_plus_1;
-        end else if (w_op_ret && i_ack) begin
+        end else if ((w_op_ret || w_op_reti) && i_ack) begin
             R[SP] <= w_sp_minus_1;
             R[PC] <= i_dat;
         end else if (w_op_push && i_ack) begin
@@ -232,7 +233,8 @@ always @(posedge i_clk)
 always @(*) begin
     if (s_fetch)        o_addr = R[PC];
     else if (w_op_ldst) o_addr = w_offs_addr;
-    else if (w_op_ret)  o_addr = w_sp_minus_1;
+    else if (w_op_ret ||
+             w_op_reti) o_addr = w_sp_minus_1;
     else if (w_op_jpbr &&
              w_op_br)   o_addr = R[SP];
     else if (w_op_push) o_addr = R[SP];
@@ -245,7 +247,8 @@ always @(*) begin
     if (s_execute) begin
         if (w_op_st)        o_dat = R[w_dst];
         else if (w_op_push) o_dat = R[w_dst];
-        else if (w_op_br)   o_dat = R[PC];
+        else if (w_op_jpbr &&
+                 w_op_br)   o_dat = R[PC];
         else                o_dat = 0;
     end else                o_dat = 0;
 end
@@ -255,7 +258,8 @@ always @(*)
     if      (i_reset)   o_cs = 0;
     else if (s_fetch)   o_cs = 1;
     else if (w_op_ldst) o_cs = 1;
-    else if (w_op_ret)  o_cs = 1;
+    else if (w_op_ret ||
+             w_op_reti) o_cs = 1;
     else if (w_op_jpbr && 
              w_op_br)   o_cs = 1;
     else if (w_op_push) o_cs = 1;
