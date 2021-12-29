@@ -22,3 +22,5 @@ ende:
 
 .org 16
 msg: .asciiz "Hallo Welt!"
+
+reti

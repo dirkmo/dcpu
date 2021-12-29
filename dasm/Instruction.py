@@ -57,7 +57,8 @@ class Instruction:
 
 class InstructionOp0(Instruction):
     _opcodes = {
-        "RET": 0xd100,
+        "RET":  0xd100,
+        "RETI": 0xd110,
     }
 
     def __init__(self, t):
@@ -108,8 +109,8 @@ class InstructionOp1JpBr(Instruction):
 
 class InstructionOp1(Instruction):
     _opcodes = {
-        "PUSH": 0xd110,
-        "POP":  0xd120,
+        "PUSH": 0xd130,
+        "POP":  0xd140,
     }
 
     def __init__(self, t, r):

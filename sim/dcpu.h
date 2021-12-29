@@ -66,17 +66,19 @@
 #define BR(dst, cond) ((0xd<<12) | (1<<7) | JPCOND(cond) | DST(dst))
 
 // return
-// ret
-#define RET (0xd100 | (0<<4))
+// ret, reti
+#define RET  (0xd100 | (0<<4))
+#define RETI (0xd100 | (1<<4))
 
 // push
 // push r0
-#define PUSH(dst) (0xd100 | (1<<4) | (DST(dst)))
+#define PUSH(dst) (0xd100 | (2<<4) | (DST(dst)))
 
 // pop
 // pop r0
-#define POP(dst) (0xd100 | (2<<4) | (DST(dst)))
+#define POP(dst) (0xd100 | (3<<4) | (DST(dst)))
 
+// alu ops
 #define ALU(rd, rs, op) (0xe000 | (op << 8) | SRC(rs) | DST(rd))
 
 #endif

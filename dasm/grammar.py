@@ -15,6 +15,7 @@ _op: ld_imm
 label: CNAME ":"
 
 op0: RET
+   | RETI
 
 op1:  PUSH REG
     | POP REG
@@ -85,6 +86,7 @@ BNZ:  "bnz"i
 BC:   "bc"i
 BNC:  "bnc"i
 RET:  "ret"i
+RETI: "reti"i
 LD:   "ld"i
 LDI:  "ldi"i
 LDIL: "ldi.l"i

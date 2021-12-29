@@ -112,8 +112,9 @@ wire w_op_br =  r_op[7];
 */
 wire w_op_special = (r_op[15:8] == 8'b1101_0001);
 wire w_op_ret     = w_op_special && (r_op[7:4] == 4'h0);
-wire w_op_push    = w_op_special && (r_op[7:4] == 4'h1);
-wire w_op_pop     = w_op_special && (r_op[7:4] == 4'h2);
+wire w_op_reti    = w_op_special && (r_op[7:4] == 4'h1);
+wire w_op_push    = w_op_special && (r_op[7:4] == 4'h2);
+wire w_op_pop     = w_op_special && (r_op[7:4] == 4'h3);
 
 /* ALU
 1110 <aluop:4> <src:4> <dst:4>   alu rd, rs
@@ -148,8 +149,19 @@ parameter
     FETCH   = 0,
     EXECUTE = 1;
 
+reg r_int;
+always @(posedge i_clk) begin
+    if (s_execute)
+        r_int <= 1'b0;
+    if (i_int) begin
+        r_int <= 1'b1;
+    end
+end
+
+
 reg  r_state /* verilator public */;
-wire s_fetch   = (r_state == FETCH);
+wire s_fetch   = (r_state == FETCH) && ~r_int;
+wire s_int     = (r_state == FETCH) &&  r_int;
 wire s_execute = (r_state == EXECUTE);
 
 wire [15:0] w_sp_plus_1  = R[SP] + 1;
@@ -188,6 +200,7 @@ always @(posedge i_clk)
         end
     end
 
+// state machine
 always @(posedge i_clk)
 begin
     if (s_fetch) begin

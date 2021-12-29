@@ -5,3 +5,5 @@ dasm/test.bin
 dasm/test.c
 dasm/test.mem
 dasm/test.hexdump
+test/verilator
+test/trace.vcd
