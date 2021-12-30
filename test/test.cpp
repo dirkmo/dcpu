@@ -151,7 +151,7 @@ int main(int argc, char *argv[]) {
         uint16_t prog[] = { LDIMML(0,0x123), LDIMMH(0,0x34), 0xffff, 0 };
         test_t t = new_test();
         t.r[0] = 0x3423; t.r[REG_PC] = 2;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -159,7 +159,7 @@ int main(int argc, char *argv[]) {
         uint16_t prog[] = { LDIMML(0,3), LD(4,0,2), 0xffff, 0, 0, 0xabcd, 0 };
         test_t t = new_test();
         t.r[0] = 3; t.r[4] = 0xabcd; t.r[REG_PC] = 2;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
     
     {
@@ -173,7 +173,7 @@ int main(int argc, char *argv[]) {
             0xffff };
         test_t t = new_test();
         t.r[3] = 2; t.r[7] = 0xffff; t.r[REG_PC] = 4; t.mem[4] = 0xffff;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -185,7 +185,7 @@ int main(int argc, char *argv[]) {
             0xffff };
         test_t t = new_test();
         t.r[0] = 0x19d; t.r[REG_PC] = 3;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -201,7 +201,7 @@ int main(int argc, char *argv[]) {
             /*7*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 1; t.r[REG_PC] = 7;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
             /*7*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[REG_PC] = 7;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -233,7 +233,7 @@ int main(int argc, char *argv[]) {
             /*7*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 2; t.r[REG_PC] = 7;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -249,7 +249,7 @@ int main(int argc, char *argv[]) {
             /*7*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x123&MASK(10); t.r[1] = 0x555 & MASK(10); t.r[13] = 0; t.r[REG_PC] = 7;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -263,7 +263,7 @@ int main(int argc, char *argv[]) {
             /*5*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x2af & MASK(10); t.r[1] = 0x19d & MASK(10); t.r[REG_PC] = 2;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
             /*5*/ 0xffff };
         test_t t = new_test();
         t.r[10] = 4; t.r[12] = 0xaf; t.r[REG_PC] = 5;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -292,7 +292,7 @@ int main(int argc, char *argv[]) {
             /*6*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 5; t.r[14] = 1; t.r[3] = 0xc1; t.r[REG_PC] = 6; t.mem[0] = 3;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -308,7 +308,7 @@ int main(int argc, char *argv[]) {
             /*7*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 5; t.r[14] = 1; t.r[3] = 0x8c; t.r[4] = 0xc1; t.r[14] = 0; t.r[REG_PC] = 4; t.mem[0] = 3;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -325,7 +325,7 @@ int main(int argc, char *argv[]) {
         test_t t = new_test();
         t.r[0] = 0xee; t.r[1] = 0xff; t.r[14] = 0x10; t.r[REG_PC] = 7;
         t.mem[0x10] = 0xff; t.mem[0x11] = 0xee;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     // ALU tests
@@ -338,7 +338,7 @@ int main(int argc, char *argv[]) {
             /*3*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0xee; t.r[1] = 0xee; t.r[REG_PC] = 3;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0xee + 0xff; t.r[1] = 0xee; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -365,7 +365,7 @@ int main(int argc, char *argv[]) {
             /*5*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0; t.r[1] = 1; t.r[REG_ST] = 3; t.r[REG_PC] = 5;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -378,7 +378,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 4; t.r[1] = 1; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -391,7 +391,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0xff - 0xee; t.r[1] = 0xee; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -404,7 +404,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = uint16_t(1-2); t.r[1] = 2; t.r[REG_ST] = 2; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -417,7 +417,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 8; t.r[1] = 1; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -430,7 +430,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x17; t.r[1] = 0x17; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -443,7 +443,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x1fa; t.r[1] = 0xfa; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -456,7 +456,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0xff; t.r[1] = 0x0f; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -469,7 +469,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 1; t.r[1] = 1; t.r[REG_ST] = 1; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -482,7 +482,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x15; t.r[1] = 1; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -494,7 +494,7 @@ int main(int argc, char *argv[]) {
             /*3*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x8; t.r[REG_ST] = 2; t.r[REG_PC] = 3;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -507,7 +507,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x2; t.r[REG_ST] = 2; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -520,7 +520,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0xad; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -533,7 +533,7 @@ int main(int argc, char *argv[]) {
             /*4*/ 0xffff };
         test_t t = new_test();
         t.r[0] = 0x3300; t.r[REG_ST] = 0; t.r[REG_PC] = 4;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
     {
@@ -546,9 +546,9 @@ int main(int argc, char *argv[]) {
         prog[0xFFF0] = LDIMML(1, 0x7c);
         prog[0xFFF1] = 0xffff;
         test_t t = new_test();
-        t.r[0] = 0x04; t.r[REG_SP] = 0x05; t.r[REG_PC] = 0xfff1;
+        t.r[0] = 0x01; t.r[1] = 0x7c; t.r[REG_SP] = 0x05; t.r[REG_PC] = 0xfff1;
         t.interrupt = 5;
-        if (!test(prog, sizeof(prog), &t)) goto done;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
 done:
