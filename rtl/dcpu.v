@@ -12,8 +12,6 @@ module dcpu(
 
 parameter ADDRESS_INTERRUPT = 16'hFFF0;
 
-`define OP_INTERRUPT 16'b1101_0000_1000_0000 // interrupt is a normal branch instruction
-
 reg [15:0] r_op /* verilator public */;
 
 // register indices
@@ -209,7 +207,7 @@ wire [15:0] w_sp_plus_1  = R[SP] + 1;
 wire [15:0] w_sp_minus_1 = R[SP] - 1;
 
 // R[]
-always @(posedge i_clk)
+always @(posedge i_clk) begin
     if (i_reset)
         R[PC] <= 0;
     else if (s_fetch && i_ack) begin
@@ -219,7 +217,7 @@ always @(posedge i_clk)
         if (r_int_state_execute) begin
             R[PC] <= ADDRESS_INTERRUPT;
             R[SP] <= w_sp_plus_1;
-        end if (w_op_ld_imm_l)
+        end else if (w_op_ld_imm_l)
             R[w_dst] <= {6'h0, w_ld_imm};
         else if (w_op_ld_imm_h)
             R[w_dst] <= {w_ld_imm[7:0], R[w_dst][7:0]};
@@ -244,6 +242,7 @@ always @(posedge i_clk)
             R[w_dst] <= r_alu;
         end
     end
+end
 
 // r_op
 always @(posedge i_clk) begin
