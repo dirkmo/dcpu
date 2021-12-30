@@ -150,66 +150,13 @@ always @(*) begin
     endcase
 end
 
-
-/// interrupt handling
-// When an interrupt occurs, r_int is set 1 and reset when reti is executed.
-// When fetching a new instruction from memory and r_int is set, a branch instruction is
-// inserted to address ADDRESS_INTERRUPT.
-reg r_int_tick, r_int;
-always @(posedge i_clk) begin
-    r_int_tick <= 1'b0;
-    if (w_op_reti)
-        r_int <= 1'b0; // interrupt flag cleared by reti instruction
-    else if (i_int) begin
-        r_int <= 1'b1;
-        r_int_tick <= 1'b1;
-    end
-end
-
 parameter
     FETCH   = 0,
     EXECUTE = 1;
 
 reg  r_state /* verilator public */;
 wire s_fetch   = (r_state == FETCH);
-wire s_int     = (r_state == FETCH) && r_int;
 wire s_execute = (r_state == EXECUTE);
-
-wire [15:0] w_sp_plus_1  = R[SP] + 1;
-wire [15:0] w_sp_minus_1 = R[SP] - 1;
-
-// R[]
-always @(posedge i_clk)
-    if (i_reset)
-        R[PC] <= 0;
-    else if (s_fetch && i_ack) begin
-        R[PC] <= R[PC] + 1;
-    end else if (s_execute) begin
-        if (w_op_ld_imm_l)
-            R[w_dst] <= {6'h0, w_ld_imm};
-        else if (w_op_ld_imm_h)
-            R[w_dst] <= {w_ld_imm[7:0], R[w_dst][7:0]};
-        else if (w_op_ld && i_ack)
-            R[w_dst] <= i_dat;
-        else if (w_op_rjp && w_jp_cond)
-            R[PC] <= w_rjp_addr;
-        else if (w_op_jpbr && w_jp_cond) begin
-            R[PC] <= (w_op_br && r_int) ? ADDRESS_INTERRUPT : R[w_dst];
-            if (w_op_br)
-                R[SP] <= w_sp_plus_1;
-        end else if ((w_op_ret || w_op_reti) && i_ack) begin
-            R[SP] <= w_sp_minus_1;
-            R[PC] <= w_op_ret ? i_dat : (i_dat - 1); // note: on RETI, the return address is decremented by 1
-        end else if (w_op_push && i_ack) begin
-            R[SP] <= w_sp_plus_1;
-        end else if (w_op_pop && i_ack) begin
-            R[SP] <= w_sp_minus_1;
-            R[w_dst] <= i_dat;
-        end else if (w_op_alu) begin
-            R[ST][1:0] <= {r_carry, zero};
-            R[w_dst] <= r_alu;
-        end
-    end
 
 // state machine
 always @(posedge i_clk)
@@ -227,17 +174,88 @@ begin
         r_state <= FETCH;
 end
 
-// r_op
+
+// interrupt handling
+// 0: no interrupt
+// 1: dummy phase if execute phase
+// 2: fetch phase
+// 3: execute phase
+// 4: interrupt active
+
+reg [2:0] r_int_state;
+wire r_int_state_fetch = (r_int_state == 2);
+wire r_int_state_execute = (r_int_state == 3);
+always @(posedge i_clk) begin
+    case (r_int_state)
+        0: // 0: no interrupt
+            if (i_int)
+                r_int_state <= s_fetch ? 1 : 2;
+        1: // 1: dummy phase
+            r_int_state <= 2;
+        2: // 2: fetch phase
+            r_int_state <= 3;
+        3: // 3: execute phase
+            r_int_state <= 4;
+        default: // waiting until RETI
+            if (w_op_reti)
+                r_int_state <= 0;
+    endcase
+    if (i_reset)
+        r_int_state <= 0;
+end
+
+
+wire [15:0] w_sp_plus_1  = R[SP] + 1;
+wire [15:0] w_sp_minus_1 = R[SP] - 1;
+
+// R[]
 always @(posedge i_clk)
+    if (i_reset)
+        R[PC] <= 0;
+    else if (s_fetch && i_ack) begin
+        if (~r_int_state_fetch)
+            R[PC] <= R[PC] + 1;
+    end else if (s_execute) begin
+        if (r_int_state_execute) begin
+            R[PC] <= ADDRESS_INTERRUPT;
+            R[SP] <= w_sp_plus_1;
+        end if (w_op_ld_imm_l)
+            R[w_dst] <= {6'h0, w_ld_imm};
+        else if (w_op_ld_imm_h)
+            R[w_dst] <= {w_ld_imm[7:0], R[w_dst][7:0]};
+        else if (w_op_ld && i_ack)
+            R[w_dst] <= i_dat;
+        else if (w_op_rjp && w_jp_cond)
+            R[PC] <= w_rjp_addr;
+        else if (w_op_jpbr && w_jp_cond) begin
+            R[PC] <= R[w_dst];
+            if (w_op_br)
+                R[SP] <= w_sp_plus_1;
+        end else if ((w_op_ret || w_op_reti) && i_ack) begin
+            R[SP] <= w_sp_minus_1;
+            R[PC] <= w_op_ret ? i_dat : (i_dat - 1); // note: on RETI, the return address is decremented by 1
+        end else if (w_op_push && i_ack) begin
+            R[SP] <= w_sp_plus_1;
+        end else if (w_op_pop && i_ack) begin
+            R[SP] <= w_sp_minus_1;
+            R[w_dst] <= i_dat;
+        end else if (w_op_alu) begin
+            R[ST][1:0] <= {r_carry, zero};
+            R[w_dst] <= r_alu;
+        end
+    end
+
+// r_op
+always @(posedge i_clk) begin
     if (i_reset)
         r_op <= 0;
     else if (s_fetch && i_ack)
-        r_op <= r_int ? `OP_INTERRUPT : i_dat;
+        r_op <= i_dat;
     else if (s_execute)
         if (r_op == 16'hffff) begin
             // $finish();
         end
-
+end
 
 // o_addr
 always @(*) begin
@@ -254,29 +272,31 @@ end
 // o_dat
 always @(*) begin
     if (s_execute) begin
-        if (w_op_st)        o_dat = R[w_dst];
-        else if (w_op_push) o_dat = R[w_dst];
-        else if (w_op_br)   o_dat = R[PC];
-        else                o_dat = 0;
-    end else                o_dat = 0;
+        if (r_int_state_execute) o_dat = R[PC];
+        else if (w_op_st)        o_dat = R[w_dst];
+        else if (w_op_push)      o_dat = R[w_dst];
+        else if (w_op_br)        o_dat = R[PC];
+        else                     o_dat = 0;
+    end else                     o_dat = 0;
 end
 
 // o_cs
 always @(*)
-    if      (i_reset)   o_cs = 0;
-    else if (s_fetch)   o_cs = 1;
-    else if (w_op_ldst) o_cs = 1;
+    if      (i_reset)             o_cs = 0;
+    else if (r_int_state_execute) o_cs = 1;
+    else if (s_fetch)             o_cs = 1;
+    else if (w_op_ldst)           o_cs = 1;
     else if (w_op_ret ||
-             w_op_reti) o_cs = 1;
-    else if (w_op_br)   o_cs = 1;
-    else if (w_op_push) o_cs = 1;
-    else if (w_op_pop)  o_cs = 1;
-    else                o_cs = 0;
+             w_op_reti)           o_cs = 1;
+    else if (w_op_br)             o_cs = 1;
+    else if (w_op_push)           o_cs = 1;
+    else if (w_op_pop)            o_cs = 1;
+    else                          o_cs = 0;
     
 // o_we
 always @(*)
     o_we = s_execute && 
-        ( w_op_st || w_op_push || w_op_br );
+        ( w_op_st || w_op_push || w_op_br || r_int_state_execute);
 
 
 endmodule
