@@ -68,7 +68,7 @@ int handle(Vdcpu *pCore) {
 
 typedef struct {
     int r[16];
-    int interrupt;
+    int interrupt_cycle;
     int mem[0x10000];
 } test_t;
 
@@ -94,7 +94,7 @@ bool test(const uint16_t *prog, int len, test_t *t) {
         if(handle(pCore)) {
             break;
         }
-        pCore->i_int = (t->interrupt == i);
+        pCore->i_int = (t->interrupt_cycle == i);
         tick();
     }
 
@@ -129,7 +129,7 @@ test_t new_test(void) {
     test_t t;
     for (int i = 0; i<16; t.r[i++] = -1);
     for (int i = 0; i<ARRSIZE(t.mem); t.mem[i++] = -1);
-    t.interrupt = -1;
+    t.interrupt_cycle = -1;
     return t;
 }
 
@@ -547,7 +547,33 @@ int main(int argc, char *argv[]) {
         prog[0xFFF1] = 0xffff;
         test_t t = new_test();
         t.r[0] = 0x01; t.r[1] = 0x7c; t.r[REG_SP] = 0x05; t.r[REG_PC] = 0xfff1;
-        t.interrupt = 5;
+        t.interrupt_cycle = 5;
+        t.mem[4] = t.interrupt_cycle / 2;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: RETI\n", count++);
+        uint16_t prog[0x10000];
+        prog[0x0000] = LDIMML(REG_SP, 0x010);
+        prog[0x0001] = LDIMML(0, 0x01);
+        prog[0x0002] = LDIMML(1, 0x02);
+        prog[0x0003] = LDIMML(2, 0x03);
+        prog[0x0004] = LDIMML(3, 0x04);
+        prog[0x0005] = 0xffff;
+        prog[0xFFF0] = LDIMML(1, 0x7c);
+        prog[0xFFF1] = LDIMML(2, 0x8d);
+        prog[0xFFF2] = LDIMML(3, 0x9e);
+        prog[0xFFF3] = RETI;
+        prog[0xFFF4] = 0xffff;
+        test_t t = new_test();
+        t.r[0] = 0x01;
+        t.r[1] = 0x7c;
+        t.r[2] = 0x8d;
+        t.r[3] = 0x04;
+        t.r[REG_SP] = 0x10;
+        t.r[REG_PC] = 0x0005;
+        t.interrupt_cycle = 5;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 

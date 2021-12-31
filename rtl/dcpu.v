@@ -231,7 +231,7 @@ always @(posedge i_clk) begin
                 R[SP] <= w_sp_plus_1;
         end else if ((w_op_ret || w_op_reti) && i_ack) begin
             R[SP] <= w_sp_minus_1;
-            R[PC] <= w_op_ret ? i_dat : (i_dat - 1); // note: on RETI, the return address is decremented by 1
+            R[PC] <= i_dat; //w_op_ret ? i_dat : (i_dat - 1); // note: on RETI, the return address is decremented by 1
         end else if (w_op_push && i_ack) begin
             R[SP] <= w_sp_plus_1;
         end else if (w_op_pop && i_ack) begin
@@ -258,14 +258,14 @@ end
 
 // o_addr
 always @(*) begin
-    if (s_fetch)        o_addr = R[PC];
-    else if (w_op_ldst) o_addr = w_offs_addr;
-    else if (w_op_ret ||
-             w_op_reti) o_addr = w_sp_minus_1;
-    else if (w_op_br)   o_addr = R[SP];
-    else if (w_op_push) o_addr = R[SP];
-    else if (w_op_pop)  o_addr = w_sp_minus_1;
-    else                o_addr = 0;
+    if (s_fetch)                    o_addr = R[PC];
+    else if (r_int_state_execute)   o_addr = R[SP];
+    else if (w_op_ldst)             o_addr = w_offs_addr;
+    else if (w_op_ret || w_op_reti) o_addr = w_sp_minus_1;
+    else if (w_op_br)               o_addr = R[SP];
+    else if (w_op_push)             o_addr = R[SP];
+    else if (w_op_pop)              o_addr = w_sp_minus_1;
+    else                            o_addr = 0;
 end
 
 // o_dat
