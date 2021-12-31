@@ -17,8 +17,8 @@ class Program:
         pos = 0
         self.tokens = tokens
         self.symbols = {}
-        self.start_address = -1
-        self.end_address = -1
+        self.start_address = 0x10000
+        self.end_address = 0
         for t in tokens:
             entry = t[-1]
             if entry.type in [Instruction.OPCODE, Instruction.DATA]:
@@ -38,16 +38,48 @@ class Program:
             if entry.type in [Instruction.OPCODE, Instruction.DATA]:
                 data = entry.data(self.symbols)
                 pos = entry.pos
+                self.start_address = min(self.start_address, pos)
                 for c,d in enumerate(data):
                     self.data[pos+c] = d
+                    self.end_address = max(self.end_address, pos+c)
 
     def write_as_bin(self, fn, endianess='big'):
         with open(fn ,"wb") as f:
             for addr in range(self.start_address, self.end_address + 1):
-                d = self.data[addr]
-                if d < 0:
-                    d = 0
+                d = max(0, self.data[addr])
                 f.write(d.to_bytes(2, byteorder=endianess))
+
+    def write_as_memfile(self, fn, endianess='big'):
+        with open(fn ,"wt") as f:
+            for addr in range(self.start_address, self.end_address + 1):
+                d = max(0, self.data[addr])
+                f.write(f"{d:04x}")
+                if (addr % 8) == 7:
+                    f.write("\n")
+                else:
+                    f.write(" ")
+
+    def write_as_cfile(self, fn, endianess='big'):
+        with open(fn ,"wt") as f:
+            f.write("uint16_t program[] = {\n")
+            for addr in range(self.start_address, self.end_address + 1):
+                d = max(0, self.data[addr])
+                if (addr % 8) == 0:
+                    f.write("    ")
+                f.write(f"0x{d:04x}, ")
+                if (addr % 8) == 7:
+                    f.write("\n")
+            if ((self.end_address - self.start_address) % 8):
+                f.write("\n")
+            f.write("};")
+
+    def write_as_hexdump(self, fn, lines, endianess='big'):
+        with open(fn ,"wt") as f:
+            for t in self.tokens:
+                entry = t[-1]
+                if entry.type in [Instruction.OPCODE, Instruction.DATA]:
+                    data = entry.data(self.symbols)
+
 
 
 class dcpuTransformer(lark.Transformer):
@@ -177,10 +209,9 @@ def main():
     program = Program(n.children)
 
     program.write_as_bin(fn_noext+".bin")
-    
-    write_program_as_memfile(words, fn_noext+".mem")
-    write_program_as_cfile(words, fn_noext+".c")
-    write_program_as_hexdump(words, offset, lines, fn_noext+".hexdump")
+    program.write_as_memfile(fn_noext+".mem")
+    program.write_as_cfile(fn_noext+".c")
+    program.write_as_hexdump(lines, fn_noext+".hexdump")
 
 if __name__ == "__main__":
     sys.exit(main())

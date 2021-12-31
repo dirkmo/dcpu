@@ -20,7 +20,8 @@ ende:
     and r1, r2
     jp ende
 
+    reti
+
 .org 16
 msg: .asciiz "Hallo Welt!"
 
-reti
