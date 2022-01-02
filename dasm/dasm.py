@@ -73,7 +73,7 @@ class Program:
                 f.write("\n")
             f.write("};")
 
-    def write_as_hexdump(self, fn, lines, endianess='big'):
+    def write_as_listing(self, fn, lines, endianess='big'):
         with open(fn ,"wt") as f:
             for t in self.tokens:
                 entry = t[-1]
@@ -142,40 +142,6 @@ class dcpuTransformer(lark.Transformer):
         return a
 
 
-def write_program_as_memfile(prog, fn, endianess='big'):
-    with open(fn ,"wt") as f:
-        for c,p in enumerate(prog):
-            for d in p.data():
-                f.write(f"{d:04x}")
-                if (c % 8) == 7:
-                    f.write("\n")
-                else:
-                    f.write(" ")
-                c = c + 1
-
-def write_program_as_cfile(prog, fn, endianess='big'):
-    with open(fn ,"wt") as f:
-        f.write("uint16_t program[] = {\n")
-        for c,p in enumerate(prog):
-            for d in p.data():
-                if (c % 8) == 0:
-                    f.write("    ")
-                f.write(f"0x{d:04x}, ")
-                if (c % 8) == 7:
-                    f.write("\n")
-                c = c + 1
-        if (len(prog) % 8):
-            f.write("\n")
-        f.write("};")
-
-def write_program_as_hexdump(prog, offset, lines, fn, endianess='big'):
-    with open(fn ,"wt") as f:
-        for i,p in enumerate(prog):
-            addr = offset + i
-            l = p.line - 1
-            f.write("# " + lines[l].strip() + "\n")
-            f.write(f"{addr:04x}: {prog[i].data_hexdump()}\n")
-
 def main():
     print("dasm: Simple dcpu assembler\n")
     l = lark.Lark(grammar.grammar, start = "start")
@@ -211,7 +177,7 @@ def main():
     program.write_as_bin(fn_noext+".bin")
     program.write_as_memfile(fn_noext+".mem")
     program.write_as_cfile(fn_noext+".c")
-    program.write_as_hexdump(lines, fn_noext+".hexdump")
+    program.write_as_listing(fn_noext+".hexdump", lines)
 
 if __name__ == "__main__":
     sys.exit(main())
