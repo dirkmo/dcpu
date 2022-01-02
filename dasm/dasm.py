@@ -5,12 +5,6 @@ import lark
 import grammar
 from Instruction import *
 
-# globals
-global symbols
-global program
-symbols = {}
-program = None
-
 
 class Program:
     def __init__(self, tokens):
@@ -94,6 +88,10 @@ class Program:
                         f.write(f" {d:04x}")
                     f.write("\n")
 
+    def write_symbols(self, fn):
+        with open(fn ,"wt") as f:
+            for s in self.symbols:
+                f.write(f"{s} 0x{self.symbols[s]:04x}\n")
 
 class dcpuTransformer(lark.Transformer):
 
@@ -191,6 +189,7 @@ def main():
     program.write_as_memfile(fn_noext+".mem")
     program.write_as_cfile(fn_noext+".c")
     program.write_as_listing(fn_noext+".list", lines)
+    program.write_symbols(fn_noext+".symbols")
 
 if __name__ == "__main__":
     sys.exit(main())

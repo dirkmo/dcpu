@@ -8,3 +8,4 @@ dasm/test.hexdump
 test/verilator
 test/trace.vcd
 dasm/test.list
+dasm/test.symbols
