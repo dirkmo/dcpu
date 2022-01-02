@@ -1,3 +1,4 @@
+# test program
 .equ UART_TX $fff0
 .equ UART_ST $fff1
 .org 0
@@ -20,8 +21,5 @@ ende:
     and r1, r2
     jp ende
 
-    reti
-
 .org 16
 msg: .asciiz "Hallo Welt!"
-

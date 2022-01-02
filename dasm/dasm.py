@@ -51,6 +51,7 @@ class Program:
 
     def write_as_memfile(self, fn, endianess='big'):
         with open(fn ,"wt") as f:
+            f.write(f"// start_address = 16'h{self.start_address:04x}\n")
             for addr in range(self.start_address, self.end_address + 1):
                 d = max(0, self.data[addr])
                 f.write(f"{d:04x}")
@@ -61,6 +62,7 @@ class Program:
 
     def write_as_cfile(self, fn, endianess='big'):
         with open(fn ,"wt") as f:
+            f.write(f"uint16_t start_address = 0x{self.start_address:04x};\n\n")
             f.write("uint16_t program[] = {\n")
             for addr in range(self.start_address, self.end_address + 1):
                 d = max(0, self.data[addr])
@@ -71,15 +73,22 @@ class Program:
                     f.write("\n")
             if ((self.end_address - self.start_address) % 8):
                 f.write("\n")
-            f.write("};")
+            f.write("};\n")
 
     def write_as_listing(self, fn, lines, endianess='big'):
+        def find_token(line):
+            for i,t in enumerate(self.tokens):
+                l = t[0].line
+                if (line == l) and (t[-1].type in [Instruction.OPCODE, Instruction.DATA]):
+                    return t
+            return None
         with open(fn ,"wt") as f:
-            for t in self.tokens:
-                entry = t[-1]
-                if entry.type in [Instruction.OPCODE, Instruction.DATA]:
+            for i,l in enumerate(lines):
+                f.write(f">{l}")
+                t = find_token(i+1)
+                if t != None:
+                    entry = t[-1]
                     data = entry.data(self.symbols)
-                    f.write(f"# {lines[t[0].line-1]}")
                     f.write(f"{entry.pos:04x}:")
                     for d in data:
                         f.write(f" {d:04x}")
