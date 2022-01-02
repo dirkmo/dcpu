@@ -79,7 +79,11 @@ class Program:
                 entry = t[-1]
                 if entry.type in [Instruction.OPCODE, Instruction.DATA]:
                     data = entry.data(self.symbols)
-
+                    f.write(f"# {lines[t[0].line-1]}")
+                    f.write(f"{entry.pos:04x}:")
+                    for d in data:
+                        f.write(f" {d:04x}")
+                    f.write("\n")
 
 
 class dcpuTransformer(lark.Transformer):
@@ -177,7 +181,7 @@ def main():
     program.write_as_bin(fn_noext+".bin")
     program.write_as_memfile(fn_noext+".mem")
     program.write_as_cfile(fn_noext+".c")
-    program.write_as_listing(fn_noext+".hexdump", lines)
+    program.write_as_listing(fn_noext+".list", lines)
 
 if __name__ == "__main__":
     sys.exit(main())
