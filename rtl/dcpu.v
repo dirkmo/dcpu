@@ -2,9 +2,9 @@ module dcpu(
     input i_reset,
     input i_clk,
 
-    output     [W-1:0] o_addr,
-    output reg [W-1:0] o_dat,
-    input      [W-1:0] i_dat,
+    output     [15:0] o_addr,
+    output reg [15:0] o_dat,
+    input      [15:0] i_dat,
     input              i_ack,
     output             o_we,
     output             o_cs,
@@ -13,100 +13,111 @@ module dcpu(
 );
 
 parameter
-    W   = 16, // data path width
-    DSS = 5, // data stack size: 2^DSS
-    RSS = 5; // return stack size: 2^RSS
+    DSS = 6, // data stack size: 2^DSS
+    RSS = 6; // return stack size: 2^RSS
 
 localparam
     FETCH = 0,
     EXECUTE = 1;
 
 reg r_state /* verilator public */; // state machine
-reg [W-1:0] r_pc /* verilator public */; // program counter
+reg [15:0] r_pc /* verilator public */; // program counter
 
 wire s_fetch   = (r_state == FETCH);
 wire s_execute = (r_state == EXECUTE);
 
-reg [W-1:0] r_op; // instruction register
+reg [15:0] r_op; // instruction register
 always @(posedge i_clk)
     if (s_fetch && i_ack)
         r_op <= i_dat;
 
-reg [W-1:0] T /* verilator public */; // top of dstack
-reg [W-1:0] N /* verilator public */; // 2nd on dstack
-reg [W-1:0] R /* verilator public */; // top of rstack
+reg [15:0] T /* verilator public */; // top of dstack
+reg [15:0] N /* verilator public */; // 2nd on dstack
+reg [15:0] R /* verilator public */; // top of rstack
 
 /*
 Instruction types:
 
-0 <lit:15 bits>                              # push literal to dstack
-1 <dst:3> <alu:6> <dsp:2> <rsp:2> <unused:2> # write alu output to dst
-*/
-wire w_op_literal   = (r_op[15] == 0);
-wire w_op_normal    = r_op[15];
-wire [2:0] w_op_dst = r_op[14:12];
-wire [5:0] w_op_alu = r_op[11:6];
-wire [1:0] w_op_dsp = r_op[5:4];
-wire [1:0] w_op_rsp = r_op[3:2];
-wire [1:0] w_unused = r_op[1:0];
+0 <addr:15>                             call
+1 00 <imm:13>                           imm.l
+1 01 <unused:4> <return:1> <imm:8>      imm.h
 
-/*
-dst: destination of write operation
-     000 T (top of dstack)
-     001 N (2nd element of dstack)
-     010 R (top of rstack)
-     011 PC
-     100 [T] (memory write to address T)
-     101 [R] (memory write to address R)
-     110
-     111
+1 10 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>
+
+1 11 <cond:3> <imm:10>                  rjp
+
 */
-wire w_op_dst_T    = (w_op_dst == 3'b000);
-wire w_op_dst_N    = (w_op_dst == 3'b001);
-wire w_op_dst_R    = (w_op_dst == 3'b010);
-wire w_op_dst_PC   = (w_op_dst == 3'b011);
-wire w_op_dst_MEMT = (w_op_dst == 3'b100);
-wire w_op_dst_MEMR = (w_op_dst == 3'b101);
+wire w_op_call = (r_op[15] == 0);
+wire w_op_imm  = (r_op[15:14] == 2'b10);
+wire w_op_imml = w_op_imm & ~r_op[13];
+wire w_op_immh = w_op_imm &  r_op[13];
+wire w_op_alu  = (r_op[15:13] == 3'b110);
+wire w_op_rjp  = (r_op[] == 3'b111);
+
+// imml field
+wire [14:0] w_op_imml_lit = r_op[14:0];
+
+// immh field
+wire [7:0] w_op_immh_lit = r_op[7:0];
+
+// rjp fields
+wire [1:0] w_op_rjp_cond = r_op[12:10];
+wire [1:0] w_op_rjp_imm  = r_op[9:0];
+
+// alu-op fields
+wire       w_op_alu_unused = r_op[12];
+wire [4:0] w_op_alu_op  = r_op[11:7];
+wire       w_op_alu_ret = r_op[6];
+wire [2:0] w_op_alu_dst = r_op[5:4];
+wire [1:0] w_op_alu_dsp = r_op[3:2];
+wire [1:0] w_op_alu_rsp = r_op[1:0];
+
+/* alu-op dst: destination of write operation
+    00 T (top of dstack)
+    01 R
+    10 PC
+    11 [T]
+*/
+wire w_op_alu_dst_T    = (w_op_alu_dst == 2'b00);
+wire w_op_alu_dst_R    = (w_op_alu_dst == 2'b01);
+wire w_op_alu_dst_PC   = (w_op_alu_dst == 2'b10);
+wire w_op_alu_dst_MEMT = (w_op_alu_dst == 2'b11);
 
 /*
 alu: alu operation
 */
-reg [W:0] w_alu;
-wire carry = w_alu[W];
+reg [16:0] w_alu;
+wire carry = w_alu[16];
 always @(*)
     case (w_op_alu[4:0])
         5'h00: w_alu = {1'b0, T};
         5'h01: w_alu = {1'b0, N};
         5'h02: w_alu = {1'b0, R};
-        5'h03: w_alu = {1'b0, N} + {1'b0, T};
-        5'h04: w_alu = {1'b0, N} - {1'b0, T};
-        5'h05: w_alu = {1'b0, N & T};
-        5'h06: w_alu = {1'b0, N | T};
-        5'h07: w_alu = {1'b0, N ^ T};
-        5'h08: w_alu = {1'b0, ~T};
-        5'h09: w_alu = 0;
-        5'h0a: w_alu = {2'b00, T[15:1]}; // T >> 1
-        5'h0b: w_alu = { T[15:0], 1'b0}; // T << 1
-        5'h0c: w_alu = {1'b0, i_dat}; // [T]
-        5'h0d: w_alu = {1'b0, i_dat}; // [R]
-        5'h0e: w_alu = |T ? {1'b0, r_pc} : {1'b0, R}; // condition for JZ R
-        5'h0f: w_alu = |T ? {1'b0, r_pc} : {1'b0, T}; // condition for JZ T
-        5'h10: w_alu = {9'b0, T[15:8]};
-        5'h11: w_alu = {1'b0, T[7:0], 8'h00};
+        5'h03: w_alu = {1'b0, i_dat}; // [T]
+
+        5'h04: w_alu = {1'b0, N} + {1'b0, T};
+        5'h05: w_alu = {1'b0, N} - {1'b0, T};
+        5'h06: w_alu = 0; // TODO: N * T
+
+        5'h07: w_alu = {1'b0, N & T};
+        5'h08: w_alu = {1'b0, N | T};
+        5'h09: w_alu = {1'b0, N ^ T};
+        5'h0a: w_alu = {15'h00, $signed(N) < signed(T)};
+        5'h0b: w_alu = {15'h00, N < T};
+        5'h0c: w_alu = {15'h00, N < T};
+        5'h0d: w_alu = {T[0], 1'b0, T[15:1]}; // T >> 1
+        5'h0e: w_alu = {9'h00, T[15:8]}; // T >> 8
+        5'h0f: w_alu = {T[15:0], 1'b0}; // T << 1
+        5'h10: w_alu = {1'b0, T[7:0], 8'h00}; // T << 8
+        5'h11: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
+        5'h12: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
+
+        5'h13: w_alu = {15'h00, carry};
         default: w_alu = 0;
     endcase
 
-reg [W-1:0] r_pick;
-always @(posedge i_clk)
-    if (s_fetch)
-        r_pick <= r_dstack[w_alu[4:0]];
 
-wire [W-1:0] w_src = w_op_alu[5] ? r_pick : w_alu[W-1:0];
-
-wire w_op_alu_MEMT = (w_op_alu == 6'h0c);
-wire w_op_alu_MEMR = (w_op_alu == 6'h0d);
-wire w_op_alu_COND_PC_R = (w_op_alu == 6'h0e);
-wire w_op_alu_COND_PC_T = (w_op_alu == 6'h0f);
+wire w_op_alu_MEMT = (w_op_alu == 4'h03);
 
 /*
 dsp: dstack pointer handling
@@ -131,10 +142,10 @@ wire w_op_rsp_RPC = (w_op_rsp == 2'b11);
 
 
 // PC
-reg [W-1:0] w_pcn;
+reg [15:0] w_pcn;
 always @(*)
-    if (w_op_dst_PC)
-        w_pcn = w_src;
+    if (w_op_alu_dst_PC)
+        w_pcn = w_alu[15:0];
     else 
         w_pcn = r_pc + 1;
 
@@ -149,8 +160,8 @@ always @(posedge i_clk)
 reg [DSS-1:0] r_dsp /* verilator public */;
 reg [DSS-1:0] w_dspn;
 always @(*)
-    casez ( { w_op_normal, w_op_dsp } )
-        3'b0??:  w_dspn = r_dsp + 1; // literal
+    casez ( { w_op_alu, w_op_dsp } )
+        3'b0??:  w_dspn = r_dsp + 1;
         3'b101:  w_dspn = r_dsp + 1;
         3'b110:  w_dspn = r_dsp - 1;
         default: w_dspn = r_dsp;
@@ -163,29 +174,33 @@ always @(posedge i_clk)
         r_dsp <= w_dspn;
 
 // dstack
-reg [W-1:0] r_dstack[0:DSS**2] /* verilator public */;
+reg [15:0] r_dstack[0:DSS**2-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
-        if (w_op_literal)
-            r_dstack[w_dspn] <= r_op;
+        if (w_op_imml)
+            r_dstack[w_dspn] <= {1'b0, w_op_imml_lit[14:0]};
+        else if (w_op_immh)
+            r_dstack[w_dspn] <= {w_op_immh_lit[7:0], r_dstack[w_dsp_n][7:0]};
         else if (w_op_dst_T)
-            r_dstack[w_dspn] <= w_src[15:0];
-        else if (w_op_dst_N)
-            r_dstack[w_dspn-1] <= w_src[15:0];
+            r_dstack[w_dspn] <= w_alu[15:0];
     end
 
 // RSP
 reg [RSS-1:0] r_rsp /* verilator public */;
 reg [RSS-1:0] w_rspn;
-always @(*)
+always @(*) begin
     if (i_reset)
         w_rspn = 0;
-    else casez ( { w_op_normal, w_op_rsp_inc, w_op_rsp_dec } )
-        3'b101:  w_rspn = r_rsp + 1;
-        3'b110:  w_rspn = r_rsp - 1;
-        3'b111:  w_rspn = r_rsp + 1;
-        default: w_rspn = r_rsp;
-    endcase
+    else begin
+        if (w_op_alu) begin
+            if (w_op_rsp_inc) begin
+                w_rspn = r_rsp + 1;
+            end else if (w_op_rsp_dec) begin
+                w_rspn = r_rsp - 1;
+            end
+        end
+    end
+end
 
 always @(posedge i_clk)
     if (i_reset)
@@ -194,7 +209,7 @@ always @(posedge i_clk)
         r_rsp <= w_rspn;
 
 // rstack
-reg [W-1:0] r_rstack[0:RSS**2] /* verilator public */;
+reg [15:0] r_rstack[0:RSS**2-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
         r_rstack[w_rspn] <= w_op_rsp_RPC ? w_pcn :
@@ -208,8 +223,8 @@ always @(posedge i_clk)
         N <= r_dstack[r_dsp - 1];
     end
 
-
-wire w_op_mem_access = s_execute && (w_op_dst_MEMT || w_op_dst_MEMR || w_op_alu_MEMT || w_op_alu_MEMR);
+wire w_mem_access_MEMT  = (w_op_alu_MEMT || w_op_alu_dst_MEMT);
+wire w_op_mem_access    = s_execute && w_mem_access_MEMT;
 wire w_all_mem_accesses = s_fetch || w_op_mem_access;
 
 // state machine
@@ -233,13 +248,12 @@ begin
 end
 
 assign o_addr = s_fetch ? r_pc :
-          w_op_dst_MEMR ? R    :
-          w_op_dst_MEMT ? T    : 0;
+      w_mem_access_MEMT ? T    : 0;
 
 assign o_cs = i_reset ? 0 : w_all_mem_accesses;
 
-assign o_we = w_op_mem_access && (w_op_dst_MEMT || w_op_dst_MEMR);
+assign o_we = w_op_mem_access && w_op_alu_dst_MEMT;
 
-assign o_dat = w_src;
+assign o_dat = w_alu[15:0];
 
 endmodule
