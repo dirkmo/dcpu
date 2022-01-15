@@ -1,11 +1,11 @@
-0 <addr:15>     call
+0 <addr:15>     call     ; R <- PC, PC <- addr, rsp+
 
-1 00 <imm:13>                         imm.l
-1 01 <unused:4> <return:1> <imm:8>    imm.h
+1 00 <imm:13>                         imm.l   ; dsp+, T <- imm
+1 01 <unused:4> <return:1> <imm:8>    imm.h   ; T <- T | imm, return
 
-1 10 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>
+1 10 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>  alu
 
-1 11 <cond:3> <imm:10>  rjp
+1 11 <cond:3> <imm:10>  rjp ; PC <- cond ? PC+imm : PC
 
 
 cond:
