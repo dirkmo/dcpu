@@ -46,31 +46,33 @@ reg [15:0] R /* verilator public */; // top of rstack
 1 11 <cond:3> <imm:10>                  rjp
 */
 
-// call
-wire w_op_call = (r_op[15] == 0);
+// call: 0 <addr:15>
+wire w_op_call = ~r_op[15];
 // call addr field
 wire [14:0] w_op_call_addr = r_op[14:0];
 
 // push literal
 wire w_op_lit  = (r_op[15:14] == 2'b10);
 
-// literal lower part
+// literal lower part: 100 <imm:13>
 wire w_op_litl = w_op_lit & ~r_op[13];
 // imml field
 wire [12:0] w_op_litl_val = r_op[12:0];
 
-// literal upper part
+// literal upper part: 101 <unused:4> <return:1> <imm:8>
 wire w_op_lith = w_op_lit & r_op[13];
 // immh field
 wire [7:0] w_op_lith_val = r_op[7:0];
+// return field
+wire w_op_lith_return = r_op[8];
 
-// relative jumps
+// relative jumps: 111 <cond:3> <imm:10>
 wire w_op_rjp  = (r_op[15:13] == 3'b111);
 // rjp fields
 wire [1:0] w_op_rjp_cond = r_op[12:10];
 wire [1:0] w_op_rjp_imm  = r_op[9:0];
 
-// alu ops
+// alu ops: 110 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>
 wire w_op_alu  = (r_op[15:13] == 3'b110);
 // alu-op fields
 wire       w_op_alu_unused = r_op[12];
@@ -90,6 +92,12 @@ wire w_op_alu_dst_T    = (w_op_alu_dst == 2'b00);
 wire w_op_alu_dst_R    = (w_op_alu_dst == 2'b01);
 wire w_op_alu_dst_PC   = (w_op_alu_dst == 2'b10);
 wire w_op_alu_dst_MEMT = (w_op_alu_dst == 2'b11);
+
+
+
+wire w_return = (w_op_alu && w_op_alu_ret) || (w_op_lith && w_op_lith_return);
+
+
 
 /*
 alu: alu operation
@@ -141,7 +149,7 @@ rsp: rstack pointer handling and push PC to rstack
      00 nothing
      01 rsp+
      10 rsp-
-     11 R <- PC (for CALL: push PC to rstack an rsp+)
+     11 rsp+, R <- PC (for CALL: push PC to rstack an rsp+)
 */
 wire w_op_rsp_inc = (w_op_alu_rsp == 2'b01);
 wire w_op_rsp_dec = (w_op_alu_rsp == 2'b10);
@@ -162,7 +170,8 @@ wire w_op_rjp_cond_fullfilled =
     w_op_rjp_cond_notzero ||
     w_op_rjp_cond_negative ||
     w_op_rjp_cond_notnegative;
-    
+
+
 // PC
 reg [15:0] w_pcn;
 always @(*)
@@ -172,6 +181,8 @@ always @(*)
         w_pcn = {1'b0, w_op_call_addr[14:0]};
     else if (w_op_rjp && w_op_rjp_cond_fullfilled)
         w_pcn = w_rjp_pc;
+    else if (w_return)
+        w_pcn = R;
     else 
         w_pcn = r_pc + 1;
 
@@ -186,12 +197,15 @@ always @(posedge i_clk)
 reg [DSS-1:0] r_dsp /* verilator public */;
 reg [DSS-1:0] w_dspn;
 always @(*)
-    casez ( { w_op_alu, w_op_alu_dsp } )
-        3'b0??:  w_dspn = r_dsp + 1;
-        3'b101:  w_dspn = r_dsp + 1;
-        3'b110:  w_dspn = r_dsp - 1;
-        default: w_dspn = r_dsp;
-    endcase
+    if (w_op_alu) begin
+        casez ( w_op_alu_dsp )
+            2'b01:  w_dspn = r_dsp + 1;
+            2'b10:  w_dspn = r_dsp - 1;
+            default: w_dspn = r_dsp;
+        endcase
+    end else if (w_op_litl) begin
+        w_dspn = r_dsp + 1;
+    end
 
 always @(posedge i_clk)
     if (i_reset)
@@ -206,7 +220,7 @@ always @(posedge i_clk)
         if (w_op_litl)
             r_dstack[w_dspn] <= {1'b0, w_op_litl_val[14:0]};
         else if (w_op_lith)
-            r_dstack[w_dspn] <= {w_op_lith_val[7:0], r_dstack[w_dspn][7:0]};
+            r_dstack[r_dsp] <= {w_op_lith_val[7:0], r_dstack[w_dspn][7:0]};
         else if (w_op_alu_dst_T)
             r_dstack[w_dspn] <= w_alu[15:0];
     end
@@ -224,6 +238,12 @@ always @(*) begin
             end else if (w_op_rsp_dec) begin
                 w_rspn = r_rsp - 1;
             end
+        end else if (w_return) begin
+            w_rspn = r_rsp - 1;
+        end else if (w_op_call) begin
+            w_rspn = r_rsp + 1;
+        end else begin
+            w_rspn = r_rsp;
         end
     end
 end
@@ -238,8 +258,10 @@ always @(posedge i_clk)
 reg [15:0] r_rstack[0:RSS**2-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
-        r_rstack[w_rspn] <= w_op_rsp_RPC ? w_pcn :
-                            w_op_alu_dst_R   ? w_alu[15:0] : r_rstack[w_rspn];
+        r_rstack[w_rspn] <= w_op_rsp_RPC   ? w_pcn :
+                            w_op_call      ? w_pcn :
+                            w_op_alu_dst_R ? w_alu[15:0]
+                                           : r_rstack[w_rspn];
     end
 
 always @(posedge i_clk)
