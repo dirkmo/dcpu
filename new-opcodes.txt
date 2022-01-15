@@ -1,0 +1,63 @@
+0 <addr:15>     call
+
+1 00 <imm:13>                         imm.l
+1 01 <unused:4> <return:1> <imm:8>    imm.h
+
+1 10 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>
+
+1 11 <cond:3> <imm:10>  rjp
+
+
+cond:
+    000
+    001
+    010
+    011
+    100 T == 0
+    101 T != 0
+    110 T & 0x8000 == 0
+    111 T & 0x8000 == 1
+
+Dst:
+    00 T
+    01 R
+    10 PC
+    11 [T]
+
+dsp:
+    00 nop
+    01 dsp+1
+    10 dsp-1
+    11 nop
+
+rsp:
+    00 nop
+    01 rsp+1
+    10 rsp-1
+    11 rsp+1, R <- PC (call)
+
+Alu-Ops:
+    T
+    N
+    R
+    [T]
+
+    N + T
+    N - T
+    N * T
+    N and T
+
+    N or T
+    N xor T
+    N < T
+    Nu < Tu
+    
+    T >> 1
+    T >> 8
+    T << 1
+    T << 8
+
+    T == 0 ? N : PC
+    T != 0 ? N : PC
+
+    carry
