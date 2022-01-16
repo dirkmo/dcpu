@@ -2,14 +2,14 @@ module dcpu(
     input i_reset,
     input i_clk,
 
-    output     [15:0] o_addr,
-    output     [15:0] o_dat,
-    input      [15:0] i_dat,
-    input              i_ack,
-    output             o_we,
-    output             o_cs,
+    output [15:0] o_addr,
+    output [15:0] o_dat,
+    input  [15:0] i_dat,
+    input          i_ack,
+    output         o_we,
+    output         o_cs,
 
-    input              i_irq
+    input          i_irq
 );
 
 parameter

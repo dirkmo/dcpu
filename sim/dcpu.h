@@ -1,16 +1,38 @@
 #ifndef __DCPU_H__
 #define __DCPU_H__
 
-#define OP 0x8000
+#define MASK(b) ((1<<b)-1)
+
+#define OP_CALL 0x0000
+#define OP_LITL 0x8000
+#define OP_LITH 0xa000
+#define OP_ALU  0xc000
+#define OP_RJP  0xe000
+
+#define OP_LITL_VAL(n) (n & MASK(13))
+#define LIT_L(v) (OP_LITL | OP_LITL_VAL(v))
+
+#define OP_LITH_VAL(n) (n & MASK(8) | )
+#define OP_LITH_RET(r) ((n & 1) << 8)
+#define LIT_H(v,r) (OP_LITH | OP_LITH_VAL(v) | OP_LITH_RET(r))
+
+#define OP_RJP_ADDR(a) (n & MASK(10))
+#define OP_RJP_COND(c) ((n & MASK(3)) << 10)
+#define COND_RJP_NONE 0
+#define COND_RJP_ZERO 4
+#define COND_RJP_NONZERO 5
+#define COND_RJP_NEG 6
+#define COND_RJP_NONNEG 7
+#define RJP(c,offs) (OP_RJP_COND(c) | OP_RJP_ADDR(a))
+
+#define ALU(op, ret, dst, dsp, rsp) (OP_ALU | )
 
 #define DST(n) (OP | ((n) << DST_SHIFT))
-#define DST_SHIFT 12
+#define DST_SHIFT 4
 #define DST_T    DST(0)
-#define DST_N    DST(1)
-#define DST_R    DST(2)
-#define DST_PC   DST(3)
-#define DST_MEMT DST(4)
-#define DST_MEMR DST(5)
+#define DST_R    DST(1)
+#define DST_PC   DST(2)
+#define DST_MEMT DST(3)
 
 #define DSP(n) (OP | ((n) << DSP_SHIFT))
 #define DSP_SHIFT 4
