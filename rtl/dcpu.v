@@ -130,8 +130,8 @@ always @(*)
         5'h0d: w_alu = {9'h00, T[15:8]}; // T >> 8
         5'h0e: w_alu = {T[15:0], 1'b0}; // T << 1
         5'h0f: w_alu = {1'b0, T[7:0], 8'h00}; // T << 8
-        5'h10: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
-        5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
+        5'h10: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JZ R
+        5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JZ R
         5'h12: w_alu = {16'h00, r_carry};
         5'h13: w_alu = {1'b0, ~T};
         default: w_alu = 0;

@@ -371,6 +371,20 @@ int main(int argc, char *argv[]) {
     }
 
     {
+        printf("Test %d: ALU: T <- MEMT\n", count++);
+        uint16_t prog[] = {
+            LIT_L(82), 
+            LIT_L(0), 
+            ALU(ALU_MEMT, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = LIT_L(82); t.n = 0; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+
+    {
         printf("Test %d: ALU: ADD\n", count++);
         uint16_t prog[] = {
             LIT_L(1), 
@@ -516,6 +530,92 @@ int main(int argc, char *argv[]) {
         t.t = 0; t.n = 1; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
+
+    {
+        printf("Test %d: ALU: SR\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xfe), 
+            LIT_H(0xfe), 
+            ALU(ALU_SR, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0xfefe>>1; t.n = 0xfefe; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: SRW\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xfe), 
+            LIT_H(0xfe), 
+            ALU(ALU_SRW, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0xfefe>>8; t.n = 0xfefe; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: SL\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xfe), 
+            LIT_H(0xfe), 
+            ALU(ALU_SL, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = (0xfefe<<1)&0xffff; t.n = 0xfefe; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: SLW\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xfe), 
+            LIT_H(0xfe), 
+            ALU(ALU_SLW, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0xfe00; t.n = 0xfefe; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: JZ, branch taken\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0x4), 
+            LIT_L(0x0), 
+            ALU(ALU_JZ, 0, DST_PC, 0, RSP_RPC),
+            0xffff,
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0; t.n = 4; t.r = 3; t.pc = 4; t.dsp = 1; t.rsp = 0;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: JZ, branch not taken\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0x4), 
+            LIT_L(0x1), 
+            ALU(ALU_JZ, 0, DST_PC, 0, RSP_RPC),
+            0xffff,
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 1; t.n = 4; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+
+
+
+
+
 done:
     pCore->final();
 
