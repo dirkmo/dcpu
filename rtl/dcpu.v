@@ -13,8 +13,8 @@ module dcpu(
 );
 
 parameter
-    DSS = 4, // data stack size: 2^DSS
-    RSS = 4; // return stack size: 2^RSS
+    DSS /* verilator public */ = 4, // data stack size: 2^DSS
+    RSS /* verilator public */ = 4; // return stack size: 2^RSS
 
 localparam
     FETCH = 0,

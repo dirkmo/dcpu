@@ -160,6 +160,9 @@ int main(int argc, char *argv[]) {
         }
     }
 
+    constexpr int DSS = (1 << pCore->dcpu->DSS);
+    constexpr int RSS = (1 << pCore->dcpu->RSS);
+
     int count = 1;
 
     {
@@ -250,7 +253,69 @@ int main(int argc, char *argv[]) {
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
-    
+    {
+        printf("Test %d: ALU: nop\n", count++);
+        uint16_t prog[] = { ALU(ALU_T, 0, DST_T, 0, 0), 0xffff };
+        test_t t = new_test();
+        t.t = -1; t.n = -1; t.r = -1; t.pc = 1; t.dsp = DSS-1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: rsp+\n", count++);
+        uint16_t prog[] = { ALU(ALU_T, 0, DST_T, 0, RSP_I), 0xffff };
+        test_t t = new_test();
+        t.t = -1; t.n = -1; t.r = -1; t.pc = 1; t.dsp = DSS-1; t.rsp = 0;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: rsp+\n", count++);
+        uint16_t prog[] = { ALU(ALU_T, 0, DST_T, 0, RSP_D), 0xffff };
+        test_t t = new_test();
+        t.t = -1; t.n = -1; t.r = -1; t.pc = 1; t.dsp = DSS-1; t.rsp = RSS-2;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: dsp+\n", count++);
+        uint16_t prog[] = { ALU(ALU_T, 0, DST_T, DSP_I, 0), 0xffff };
+        test_t t = new_test();
+        t.t = -1; t.n = -1; t.r = -1; t.pc = 1; t.dsp = 0; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: dsp-\n", count++);
+        uint16_t prog[] = { ALU(ALU_T, 0, DST_T, DSP_D, 0), 0xffff };
+        test_t t = new_test();
+        t.t = -1; t.n = -1; t.r = -1; t.pc = 1; t.dsp = DSS-2; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: return, no rsp-\n", count++);
+        uint16_t prog[] = { CALL(3), LIT_L(2), 0xffff, ALU(ALU_T, RET, DST_T, 0, 0), LIT_L(1), 0xffff };
+        test_t t = new_test();
+        t.t = 2; t.n = -1; t.r = 1; t.pc = 2; t.dsp = 0; t.rsp = 0;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: return, rsp-\n", count++);
+        uint16_t prog[] = { CALL(3), LIT_L(2), 0xffff, ALU(ALU_T, RET, DST_T, 0, RSP_D), LIT_L(1), 0xffff };
+        test_t t = new_test();
+        t.t = 2; t.n = -1; t.r = -1; t.pc = 2; t.dsp = 0; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: T <- N\n", count++);
+        uint16_t prog[] = { LIT_L(1), LIT_L(2), ALU(ALU_N, 0, DST_T, DSP_I, 0), 0xffff };
+        test_t t = new_test();
+        t.t = 2; t.n = 2; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
 
 done:
     pCore->final();

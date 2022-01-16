@@ -36,41 +36,43 @@
 #define RSP(n)     ((n & MASK(2)) << 0)
 #define DSP(n)     ((n & MASK(2)) << 2)
 #define DST(n)     ((n & MASK(2)) << 4)
-#define ALU_RET(r) ((r & MASK(1) << 6))
-#define ALU_OP(o)  ((o & MASK(5) << 7))
+#define ALU_RET(r) ((r & MASK(1)) << 6)
+#define ALU_OP(o)  ((o & MASK(5)) << 7)
 #define ALU(op, ret, dst, dsp, rsp) (OP_ALU | ALU_OP(op) | ALU_RET(ret) | DST(dst) | DSP(dsp) | RSP(rsp))
 
-#define DST_T    DST(0)
-#define DST_R    DST(1)
-#define DST_PC   DST(2)
-#define DST_MEMT DST(3)
+#define DST_T    0
+#define DST_R    1
+#define DST_PC   2
+#define DST_MEMT 3
 
-#define DSP_I DSP(1)
-#define DSP_D DSP(2)
+#define DSP_I 1
+#define DSP_D 2
 
-#define RSP_I   RSP(1)
-#define RSP_D   RSP(2)
-#define RSP_RPC RSP(3)
+#define RSP_I   1
+#define RSP_D   2
+#define RSP_RPC 3
 
-#define ALU_T       ALU_OP(0)
-#define ALU_N       ALU_OP(1)
-#define ALU_R       ALU_OP(2)
-#define ALU_MEMT    ALU_OP(3)
-#define ALU_ADD     ALU_OP(4)
-#define ALU_SUB     ALU_OP(5)
-#define ALU_MUL     ALU_OP(6)
-#define ALU_AND     ALU_OP(7)
-#define ALU_OR      ALU_OP(8)
-#define ALU_XOR     ALU_OP(9)
-#define ALU_LTS     ALU_OP(10) // less than signed
-#define ALU_LT      ALU_OP(11) // less than
-#define ALU_SR      ALU_OP(12)
-#define ALU_SRW     ALU_OP(13)
-#define ALU_SL      ALU_OP(14)
-#define ALU_SLW     ALU_OP(15)
-#define ALU_JZ      ALU_OP(16)
-#define ALU_JNZ     ALU_OP(17)
-#define ALU_CARRY   ALU_OP(18)
-#define ALU_INV     ALU_OP(19)
+#define RET 1
+
+#define ALU_T       0
+#define ALU_N       1
+#define ALU_R       2
+#define ALU_MEMT    3
+#define ALU_ADD     4
+#define ALU_SUB     5
+#define ALU_MUL     6
+#define ALU_AND     7
+#define ALU_OR      8
+#define ALU_XOR     9
+#define ALU_LTS     10 // less than signed
+#define ALU_LT      11 // less than
+#define ALU_SR      12
+#define ALU_SRW     13
+#define ALU_SL      14
+#define ALU_SLW     15
+#define ALU_JZ      16
+#define ALU_JNZ     17
+#define ALU_CARRY   18
+#define ALU_INV     19
 
 #endif
