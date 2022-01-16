@@ -68,11 +68,11 @@ wire [7:0] w_op_lith_val = r_op[7:0];
 // return field
 wire w_op_lith_return = r_op[8];
 
-// relative jumps: 111 <cond:3> <imm:10>
+// relative jumps: 111 <cond:3> <offs:10>
 wire w_op_rjp  = (r_op[15:13] == 3'b111);
 // rjp fields
 wire [2:0] w_op_rjp_cond = r_op[12:10];
-wire [9:0] w_op_rjp_imm  = r_op[9:0];
+wire [9:0] w_op_rjp_offs  = r_op[9:0];
 
 // alu ops: 110 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>
 wire w_op_alu  = (r_op[15:13] == 3'b110);
@@ -161,7 +161,7 @@ wire w_op_rsp_inc = (w_op_alu_rsp == 2'b01) || w_op_rsp_RPC;
 wire w_op_rsp_dec = (w_op_alu_rsp == 2'b10);
 
 // rjp
-wire [15:0] w_rjp_pc = r_pc + {{6{w_op_rjp_imm[9]}}, w_op_rjp_imm};
+wire [15:0] w_rjp_pc = r_pc + {{6{w_op_rjp_offs[9]}}, w_op_rjp_offs};
 
 wire w_op_rjp_cond_always      = ~w_op_rjp_cond[2];
 wire w_op_rjp_cond_zero        = (w_op_rjp_cond[2:0] == 3'b100) && (T==0);

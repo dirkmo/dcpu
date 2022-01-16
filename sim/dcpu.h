@@ -5,7 +5,7 @@
 
 // call 0: <addr:15>
 #define OP_CALL 0x0000
-#define CALL(a) (OP_CALL | MASK(15))
+#define CALL(a) (OP_CALL | (a & MASK(15)))
 
 // lit.l: 100 <imm:13> 
 #define OP_LITL 0x8000
@@ -19,11 +19,11 @@
 #define LIT_H(v) (OP_LITH | OP_LITH_RET(0) | OP_LITH_VAL(v))
 #define LIT_H_RET(v) (OP_LITH | OP_LITH_RET(1) | OP_LITH_VAL(v))
 
-// rjp: 111 <cond:3> <imm:10>
+// rjp: 111 <cond:3> <offs:10>
 #define OP_RJP  0xe000
-#define OP_RJP_ADDR(a) (n & MASK(10))
-#define OP_RJP_COND(c) ((n & MASK(3)) << 10)
-#define RJP(c,offs) (OP_RJP | OP_RJP_COND(c) | OP_RJP_ADDR(a))
+#define OP_RJP_OFFS(o) (o & MASK(10))
+#define OP_RJP_COND(c) ((c & MASK(3)) << 10)
+#define RJP(c,offs) (OP_RJP | OP_RJP_COND(c) | OP_RJP_OFFS(offs))
 
 #define COND_RJP_NONE 0
 #define COND_RJP_ZERO 4
@@ -36,7 +36,7 @@
 #define RSP(n)     ((n & MASK(2)) << 0)
 #define DSP(n)     ((n & MASK(2)) << 2)
 #define DST(n)     ((n & MASK(2)) << 4)
-#define ALU_RET(o) ((r & MASK(1) << 6))
+#define ALU_RET(r) ((r & MASK(1) << 6))
 #define ALU_OP(o)  ((o & MASK(5) << 7))
 #define ALU(op, ret, dst, dsp, rsp) (OP_ALU | ALU_OP(op) | ALU_RET(ret) | DST(dst) | DSP(dsp) | RSP(rsp))
 
