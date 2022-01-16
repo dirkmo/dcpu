@@ -110,24 +110,23 @@ always @(*)
         5'h01: w_alu = {1'b0, N};
         5'h02: w_alu = {1'b0, R};
         5'h03: w_alu = {1'b0, i_dat}; // [T]
-
         5'h04: w_alu = {1'b0, N} + {1'b0, T};
         5'h05: w_alu = {1'b0, N} - {1'b0, T};
         5'h06: w_alu = 0; // TODO: N * T
-
         5'h07: w_alu = {1'b0, N & T};
         5'h08: w_alu = {1'b0, N | T};
         5'h09: w_alu = {1'b0, N ^ T};
         5'h0a: w_alu = {17{($signed(N) < $signed(T))}};
         5'h0b: w_alu = {17{(N < T)}};
-        5'h0d: w_alu = {T[0], 1'b0, T[15:1]}; // T >> 1
-        5'h0e: w_alu = {9'h00, T[15:8]}; // T >> 8
-        5'h0f: w_alu = {T[15:0], 1'b0}; // T << 1
-        5'h10: w_alu = {1'b0, T[7:0], 8'h00}; // T << 8
-        5'h11: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
-        5'h12: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
+        5'h0c: w_alu = {T[0], 1'b0, T[15:1]}; // T >> 1
+        5'h0d: w_alu = {9'h00, T[15:8]}; // T >> 8
+        5'h0e: w_alu = {T[15:0], 1'b0}; // T << 1
+        5'h0f: w_alu = {1'b0, T[7:0], 8'h00}; // T << 8
+        5'h10: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
+        5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
 
-        5'h13: w_alu = {15'h00, carry};
+        5'h12: w_alu = {15'h00, carry};
+        5'h13: w_alu = {1'b0, ~T}
         default: w_alu = 0;
     endcase
 
