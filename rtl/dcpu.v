@@ -69,8 +69,8 @@ wire w_op_lith_return = r_op[8];
 // relative jumps: 111 <cond:3> <imm:10>
 wire w_op_rjp  = (r_op[15:13] == 3'b111);
 // rjp fields
-wire [1:0] w_op_rjp_cond = r_op[12:10];
-wire [1:0] w_op_rjp_imm  = r_op[9:0];
+wire [2:0] w_op_rjp_cond = r_op[12:10];
+wire [9:0] w_op_rjp_imm  = r_op[9:0];
 
 // alu ops: 110 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>
 wire w_op_alu  = (r_op[15:13] == 3'b110);
@@ -126,7 +126,7 @@ always @(*)
         5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
 
         5'h12: w_alu = {15'h00, carry};
-        5'h13: w_alu = {1'b0, ~T}
+        5'h13: w_alu = {1'b0, ~T};
         default: w_alu = 0;
     endcase
 
@@ -218,7 +218,7 @@ reg [15:0] r_dstack[0:DSS**2-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
         if (w_op_litl)
-            r_dstack[w_dspn] <= {1'b0, w_op_litl_val[14:0]};
+            r_dstack[w_dspn] <= {3'b000, w_op_litl_val[12:0]};
         else if (w_op_lith)
             r_dstack[r_dsp] <= {w_op_lith_val[7:0], r_dstack[r_dsp][7:0]};
         else if (w_op_alu && w_op_alu_dst_T)
