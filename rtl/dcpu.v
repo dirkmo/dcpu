@@ -137,6 +137,7 @@ always @(*)
         default: w_alu = 0;
     endcase
 
+// side effects for alu operations
 wire w_op_alu_MEMT = (w_op_alu_op == 5'h3);
 
 /*

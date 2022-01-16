@@ -75,12 +75,13 @@ typedef struct {
 } test_t;
 
 void printregs(int count, test_t *t) {
-    printf("%d: pc:%04x ", count, pCore->dcpu->r_pc);
-    printf("T:%04x ", pCore->dcpu->T);
-    printf("N:%04x ", pCore->dcpu->N);
-    printf("R:%04x ", pCore->dcpu->R);
-    printf("dsp:%d ", pCore->dcpu->r_dsp);
-    printf("rsp:%d ", pCore->dcpu->r_rsp);
+    Vdcpu_dcpu *d = pCore->dcpu;
+    printf("%d: pc:%04x ", count, d->r_pc);
+    printf("T:%04x ", d->r_dstack[d->r_dsp]);
+    printf("N:%04x ", d->r_dstack[d->r_dsp-1]);
+    printf("R:%04x ", d->r_rstack[d->r_rsp]);
+    printf("dsp:%d ", d->r_dsp);
+    printf("rsp:%d ", d->r_rsp);
     printf("\n");
 }
 
@@ -108,7 +109,6 @@ bool test(const uint16_t *prog, int len, test_t *t) {
         pCore->i_irq = (t->interrupt_cycle == i);
         tick();
     }
-    printregs(i, t);
 
     bool total = true;
     bool res;
@@ -119,7 +119,6 @@ bool test(const uint16_t *prog, int len, test_t *t) {
     total &= checkval(t->r, d->r_rstack[d->r_rsp], "R");
     total &= checkval(t->dsp, d->r_dsp, "dsp");
     total &= checkval(t->rsp, d->r_rsp, "rsp");
-    printf("\n");
     for ( i = 0; i<ARRSIZE(mem); i++) {
         if (t->mem[i] >= 0 && t->mem[i] != mem[i]) {
             printf("%sBad memory value at address %04x: %04x%s\n", RED, i, mem[i], NORMAL);
@@ -310,10 +309,64 @@ int main(int argc, char *argv[]) {
     }
 
     {
-        printf("Test %d: ALU: T <- N\n", count++);
+        printf("Test %d: ALU: T <- N, dsp+\n", count++);
         uint16_t prog[] = { LIT_L(1), LIT_L(2), ALU(ALU_N, 0, DST_T, DSP_I, 0), 0xffff };
         test_t t = new_test();
-        t.t = 2; t.n = 2; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = RSS-1;
+        t.t = 1; t.n = 2; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: T <- N, dsp-\n", count++);
+        uint16_t prog[] = { LIT_L(1), LIT_L(2), LIT_L(3), ALU(ALU_N, 0, DST_T, DSP_D, 0), 0xffff };
+        test_t t = new_test();
+        t.t = 2; t.n = 1; t.r = -1; t.pc = 4; t.dsp = 1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: T <- N\n", count++);
+        uint16_t prog[] = { LIT_L(1), LIT_L(2), ALU(ALU_N, 0, DST_T, 0, 0), 0xffff };
+        test_t t = new_test();
+        t.t = 1; t.n = 1; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: R <- T\n", count++);
+        uint16_t prog[] = { LIT_L(1), LIT_L(2), ALU(ALU_T, 0, DST_R, 0, 0), 0xffff };
+        test_t t = new_test();
+        t.t = 2; t.n = 1; t.r = 2; t.pc = 3; t.dsp = 1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: R <- N, dsp-, rsp+\n", count++);
+        uint16_t prog[] = { LIT_L(1), LIT_L(2), ALU(ALU_N, 0, DST_R, DSP_D, RSP_I), 0xffff };
+        test_t t = new_test();
+        t.t = 1; t.n = -1; t.r = 1; t.pc = 3; t.dsp = 0; t.rsp = 0;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: MEMT <- N\n", count++);
+        uint16_t prog[] = { LIT_L(123), LIT_L(4), ALU(ALU_N, 0, DST_MEMT, 0, 0), 0xffff, 0 };
+        test_t t = new_test();
+        t.t = 4; t.n = 123; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = RSS-1;
+        t.mem[4] = 123;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: N <- R\n", count++);
+        uint16_t prog[] = {
+            LIT_L(33), 
+            LIT_L(34), 
+            ALU(ALU_T, 0, DST_R, 0, RSP_I),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 34; t.n = 33; t.r = 34; t.pc = 3; t.dsp = 1; t.rsp = 0;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
