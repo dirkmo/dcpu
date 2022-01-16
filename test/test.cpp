@@ -639,9 +639,47 @@ int main(int argc, char *argv[]) {
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: ALU: CARRY\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xff), 
+            LIT_H(0xff), 
+            LIT_L(0x3), 
+            ALU(ALU_ADD, 0, DST_T, DSP_I, 0),
+            ALU(ALU_CARRY, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 1; t.n = 2; t.r = -1; t.pc = 5; t.dsp = 3; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
 
+    {
+        printf("Test %d: ALU: no CARRY\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xf0), 
+            LIT_H(0xff), 
+            LIT_L(0x3), 
+            ALU(ALU_ADD, 0, DST_T, DSP_I, 0),
+            ALU(ALU_CARRY, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0; t.n = 0xfff3; t.r = -1; t.pc = 5; t.dsp = 3; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
 
-
+    {
+        printf("Test %d: ALU: INV\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xff), 
+            ALU(ALU_INV, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0xff00; t.n = 0xff; t.r = -1; t.pc = 2; t.dsp = 1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
 
 done:
     pCore->final();
