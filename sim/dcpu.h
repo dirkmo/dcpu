@@ -14,9 +14,10 @@
 
 // lit.h: 101 <unused:4> <return:1> <imm:8>
 #define OP_LITH 0xa000
-#define OP_LITH_VAL(n) (n & MASK(8) | )
-#define OP_LITH_RET(r) ((n & 1) << 8)
-#define LIT_H(v,r) (OP_LITH | OP_LITH_RET(r) | OP_LITH_VAL(v))
+#define OP_LITH_VAL(n) (n & MASK(8))
+#define OP_LITH_RET(r) ((r & 1) << 8)
+#define LIT_H(v) (OP_LITH | OP_LITH_RET(0) | OP_LITH_VAL(v))
+#define LIT_H_RET(v) (OP_LITH | OP_LITH_RET(1) | OP_LITH_VAL(v))
 
 // rjp: 111 <cond:3> <imm:10>
 #define OP_RJP  0xe000

@@ -13,8 +13,8 @@ module dcpu(
 );
 
 parameter
-    DSS = 6, // data stack size: 2^DSS
-    RSS = 6; // return stack size: 2^RSS
+    DSS = 4, // data stack size: 2^DSS
+    RSS = 4; // return stack size: 2^RSS
 
 localparam
     FETCH = 0,
@@ -26,9 +26,11 @@ reg [15:0] r_pc /* verilator public */; // program counter
 wire s_fetch   = (r_state == FETCH);
 wire s_execute = (r_state == EXECUTE);
 
-reg [15:0] r_op; // instruction register
+reg [15:0] r_op /* verilator public */; // instruction register
 always @(posedge i_clk)
-    if (s_fetch && i_ack)
+    if (i_reset)
+        r_op <= 0;
+    else if (s_fetch && i_ack)
         r_op <= i_dat;
 
 reg [15:0] T /* verilator public */; // top of dstack
@@ -214,18 +216,18 @@ always @(*)
 
 always @(posedge i_clk)
     if (i_reset)
-        r_dsp <= 0;
+        r_dsp <= {DSS{1'b1}};
     else if(s_execute)
         r_dsp <= w_dspn;
 
 // dstack
-reg [15:0] r_dstack[0:DSS**2-1] /* verilator public */;
+reg [15:0] r_dstack[0:2**DSS-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
         if (w_op_litl)
             r_dstack[w_dspn] <= {3'b000, w_op_litl_val[12:0]};
         else if (w_op_lith)
-            r_dstack[r_dsp] <= {w_op_lith_val[7:0], r_dstack[r_dsp][7:0]};
+            r_dstack[w_dspn] <= {w_op_lith_val[7:0], r_dstack[r_dsp][7:0]};
         else if (w_op_alu && w_op_alu_dst_T)
             r_dstack[w_dspn] <= w_alu[15:0];
     end
@@ -234,35 +236,31 @@ always @(posedge i_clk)
 reg [RSS-1:0] r_rsp /* verilator public */;
 reg [RSS-1:0] w_rspn;
 always @(*) begin
-    if (i_reset)
-        w_rspn = 0;
-    else begin
-        if (w_op_alu) begin
-            if (w_op_rsp_inc) begin
-                w_rspn = r_rsp + 1;
-            end else if (w_op_rsp_dec) begin
-                w_rspn = r_rsp - 1;
-            end else begin
-                w_rspn = r_rsp;
-            end
-        end else if (w_return) begin
-            w_rspn = r_rsp - 1;
-        end else if (w_op_call) begin
+    if (w_op_alu) begin
+        if (w_op_rsp_inc) begin
             w_rspn = r_rsp + 1;
+        end else if (w_op_rsp_dec) begin
+            w_rspn = r_rsp - 1;
         end else begin
             w_rspn = r_rsp;
         end
+    end else if (w_return) begin
+        w_rspn = r_rsp - 1;
+    end else if (w_op_call) begin
+        w_rspn = r_rsp + 1;
+    end else begin
+        w_rspn = r_rsp;
     end
 end
 
 always @(posedge i_clk)
     if (i_reset)
-        r_rsp <= 0;
+        r_rsp <= {RSS{1'b1}};
     else if (s_execute)
         r_rsp <= w_rspn;
 
 // rstack
-reg [15:0] r_rstack[0:RSS**2-1] /* verilator public */;
+reg [15:0] r_rstack[0:2**RSS-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
         r_rstack[w_rspn] <= (w_op_alu && w_op_rsp_RPC) ? (r_pc+1) :
@@ -279,7 +277,7 @@ always @(posedge i_clk)
     end
 
 wire w_mem_access_MEMT  = (w_op_alu_MEMT || w_op_alu_dst_MEMT);
-wire w_op_mem_access    = s_execute && w_mem_access_MEMT;
+wire w_op_mem_access    = s_execute && w_op_alu && w_mem_access_MEMT;
 wire w_all_mem_accesses = s_fetch || w_op_mem_access;
 
 // state machine

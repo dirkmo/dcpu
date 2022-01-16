@@ -8,7 +8,7 @@ INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include
 
 DEFINES=+define+SIM=1
 
-VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" --trace --exe $(INCDIR) --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
+VFLAGS = -O0 --trace-max-array 64 --cc -CFLAGS "$(CXXFLAGS)" --trace --exe $(INCDIR) --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
 GTKWAVE := gtkwave
 ifeq ($(UNAME),Darwin)
 VFLAGS += --compiler clang
