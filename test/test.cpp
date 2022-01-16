@@ -611,6 +611,33 @@ int main(int argc, char *argv[]) {
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: ALU: JNZ, branch taken\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0x4), 
+            LIT_L(0x1), 
+            ALU(ALU_JNZ, 0, DST_PC, 0, RSP_RPC),
+            0xffff,
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 1; t.n = 4; t.r = 3; t.pc = 4; t.dsp = 1; t.rsp = 0;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: JNZ, branch not taken\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0x4), 
+            LIT_L(0x0), 
+            ALU(ALU_JNZ, 0, DST_PC, 0, RSP_RPC),
+            0xffff,
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0; t.n = 4; t.r = -1; t.pc = 3; t.dsp = 1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
 
 
 

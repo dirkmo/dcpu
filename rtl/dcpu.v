@@ -130,8 +130,8 @@ always @(*)
         5'h0d: w_alu = {9'h00, T[15:8]}; // T >> 8
         5'h0e: w_alu = {T[15:0], 1'b0}; // T << 1
         5'h0f: w_alu = {1'b0, T[7:0], 8'h00}; // T << 8
-        5'h10: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JZ R
-        5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JZ R
+        5'h10: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JZ
+        5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JNZ
         5'h12: w_alu = {16'h00, r_carry};
         5'h13: w_alu = {1'b0, ~T};
         default: w_alu = 0;
@@ -139,6 +139,11 @@ always @(*)
 
 // side effects for alu operations
 wire w_op_alu_MEMT = (w_op_alu_op == 5'h3);
+wire w_op_alu_jz   = (w_op_alu_op == 5'h10);
+wire w_op_alu_jnz  = (w_op_alu_op == 5'h11);
+wire w_op_alu_j_cond_fullfilled = (w_op_alu_jz  && (T==0))
+                               || (w_op_alu_jnz && (T!=0));
+wire w_op_alu_RPC_branch_taken = w_op_alu && w_op_rsp_RPC && w_op_alu_j_cond_fullfilled;
 
 /*
 dsp: dstack pointer handling
@@ -158,7 +163,7 @@ rsp: rstack pointer handling and push PC to rstack
      11 rsp+, R <- PC (for CALL: push PC to rstack an rsp+)
 */
 wire w_op_rsp_RPC = (w_op_alu_rsp == 2'b11);
-wire w_op_rsp_inc = (w_op_alu_rsp == 2'b01) || w_op_rsp_RPC;
+wire w_op_rsp_inc = (w_op_alu_rsp == 2'b01);
 wire w_op_rsp_dec = (w_op_alu_rsp == 2'b10);
 
 // rjp
@@ -240,6 +245,8 @@ always @(*) begin
     if (w_op_alu) begin
         if (w_op_rsp_inc) begin
             w_rspn = r_rsp + 1;
+        end else if (w_op_rsp_RPC && w_op_alu_j_cond_fullfilled) begin
+            w_rspn = r_rsp + 1;
         end else if (w_op_rsp_dec) begin
             w_rspn = r_rsp - 1;
         end else begin
@@ -264,10 +271,10 @@ always @(posedge i_clk)
 reg [15:0] r_rstack[0:2**RSS-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute) begin
-        r_rstack[w_rspn] <= (w_op_alu && w_op_rsp_RPC) ? (r_pc+1) :
-                                             w_op_call ? (r_pc+1) :
-                                        w_op_alu_dst_R ? w_alu[15:0] :
-                                                         r_rstack[w_rspn];
+        r_rstack[w_rspn] <= w_op_call ? (r_pc+1) :
+            w_op_alu_RPC_branch_taken ? (r_pc+1) :
+                       w_op_alu_dst_R ? w_alu[15:0] :
+                                        r_rstack[w_rspn];
     end
 
 always @(posedge i_clk)
