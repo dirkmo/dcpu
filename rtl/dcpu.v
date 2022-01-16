@@ -78,7 +78,7 @@ wire w_op_alu  = (r_op[15:13] == 3'b110);
 wire       w_op_alu_unused = r_op[12];
 wire [4:0] w_op_alu_op  = r_op[11:7];
 wire       w_op_alu_ret = r_op[6];
-wire [2:0] w_op_alu_dst = r_op[5:4];
+wire [1:0] w_op_alu_dst = r_op[5:4];
 wire [1:0] w_op_alu_dsp = r_op[3:2];
 wire [1:0] w_op_alu_rsp = r_op[1:0];
 
@@ -103,7 +103,13 @@ wire w_return = (w_op_alu && w_op_alu_ret) || (w_op_lith && w_op_lith_return);
 alu: alu operation
 */
 reg [16:0] w_alu;
+reg r_carry;
 wire carry = w_alu[16];
+
+always @(posedge i_clk)
+    if (s_execute)
+        r_carry <= carry;
+
 always @(*)
     case (w_op_alu_op[4:0])
         5'h00: w_alu = {1'b0, T};
@@ -124,12 +130,10 @@ always @(*)
         5'h0f: w_alu = {1'b0, T[7:0], 8'h00}; // T << 8
         5'h10: w_alu = (T==0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
         5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc}; // condition for JZ R
-
-        5'h12: w_alu = {15'h00, carry};
+        5'h12: w_alu = {16'h00, r_carry};
         5'h13: w_alu = {1'b0, ~T};
         default: w_alu = 0;
     endcase
-
 
 wire w_op_alu_MEMT = (w_op_alu_op == 5'h3);
 
@@ -155,7 +159,7 @@ wire w_op_rsp_inc = (w_op_alu_rsp == 2'b01) || w_op_rsp_RPC;
 wire w_op_rsp_dec = (w_op_alu_rsp == 2'b10);
 
 // rjp
-wire [15:0] w_rjp_pc = r_pc + w_op_rjp_imm;
+wire [15:0] w_rjp_pc = r_pc + {{6{w_op_rjp_imm[9]}}, w_op_rjp_imm};
 
 wire w_op_rjp_cond_always      = ~w_op_rjp_cond[2];
 wire w_op_rjp_cond_zero        = (w_op_rjp_cond[2:0] == 3'b100) && (T==0);
@@ -205,7 +209,8 @@ always @(*)
             w_dspn = r_dsp;
     end else if (w_op_litl) begin
         w_dspn = r_dsp + 1;
-    end
+    end else
+        w_dspn = r_dsp;
 
 always @(posedge i_clk)
     if (i_reset)
@@ -237,6 +242,8 @@ always @(*) begin
                 w_rspn = r_rsp + 1;
             end else if (w_op_rsp_dec) begin
                 w_rspn = r_rsp - 1;
+            end else begin
+                w_rspn = r_rsp;
             end
         end else if (w_return) begin
             w_rspn = r_rsp - 1;
