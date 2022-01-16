@@ -370,6 +370,152 @@ int main(int argc, char *argv[]) {
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
+    {
+        printf("Test %d: ALU: ADD\n", count++);
+        uint16_t prog[] = {
+            LIT_L(1), 
+            LIT_L(10), 
+            ALU(ALU_ADD, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 11; t.n = 10; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: SUB\n", count++);
+        uint16_t prog[] = {
+            LIT_L(1), 
+            LIT_L(10), 
+            ALU(ALU_SUB, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = (uint16_t)(1-10); t.n = 10; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    } 
+
+    {
+        printf("Test %d: ALU: AND\n", count++);
+        uint16_t prog[] = {
+            LIT_L(15), 
+            LIT_L(7), 
+            ALU(ALU_AND, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 7; t.n = 7; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: OR\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0x0f), 
+            LIT_L(0x20), 
+            ALU(ALU_OR, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0x2f; t.n = 0x20; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: XOR\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xff), 
+            LIT_L(0x0f), 
+            ALU(ALU_XOR, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0xf0; t.n = 0x0f; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: LTS\n", count++);
+        uint16_t prog[] = {
+            LIT_L(1), 
+            LIT_L(2), 
+            ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0xffff; t.n = 0x2; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: LTS\n", count++);
+        uint16_t prog[] = {
+            LIT_L(2), 
+            LIT_L(1), 
+            ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0; t.n = 1; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: LTS\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xff), 
+            LIT_H(0xff), 
+            LIT_L(1), 
+            ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0xffff; t.n = 1; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: LTS\n", count++);
+        uint16_t prog[] = {
+            LIT_L(1),
+            LIT_L(0xff), 
+            LIT_H(0xff), 
+            ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0; t.n = 0xffff; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: LT\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xff), 
+            LIT_H(0xff), 
+            LIT_L(1),
+            ALU(ALU_LT, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0; t.n = 1; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: ALU: LT\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0xff), 
+            LIT_H(0xff), 
+            LIT_L(1),
+            ALU(ALU_LT, 0, DST_T, DSP_I, 0),
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 0; t.n = 1; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
 done:
     pCore->final();
 
