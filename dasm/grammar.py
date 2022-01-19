@@ -8,6 +8,7 @@ label: CNAME ":"
 _op:  call
     | litl
     | lith
+    | lit
     | rj
     | alu
 
@@ -19,8 +20,8 @@ _dir: equ
 
 call: CALL (CNAME | UNSIGNED_NUMBER)
 litl: LITL UNSIGNED_NUMBER
-lith: LITH UNSIGNED_NUMBER
-lit:  LIT SIGNED_NUMBER
+lith: LITH UNSIGNED_NUMBER RETBIT?
+lit:  LIT (CNAME | UNSIGNED_NUMBER) RETBIT?
 rj: (RJP | RJZ | RJNZ | RJN | RJNN ) (CNAME | SIGNED_NUMBER)
 alu: "a:"i _aluop _dst _ret? _dsp? _rsp?
 
@@ -53,6 +54,8 @@ org: ORG UNSIGNED_NUMBER
 ascii: (ASCII|ASCIIZ) STRING
 word: WORD [SIGNED_NUMBER|CNAME] ("," [SIGNED_NUMBER|CNAME])*
 cstr: CSTR STRING
+
+RETBIT: "[ret]"i
 
 CALL: "call"i
 LITL: "litl"i
@@ -104,7 +107,7 @@ CSTR: ".cstr"i
 
 
 SIGNED_INT: ["+"|"-"] INT
-HEX: "$" HEXDIGIT+
+HEX: ("$" | "0x"i) HEXDIGIT+
 SIGNED_HEX: ["+"|"-"] HEX
 
 OFFSET: ("+"|"-")(HEX|INT)

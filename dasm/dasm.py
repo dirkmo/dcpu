@@ -19,6 +19,10 @@ class dcpuTransformer(lark.Transformer):
         a.append(Instruction.OpLith(a))
         return a
 
+    def lit(self, a):
+        a.append(Instruction.OpLit(a))
+        return a
+
     def rj(self, a):
         a.append(Instruction.OpRelJmp(a))
         return a

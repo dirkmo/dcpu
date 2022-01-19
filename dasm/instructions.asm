@@ -5,6 +5,10 @@ call start
 
 litl 123
 lith 80
+lith 90 [ret]
+lit 0xffff
+lit start
+lit start [ret]
 
 rj start
 rj -4
