@@ -3,37 +3,52 @@ import sys
 import os
 import lark
 import grammar
+import Instruction
+from Program import Program
 
 class dcpuTransformer(lark.Transformer):
-
     def call(self, a):
+        a.append(Instruction.OpCall(a))
         return a
 
     def litl(self, a):
+        a.append(Instruction.OpLitl(a))
         return a
 
     def lith(self, a):
+        a.append(Instruction.OpLith(a))
         return a
 
     def rj(self, a):
+        a.append(Instruction.OpRelJmp(a))
         return a
 
     def alu(self, a):
+        a.append(Instruction.OpAlu(a))
         return a
 
     def equ(self, a):
+        a.append(Instruction.OpEqu(a))
         return a
 
     def label(self, a):
+        a.append(Instruction.OpLabel(a))
         return a
 
     def org(self, a):
+        a.append(Instruction.OpOrg(a))
         return a
 
     def word(self, a):
+        a.append(Instruction.OpWord(a))
         return a
 
     def ascii(self, a):
+        a.append(Instruction.OpAscii(a))
+        return a
+    
+    def cstr(self, a):
+        a.append(Instruction.OpCstr(a))
         return a
 
 
@@ -59,8 +74,10 @@ def main():
     print(t.pretty())
     print(t)
 
-    # n = dcpuTransformer().transform(t)
-    # print(n)
+    n = dcpuTransformer().transform(t)
+    print(n)
+
+    program = Program(n.children)
 
     # for c in n.children:
     #     print(c)
