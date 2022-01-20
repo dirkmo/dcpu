@@ -7,6 +7,7 @@ litl 123
 lith 80
 lith 90 [ret]
 lit 0xffff
+lit -1
 lit start
 lit start [ret]
 
