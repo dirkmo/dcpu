@@ -23,7 +23,7 @@ litl: LITL UNSIGNED_NUMBER
 lith: LITH UNSIGNED_NUMBER RETBIT?
 lit:  LIT (CNAME | SIGNED_NUMBER) RETBIT?
 rj: (RJP | RJZ | RJNZ | RJN | RJNN ) (CNAME | SIGNED_NUMBER)
-alu: "a:"i _aluop _dst _ret? _dsp? _rsp?
+alu: "a:"i _aluop _dst RETBIT? _dsp? _rsp?
 
 _aluop: ALU_T
     | ALU_N
@@ -35,6 +35,8 @@ _aluop: ALU_T
     | AND
     | OR
     | XOR
+    | LT
+    | LTS
     | SL
     | SLW
     | SR
@@ -47,7 +49,6 @@ _aluop: ALU_T
 _dst: DST_T | DST_R | DST_MEM | DST_PC
 _dsp: DP | DM
 _rsp: RP | RM | RPC
-_ret: RET
 
 equ: EQU CNAME SIGNED_NUMBER
 org: ORG UNSIGNED_NUMBER
@@ -77,8 +78,6 @@ RP: "r+"i
 RM: "r-"i
 RPC: "r+pc"i
 
-RET:  "ret"i
-
 ALU_T: "t"i
 ALU_N: "n"i
 ALU_R: "r"i
@@ -89,14 +88,16 @@ MUL:  "mul"i
 AND:  "and"i
 OR:   "or"i
 XOR:  "xor"i
-SL:  "sl"i
-SLW: "slw"i
-SR:  "sr"i
-SRW: "srw"i
-JZ: "jz"i
-JNZ: "jnz"i
+LT:   "lt"i
+LTS:  "lts"i
+SR:   "sr"i
+SRW:  "srw"i
+SL:   "sl"i
+SLW:  "slw"i
+JZ:   "jz"i
+JNZ:  "jnz"i
 CARRY: "c"i
-INV: "inv"i
+INV:  "inv"i
 
 EQU:  ".equ"i
 ORG:  ".org"i

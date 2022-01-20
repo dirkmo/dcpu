@@ -18,7 +18,7 @@ rj.nz 5
 rj.n 5
 rj.nn 5
 
-a:t mem ret d+ r-
+a:t mem [ret] d+ r-
 a:JZ pc r+pc
 
 
