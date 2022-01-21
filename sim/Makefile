@@ -18,7 +18,7 @@ endif
 CXXFLAGS=-g -Wall -O0
 
 CPPSRC=sim.cpp
-VERILOGSRC=../rtl/dcpu.v
+VERILOGSRC=top.v ../rtl/dcpu.v uartmaster/fifo.v uartmaster/UartProtocol.v uartmaster/UartMasterSlave.v uartmaster/uart_tx.v uartmaster/uart_rx.v
 
 all: top
 
@@ -26,10 +26,10 @@ verilator: $(CPPSRC) $(VERILOGSRC)
 	verilator $(VFLAGS) $(VERILOGSRC) $(CPPSRC)
 
 top: verilator
-	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vdcpu.mk
+	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vtop.mk
 
 sim: top
-	$(VERILATOR_OUTPUTDIR)/Vdcpu -t
+	$(VERILATOR_OUTPUTDIR)/Vtop -t
 
 wave: sim
 	gtkwave sim.gtkw &

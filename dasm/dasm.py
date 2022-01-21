@@ -75,11 +75,11 @@ def main():
     contents = "".join(lines)
 
     t = l.parse(contents)
-    print(t.pretty())
-    print(t)
+    # print(t.pretty())
+    # print(t)
 
     n = dcpuTransformer().transform(t)
-    print(n)
+    # print(n)
 
     program = Program(n.children)
 

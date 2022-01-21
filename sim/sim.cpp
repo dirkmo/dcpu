@@ -2,9 +2,7 @@
 #include <string.h>
 #include <verilated_vcd_c.h>
 #include "verilated.h"
-#include "Vdcpu.h"
-#include "Vdcpu_dcpu.h"
-#include "dcpu.h"
+#include "Vtop.h"
 
 using namespace std;
 

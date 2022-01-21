@@ -1,3 +1,5 @@
+`default_nettype none
+
 module dcpu(
     input i_reset,
     input i_clk,
@@ -9,7 +11,7 @@ module dcpu(
     output         o_we,
     output         o_cs,
 
-    input          i_irq
+    input          i_irq // TODO: implement interrupt handling
 );
 
 parameter
