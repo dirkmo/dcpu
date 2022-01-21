@@ -114,7 +114,7 @@ class OpLit(OpBase):
         if sym or (v >= (1<<13)) or ret:
             ops.append(OpBase.OP_LITH | ((v>>8)&0xff) | (ret << 8))
 
-        return [ops]
+        return ops
 
 
 class OpRelJmp(OpBase):

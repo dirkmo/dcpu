@@ -83,11 +83,12 @@ def main():
 
     program = Program(n.children)
 
-    # for c in n.children:
-    #     print(c)
-
-    # fn_noext = os.path.splitext(fn)[0]
-
+    fn_noext = os.path.splitext(fn)[0]
+    program.write_as_bin(fn_noext+".bin")
+    program.write_as_memfile(fn_noext+".mem")
+    program.write_as_cfile(fn_noext+".c")
+    program.write_as_listing(fn_noext+".list", lines)
+    program.write_symbols(fn_noext+".symbols")
 
 if __name__ == "__main__":
     sys.exit(main())

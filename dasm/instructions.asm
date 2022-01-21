@@ -1,7 +1,6 @@
-start:
-
 call 1234
-call start
+
+start: call start
 
 litl 123
 lith 80
@@ -27,4 +26,4 @@ a:JZ pc r+pc
 .org $200
 .equ Name 123
 .asciiz "Hallo"
-.ascii "ohne null"
+.ascii "ohne null!"
