@@ -235,13 +235,13 @@ always @(*)
 always @(posedge i_clk)
     if (i_reset)
         r_dsp <= {DSS{1'b1}};
-    else if(s_execute)
+    else if(s_execute && w_state_changed)
         r_dsp <= w_dspn;
 
 // dstack
 reg [15:0] r_dstack[0:2**DSS-1] /* verilator public */;
 always @(posedge i_clk)
-    if (s_execute) begin
+    if (s_execute && w_state_changed) begin
         if (w_op_litl)
             r_dstack[w_dspn] <= {3'b000, w_op_litl_val[12:0]};
         else if (w_op_lith)
@@ -276,13 +276,13 @@ end
 always @(posedge i_clk)
     if (i_reset)
         r_rsp <= {RSS{1'b1}};
-    else if (s_execute)
+    else if (s_execute && w_state_changed)
         r_rsp <= w_rspn;
 
 // rstack
 reg [15:0] r_rstack[0:2**RSS-1] /* verilator public */;
 always @(posedge i_clk)
-    if (s_execute) begin
+    if (s_execute && w_state_changed) begin
         r_rstack[w_rspn] <= w_op_call ? (r_pc+1) :
             w_op_alu_RPC_branch_taken ? (r_pc+1) :
                        w_op_alu_dst_R ? w_alu[15:0] :
