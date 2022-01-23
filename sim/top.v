@@ -33,7 +33,6 @@ wire i_uart_slave_we;
 reg uart_slave_cs;
 wire o_uart_uart_reset;
 wire o_uart_uart_int;
-wire o_slave_ack;
 reg mem_cs;
 wire o_uart_int;
 wire o_uart_reset;
@@ -88,7 +87,7 @@ always @(*) begin
 end
 
 assign i_cpu_dat = uart_slave_cs ? {8'h00, o_uart_slave_dat} : i_dat;
-assign i_cpu_ack = uart_slave_cs ? o_slave_ack : i_ack;
+assign i_cpu_ack = uart_slave_cs ? o_uart_slave_ack : i_ack;
 assign o_dat = o_cpu_dat;
 assign o_we = cpu_we;
 assign o_cs = mem_cs;

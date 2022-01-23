@@ -23,6 +23,11 @@ localparam
     EXECUTE = 1;
 
 reg r_state /* verilator public */; // state machine
+reg r_state_prev;
+wire w_state_changed = (r_state_prev != r_state);
+always @(posedge i_clk)
+    r_state_prev <= r_state;
+
 reg [15:0] r_pc /* verilator public */; // program counter
 
 wire s_fetch   /* verilator public */ = (r_state == FETCH);
@@ -207,7 +212,7 @@ always @(*)
 always @(posedge i_clk)
     if(i_reset)
         r_pc <= 0;
-    else if(s_execute)
+    else if(s_execute && w_state_changed)
         r_pc <= w_pcn;
 
 
@@ -305,7 +310,6 @@ begin
             end
         end
         EXECUTE: begin
-            $display("EXECUTE");
             if (~w_all_mem_accesses || i_ack)
                 r_state <= FETCH;
         end
@@ -328,10 +332,8 @@ assign o_dat = w_alu[15:0];
 `ifdef SIM
 // for simulation
 always @(posedge i_clk)
-    if (w_op_sim_end) begin
-        $display("SIMULATION FINISHED!!!!!");
+    if (w_op_sim_end)
         $finish();
-    end
 `endif
 
 endmodule
