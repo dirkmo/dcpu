@@ -90,6 +90,19 @@ int program_load(const char *fn, vector<uint16_t>& prog) {
     return 0;
 }
 
+void print_cpustate(Vtop *pCore) {
+    printf("D(%d):", pCore->top->cpu0->r_dsp);
+    for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
+        printf(" %x", pCore->top->cpu0->r_dstack[i]);
+    }
+    printf("\n");
+    printf("R(%d): ", pCore->top->cpu0->r_rsp);
+    for (int i = 0; i <= pCore->top->cpu0->r_rsp; i++) {
+        printf(" %x", pCore->top->cpu0->r_rstack[i]);
+    }
+    printf("\n");
+}
+
 int main(int argc, char *argv[]) {
     Verilated::traceEverOn(true);
     pCore = new Vtop();
@@ -118,7 +131,7 @@ int main(int argc, char *argv[]) {
             break;
         }
         tick();
-        printf("%d: pc: %04x, dsp: %x, T: %04x, N: %04x\n", step, pCore->top->cpu0->r_pc, pCore->top->cpu0->r_dsp, pCore->top->cpu0->T, pCore->top->cpu0->N);
+        print_cpustate(pCore);
         step++;
     }
 
