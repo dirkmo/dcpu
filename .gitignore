@@ -1,2 +1,7 @@
 rtl/a.out
 dasm/__pycache__
+sim/test.bin
+sim/test.c
+sim/test.mem
+sim/test.list
+sim/test.symbols

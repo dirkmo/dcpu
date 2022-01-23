@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import sys
 import os
+import argparse
 import lark
 import grammar
 import Instruction
@@ -60,12 +61,14 @@ def main():
     print("dasm: Simple dcpu assembler\n")
     l = lark.Lark(grammar.grammar, start = "start")
 
-    if len(sys.argv) < 2:
-        print("Usage: dasm.py <asm file input>")
-        exit(1)
+    parser = argparse.ArgumentParser(description='dcpu assembler')
+    parser.add_argument("-i", help="Assembly input file", action="store", metavar="<input file>", type=str, required=True, dest="input_filename")
+    parser.add_argument("-o", help="Binary output file basename (without file extension)", metavar="<output file base name>", action="store", type=str, required=False, dest="output_filebase")
+
+    args = parser.parse_args()
 
     try:
-        fn = sys.argv[1]
+        fn = args.input_filename
         with open(fn) as f:
             lines = f.readlines()
     except:
@@ -79,16 +82,20 @@ def main():
     # print(t)
 
     n = dcpuTransformer().transform(t)
-    # print(n)
 
     program = Program(n.children)
 
-    fn_noext = os.path.splitext(fn)[0]
-    program.write_as_bin(fn_noext+".bin")
-    program.write_as_memfile(fn_noext+".mem")
-    program.write_as_cfile(fn_noext+".c")
-    program.write_as_listing(fn_noext+".list", lines)
-    program.write_symbols(fn_noext+".symbols")
+    if args.output_filebase == None:
+        (path, name) = os.path.split(fn) # remove path
+        outfn_noext = os.path.splitext(name)[0] # remove extension
+    else:
+        outfn_noext = args.output_filebase
+    
+    program.write_as_bin(outfn_noext+".bin")
+    program.write_as_memfile(outfn_noext+".mem")
+    program.write_as_cfile(outfn_noext+".c")
+    program.write_as_listing(outfn_noext+".list", lines)
+    program.write_symbols(outfn_noext+".symbols")
 
 if __name__ == "__main__":
     sys.exit(main())

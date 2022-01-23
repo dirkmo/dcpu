@@ -10,16 +10,16 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["instructions.asm"],
+            "args": ["-i", "instructions.asm"],
             "cwd": "${workspaceFolder}/dasm",
         },
         {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/sim/verilator/Vdcpu",
+            "program": "${workspaceFolder}/sim/verilator/Vtop",
             "args": [
-                "-t"
+                "test.bin"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/sim",
