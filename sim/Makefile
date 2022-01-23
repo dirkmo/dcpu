@@ -29,7 +29,8 @@ top: verilator
 	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vtop.mk
 
 sim: top
-	$(VERILATOR_OUTPUTDIR)/Vtop -t
+	../dasm/dasm.py -i test.asm -o test
+	$(VERILATOR_OUTPUTDIR)/Vtop test.bin
 
 wave: sim
 	gtkwave sim.gtkw &

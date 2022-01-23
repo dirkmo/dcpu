@@ -29,15 +29,19 @@ void opentrace(const char *vcdname) {
     }
 }
 
-void tick() {
-    pCore->i_clk = 0;
-    pCore->eval();
-    if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
-    tickcount += ts / 2;
-    pCore->i_clk = 1;
-    pCore->eval();
-    if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
-    tickcount += ts / 2;
+void tick(int t = 3) {
+    if (t&1) {
+        pCore->i_clk = 0;
+        pCore->eval();
+        if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
+        tickcount += ts / 2;
+    }
+    if (t&2) {
+        pCore->i_clk = 1;
+        pCore->eval();
+        if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
+        tickcount += ts / 2;
+    }
 }
 
 void reset() {
@@ -53,6 +57,7 @@ uint16_t mem[0x10000];
 int handle(Vtop *pCore) {
     if (pCore->o_cs) {
         pCore->i_dat = mem[pCore->o_addr];
+        printf("i_dat=%04x, o_addr=%04x\n", pCore->i_dat, pCore->o_addr);
         if (pCore->o_we) {
             mem[pCore->o_addr] = pCore->o_dat;
             printf("write [%04x] <- %04x\n", pCore->o_addr, pCore->o_dat);
@@ -67,7 +72,7 @@ int handle(Vtop *pCore) {
     return 0;
 }
 
-int program_load(const char *fn, vector<uint16_t>& prog) {
+int program_load(const char *fn, uint16_t offset) {
     FILE *f = fopen(fn, "rb");
     if (!f) {
         fprintf(stderr, "Failed to open file\n");
@@ -79,24 +84,24 @@ int program_load(const char *fn, vector<uint16_t>& prog) {
         fprintf(stderr, "Odd program size!\n");
         return -2;
     }
-    prog.resize(size/2);
     fseek(f, 0, SEEK_SET);
     for (int i = 0; i < size/2; i++) {
         uint16_t word;
         fread(&word, sizeof(uint16_t), 1, f);
-        prog[i] = (word >> 8) | ((word & 0xff) << 8);
+        mem[offset+i] = (word >> 8) | ((word & 0xff) << 8);
     }
     fclose(f);
     return 0;
 }
 
 void print_cpustate(Vtop *pCore) {
+    printf("PC %04x\n", pCore->top->cpu0->r_pc);
     printf("D(%d):", pCore->top->cpu0->r_dsp);
     for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
         printf(" %x", pCore->top->cpu0->r_dstack[i]);
     }
     printf("\n");
-    printf("R(%d): ", pCore->top->cpu0->r_rsp);
+    printf("R(%d):", pCore->top->cpu0->r_rsp);
     for (int i = 0; i <= pCore->top->cpu0->r_rsp; i++) {
         printf(" %x", pCore->top->cpu0->r_rstack[i]);
     }
@@ -109,29 +114,29 @@ int main(int argc, char *argv[]) {
 
     opentrace("trace.vcd");
 
+    printf("dcpu simulator\n");
     if (argc < 2) {
         fprintf(stderr, "Missing file name\n");
         return -1;
     }
     
-    vector<uint16_t> prog;
-    if (program_load(argv[1], prog)) {
+    if (program_load(argv[1], 0)) {
         fprintf(stderr, "ERROR: Failed to load file '%s'\n", argv[1]);
         return -2;
     }
 
-    for (auto& v: prog) {
-        printf("%04x ", v);
-    }
-    printf("\n");
     reset();
+    print_cpustate(pCore);
+
     int step = 0;
-    while(step < 4) {
+    while(step < 20) {
         if(handle(pCore)) {
             break;
         }
-        tick();
-        print_cpustate(pCore);
+        if (pCore->top->cpu0->s_execute) {
+            print_cpustate(pCore);
+        }
+        tick((step & 1) ? 1 : 2);
         step++;
     }
 

@@ -75,14 +75,14 @@ UartMasterSlave uart0(
     .o_reset(o_uart_reset)
 );
 
-always @(posedge i_clk) begin
-    uart_slave_cs <= 0;
-    mem_cs <= 0;
+always @(*) begin
+    uart_slave_cs = 0;
+    mem_cs = 0;
     if (cpu_cs) begin
         if (cpu_addr >= 16'hfffe) begin
-            uart_slave_cs <= 1;
+            uart_slave_cs = 1;
         end else begin
-            mem_cs <= 1;
+            mem_cs = 1;
         end
     end
 end
@@ -91,6 +91,7 @@ assign i_cpu_dat = uart_slave_cs ? {8'h00, o_uart_slave_dat} : i_dat;
 assign i_cpu_ack = uart_slave_cs ? o_slave_ack : i_ack;
 assign o_dat = o_cpu_dat;
 assign o_we = cpu_we;
-
+assign o_cs = mem_cs;
+assign o_addr = cpu_addr;
 
 endmodule
