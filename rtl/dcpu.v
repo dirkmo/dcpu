@@ -24,7 +24,7 @@ localparam
 
 reg r_state /* verilator public */; // state machine
 reg r_state_prev;
-wire w_state_changed = (r_state_prev != r_state);
+wire w_state_changed /* verilator public */ = (r_state_prev != r_state);
 always @(posedge i_clk)
     r_state_prev <= r_state;
 

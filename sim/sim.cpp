@@ -96,7 +96,7 @@ int program_load(const char *fn, uint16_t offset) {
 
 void print_cpustate(Vtop *pCore) {
     uint16_t pc = pCore->top->cpu0->r_pc;
-    printf("PC %04x: %04x\n", pc, dcpu_disasm(mem[pc]));
+    printf("PC %04x: %s\n", pc, dcpu_disasm(mem[pc]));
     printf("D(%d):", pCore->top->cpu0->r_dsp);
     for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
         printf(" %x", pCore->top->cpu0->r_dstack[i]);
@@ -133,10 +133,10 @@ int main(int argc, char *argv[]) {
         if(handle(pCore)) {
             break;
         }
-        if (pCore->top->cpu0->s_execute && (step&1)) {
+        tick((step & 1) ? 1 : 2);
+        if (pCore->top->cpu0->s_execute && pCore->top->cpu0->w_state_changed && (step&1)) {
             print_cpustate(pCore);
         }
-        tick((step & 1) ? 1 : 2);
         step++;
     }
 
