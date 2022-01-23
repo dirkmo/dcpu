@@ -25,8 +25,8 @@ localparam
 reg r_state /* verilator public */; // state machine
 reg [15:0] r_pc /* verilator public */; // program counter
 
-wire s_fetch   = (r_state == FETCH);
-wire s_execute = (r_state == EXECUTE);
+wire s_fetch   /* verilator public */ = (r_state == FETCH);
+wire s_execute /* verilator public */ = (r_state == EXECUTE);
 
 reg [15:0] r_op /* verilator public */; // instruction register
 always @(posedge i_clk)
@@ -69,6 +69,11 @@ wire w_op_lith = w_op_lit & r_op[13];
 wire [7:0] w_op_lith_val = r_op[7:0];
 // return field
 wire w_op_lith_return = r_op[8];
+
+`ifdef SIM
+// for simulation
+wire w_op_sim_end = w_op_lith & (r_op[12:9] == 4'b1111) && (r_op[8:0] == 9'h0);
+`endif
 
 // relative jumps: 111 <cond:3> <offs:10>
 wire w_op_rjp  = (r_op[15:13] == 3'b111);
@@ -300,6 +305,7 @@ begin
             end
         end
         EXECUTE: begin
+            $display("EXECUTE");
             if (~w_all_mem_accesses || i_ack)
                 r_state <= FETCH;
         end
@@ -318,5 +324,14 @@ assign o_cs = i_reset ? 0 : w_all_mem_accesses;
 assign o_we = w_op_mem_access && w_op_alu_dst_MEMT;
 
 assign o_dat = w_alu[15:0];
+
+`ifdef SIM
+// for simulation
+always @(posedge i_clk)
+    if (w_op_sim_end) begin
+        $display("SIMULATION FINISHED!!!!!");
+        $finish();
+    end
+`endif
 
 endmodule

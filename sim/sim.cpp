@@ -57,7 +57,6 @@ uint16_t mem[0x10000];
 int handle(Vtop *pCore) {
     if (pCore->o_cs) {
         pCore->i_dat = mem[pCore->o_addr];
-        printf("i_dat=%04x, o_addr=%04x\n", pCore->i_dat, pCore->o_addr);
         if (pCore->o_we) {
             mem[pCore->o_addr] = pCore->o_dat;
             printf("write [%04x] <- %04x\n", pCore->o_addr, pCore->o_dat);
@@ -95,7 +94,8 @@ int program_load(const char *fn, uint16_t offset) {
 }
 
 void print_cpustate(Vtop *pCore) {
-    printf("PC %04x\n", pCore->top->cpu0->r_pc);
+    uint16_t pc = pCore->top->cpu0->r_pc;
+    printf("PC %04x: %04x\n", pc, mem[pc]);
     printf("D(%d):", pCore->top->cpu0->r_dsp);
     for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
         printf(" %x", pCore->top->cpu0->r_dstack[i]);
@@ -126,20 +126,22 @@ int main(int argc, char *argv[]) {
     }
 
     reset();
-    print_cpustate(pCore);
 
     int step = 0;
-    while(step < 20) {
+    while(step < 30 && !Verilated::gotFinish()) {
         if(handle(pCore)) {
             break;
         }
-        if (pCore->top->cpu0->s_execute) {
+        if (pCore->top->cpu0->s_execute && (step&1)) {
             print_cpustate(pCore);
         }
         tick((step & 1) ? 1 : 2);
         step++;
     }
 
+    if(Verilated::gotFinish()) {
+        printf("Simulation finished\n");
+    }
 
     pCore->final();
 

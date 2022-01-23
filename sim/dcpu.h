@@ -16,6 +16,7 @@
 #define OP_LITH 0xa000
 #define OP_LITH_VAL(n) (n & MASK(8))
 #define OP_LITH_RET(r) ((r & 1) << 8)
+#define OP_LITH_UNUSED(u) ((r & 0xf) << 9)
 #define LIT_H(v) (OP_LITH | OP_LITH_RET(0) | OP_LITH_VAL(v))
 #define LIT_H_RET(v) (OP_LITH | OP_LITH_RET(1) | OP_LITH_VAL(v))
 
@@ -74,5 +75,8 @@
 #define ALU_JNZ     17
 #define ALU_CARRY   18
 #define ALU_INV     19
+
+// for simulation
+#define OP_SIM_END (OP_LITH | OP_LITH_UNUSED(0xf))
 
 #endif
