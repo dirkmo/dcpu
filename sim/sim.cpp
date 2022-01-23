@@ -111,16 +111,16 @@ int main(int argc, char *argv[]) {
         printf("%04x ", v);
     }
     printf("\n");
-    // reset();
-    // int step = 0;
-    // while(1) {
-    //     if(handle(pCore)) {
-    //         break;
-    //     }
-    //     tick();
-    //     printf("%d: pc: %04x, dsp: %x, T: %04x, N: %04x\n", step, pCore->top->cpu0->r_pc, pCore->top->cpu0->r_dsp, pCore->top->cpu0->T, pCore->top->cpu0->N);
-    //     step++;
-    // }
+    reset();
+    int step = 0;
+    while(step < 4) {
+        if(handle(pCore)) {
+            break;
+        }
+        tick();
+        printf("%d: pc: %04x, dsp: %x, T: %04x, N: %04x\n", step, pCore->top->cpu0->r_pc, pCore->top->cpu0->r_dsp, pCore->top->cpu0->T, pCore->top->cpu0->N);
+        step++;
+    }
 
 
     pCore->final();

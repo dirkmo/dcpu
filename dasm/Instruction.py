@@ -86,7 +86,7 @@ class OpLit(OpBase):
         super().__init__(tokens, OpBase.OPCODE)
     
     def len(self):
-        if self.tokens[1].type == "UNSIGNED_NUMBER":
+        if self.tokens[1].type == "SIGNED_NUMBER":
             v = convert_to_number(self.tokens[1].value)
             if v < (1<<13):
                 return 1

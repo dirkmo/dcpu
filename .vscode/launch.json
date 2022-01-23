@@ -10,7 +10,9 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "args": ["-i", "instructions.asm"],
+            "args": [
+                "-i", "${workspaceFolder}/sim/test.asm",
+                "-o", "${workspaceFolder}/sim/test"],
             "cwd": "${workspaceFolder}/dasm",
         },
         {
