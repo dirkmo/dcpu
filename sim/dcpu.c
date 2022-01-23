@@ -12,3 +12,7 @@ const char *disassembly[] = {
     "RJ.NN $%x",
     "A:%s %s [%s] %s %s"
 };
+
+int dcpu_disasm(uint16_t op) {
+    return 0;
+}

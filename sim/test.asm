@@ -5,6 +5,6 @@
 
 lit $44 # 'D'
 lit UART_TX
-a:n mem d-
+a:n mem
 
 .word SIM_END

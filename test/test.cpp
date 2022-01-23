@@ -4,7 +4,7 @@
 #include "verilated.h"
 #include "Vdcpu.h"
 #include "Vdcpu_dcpu.h"
-#include "dcpu.h"
+#include "dcpu-opcodes.h"
 
 using namespace std;
 

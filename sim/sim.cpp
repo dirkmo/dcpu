@@ -96,7 +96,7 @@ int program_load(const char *fn, uint16_t offset) {
 
 void print_cpustate(Vtop *pCore) {
     uint16_t pc = pCore->top->cpu0->r_pc;
-    printf("PC %04x: %04x\n", pc, mem[pc]);
+    printf("PC %04x: %04x\n", pc, dcpu_disasm(mem[pc]));
     printf("D(%d):", pCore->top->cpu0->r_dsp);
     for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
         printf(" %x", pCore->top->cpu0->r_dstack[i]);

@@ -26,7 +26,7 @@ module UartMasterSlave(
 );
 
 parameter
-    BAUDRATE /* verilator public */ = 115200,
+    BAUDRATE /* verilator public */ = 1152000,
     SYS_FREQ /* verilator public */ = 25000000;
 
 wire uart_tx_ready /* verilator public */;

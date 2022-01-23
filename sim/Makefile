@@ -4,11 +4,11 @@ UNAME := $(shell uname -s)
 
 VERILATOR_OUTPUTDIR = verilator
 
-INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include
+INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include -I/usr/share/verilator/include/vltstd
 
 DEFINES=+define+SIM=1
 
-VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" --trace --exe $(INCDIR) --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
+VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" --trace $(INCDIR) --exe --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
 GTKWAVE := gtkwave
 ifeq ($(UNAME),Darwin)
 VFLAGS += --compiler clang
@@ -17,12 +17,12 @@ endif
 
 CXXFLAGS=-g -Wall -O0
 
-CPPSRC=sim.cpp
+CPPSRC=sim.cpp dcpu.c
 VERILOGSRC=top.v ../rtl/dcpu.v uartmaster/fifo.v uartmaster/UartProtocol.v uartmaster/UartMasterSlave.v uartmaster/uart_tx.v uartmaster/uart_rx.v
 
 all: top
 
-verilator: $(CPPSRC) $(VERILOGSRC)
+verilator: $(VERILOGSRC) $(CPPSRC)
 	verilator $(VFLAGS) $(VERILOGSRC) $(CPPSRC)
 
 top: verilator
