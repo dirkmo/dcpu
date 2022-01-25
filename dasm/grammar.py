@@ -23,7 +23,7 @@ litl: LITL UNSIGNED_NUMBER
 lith: LITH UNSIGNED_NUMBER RETBIT?
 lit:  LIT (CNAME | SIGNED_NUMBER) RETBIT?
 rj: (RJP | RJZ | RJNZ | RJN | RJNN ) (CNAME | SIGNED_NUMBER)
-alu: "a:"i _aluop _dst RETBIT? _dsp? _rsp?
+alu: "a:"i _aluop _dst _dsp? _rsp? RETBIT?
 
 _aluop: ALU_T
     | ALU_N
