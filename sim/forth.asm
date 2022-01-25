@@ -86,9 +86,9 @@ _tuck_body:
 
 _wait_uart_tx_can_send: # ( -- )
             lit ADDR_UART_ST
-            a:mem t 
+            a:mem t
             lit MASK_UART_TX_FULL
-            a:and
+            a:and t d-
             rj.nz _wait_uart_tx_can_send
             a:t t [ret]
 
@@ -105,9 +105,9 @@ _emit_body:
 
 _wait_uart_rx_has_data: # ( -- )
             lit ADDR_UART_ST
-            a:mem t 
+            a:mem t
             lit MASK_UART_RX_EMPTY
-            a:and
+            a:and t d-
             rj.z _wait_uart_rx_has_data
             a:t t [ret]
 
