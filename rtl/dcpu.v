@@ -81,6 +81,7 @@ wire w_op_sim_end = w_op_lith & (r_op[12:9] == 4'b1111) && (r_op[8:0] == 9'h0);
 `endif
 
 // relative jumps: 111 <cond:3> <offs:10>
+// rjumps with condition pop the dstack
 wire w_op_rjp  = (r_op[15:13] == 3'b111);
 // rjp fields
 wire [2:0] w_op_rjp_cond = r_op[12:10];
@@ -187,6 +188,8 @@ wire w_op_rjp_cond_notzero     = (w_op_rjp_cond[2:0] == 3'b101) && (T!=0);
 wire w_op_rjp_cond_negative    = (w_op_rjp_cond[2:0] == 3'b110) && T[15];
 wire w_op_rjp_cond_notnegative = (w_op_rjp_cond[2:0] == 3'b111) && ~T[15];
 
+wire w_op_rjp_with_cond = w_op_rjp && w_op_rjp_cond[2];
+
 wire w_op_rjp_cond_fullfilled =
     w_op_rjp_cond_always ||
     w_op_rjp_cond_zero ||
@@ -229,6 +232,8 @@ always @(*)
             w_dspn = r_dsp;
     end else if (w_op_litl) begin
         w_dspn = r_dsp + 1;
+    end else if (w_op_rjp_with_cond) begin
+        w_dspn = r_dsp - 1;
     end else
         w_dspn = r_dsp;
 

@@ -8,7 +8,7 @@ INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include -I/usr/share/veri
 
 DEFINES=+define+SIM=1
 
-VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" --trace $(INCDIR) --exe --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
+VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" -LDFLAGS "$(LDFLAGS)" --trace $(INCDIR) --exe --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
 GTKWAVE := gtkwave
 ifeq ($(UNAME),Darwin)
 VFLAGS += --compiler clang
@@ -16,6 +16,7 @@ GTKWAVE := /Applications/gtkwave.app/Contents/MacOS/gtkwave-bin
 endif
 
 CXXFLAGS=-g -Wall -O0
+LDFLAGS=-lreadline
 
 CPPSRC=sim.cpp dcpu.c
 VERILOGSRC=top.v ../rtl/dcpu.v uartmaster/fifo.v uartmaster/UartProtocol.v uartmaster/UartMasterSlave.v uartmaster/uart_tx.v uartmaster/uart_rx.v
@@ -29,8 +30,8 @@ top: verilator
 	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vtop.mk
 
 sim: top
-	../dasm/dasm.py -i test.asm -o test
-	$(VERILATOR_OUTPUTDIR)/Vtop test.bin
+	../dasm/dasm.py -i forth.asm -o forth
+	$(VERILATOR_OUTPUTDIR)/Vtop forth.bin
 
 wave: sim
 	gtkwave sim.gtkw &

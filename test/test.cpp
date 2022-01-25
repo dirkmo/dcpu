@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: RJZ, branch taken\n", count++);
         uint16_t prog[] = { LIT_L(0x0), RJP(COND_RJP_ZERO, 2), LIT_L(0x1), LIT_L(0x2), 0xffff };
         test_t t = new_test();
-        t.t = 0x2; t.n = 0; t.r = -1; t.pc = 4; t.dsp = 1; t.rsp = -1;
+        t.t = 0x2; t.n = -1; t.r = -1; t.pc = 4; t.dsp = 0; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
@@ -216,7 +216,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: RJZ, branch not taken\n", count++);
         uint16_t prog[] = { LIT_L(0xf), RJP(COND_RJP_ZERO, 2), LIT_L(0x1), LIT_L(0x2), 0xffff };
         test_t t = new_test();
-        t.t = 0x2; t.n = 0x1; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
+        t.t = 0x2; t.n = 0x1; t.r = -1; t.pc = 4; t.dsp = 1; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
@@ -224,7 +224,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: RJNZ, branch taken\n", count++);
         uint16_t prog[] = { LIT_L(0xf), RJP(COND_RJP_NONZERO, 2), LIT_L(0x1), LIT_L(0x2), 0xffff };
         test_t t = new_test();
-        t.t = 0x2; t.n = 0xf; t.r = -1; t.pc = 4; t.dsp = 1; t.rsp = -1;
+        t.t = 0x2; t.n = -1; t.r = -1; t.pc = 4; t.dsp = 0; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
@@ -232,7 +232,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: RJNZ, branch not taken\n", count++);
         uint16_t prog[] = { LIT_L(0x0), RJP(COND_RJP_NONZERO, 2), LIT_L(0x1), LIT_L(0x2), 0xffff };
         test_t t = new_test();
-        t.t = 0x2; t.n = 0x1; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
+        t.t = 0x2; t.n = 0x1; t.r = -1; t.pc = 4; t.dsp = 1; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
@@ -240,7 +240,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: RJN, branch taken\n", count++);
         uint16_t prog[] = { LIT_L(0x00), LIT_H(0x80), RJP(COND_RJP_NEG, 2), LIT_L(0x3), LIT_L(0x4), 0xffff };
         test_t t = new_test();
-        t.t = 0x4; t.n = 0x8000; t.r = -1; t.pc = 5; t.dsp = 1; t.rsp = -1;
+        t.t = 0x4; t.n = -1; t.r = -1; t.pc = 5; t.dsp = 0; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
@@ -248,7 +248,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: RJNN, branch not taken\n", count++);
         uint16_t prog[] = { LIT_L(0x0), RJP(COND_RJP_NEG, 2), LIT_L(0x1), LIT_L(0x2), 0xffff };
         test_t t = new_test();
-        t.t = 0x2; t.n = 0x1; t.r = -1; t.pc = 4; t.dsp = 2; t.rsp = -1;
+        t.t = 0x2; t.n = 0x1; t.r = -1; t.pc = 4; t.dsp = 1; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
