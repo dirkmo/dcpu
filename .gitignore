@@ -1,7 +1,8 @@
 rtl/a.out
 dasm/__pycache__
-sim/test.bin
+sim/*.bin
+sim/*.symbols
+sim/*.list
+sim/*.mem
 sim/test.c
-sim/test.mem
-sim/test.list
-sim/test.symbols
+sim/forth.c

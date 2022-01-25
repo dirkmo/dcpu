@@ -81,7 +81,7 @@ wire w_op_sim_end = w_op_lith & (r_op[12:9] == 4'b1111) && (r_op[8:0] == 9'h0);
 `endif
 
 // relative jumps: 111 <cond:3> <offs:10>
-// rjumps with condition pop the dstack
+// hint: rjumps with condition pop the dstack
 wire w_op_rjp  = (r_op[15:13] == 3'b111);
 // rjp fields
 wire [2:0] w_op_rjp_cond = r_op[12:10];
