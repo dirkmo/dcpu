@@ -69,7 +69,12 @@ wire w_op_litl = w_op_lit & ~r_op[13];
 wire [12:0] w_op_litl_val = r_op[12:0];
 
 // literal upper part: 101 <unused:4> <return:1> <imm:8>
-wire w_op_lith = w_op_lit & r_op[13];
+`ifdef SIM
+wire w_op_lith = w_op_lit && r_op[13] && (r_op[12:9] != 4'b1111);
+`else
+wire w_op_lith = w_op_lit && r_op[13];
+`endif
+
 // immh field
 wire [7:0] w_op_lith_val = r_op[7:0];
 // return field
@@ -77,7 +82,7 @@ wire w_op_lith_return = r_op[8];
 
 `ifdef SIM
 // for simulation
-wire w_op_sim_end = w_op_lith & (r_op[12:9] == 4'b1111) && (r_op[8:0] == 9'h0);
+wire w_op_sim_end = w_op_lit && (r_op[13:9] == 5'b11111) && (r_op[8:0] == 9'h0);
 `endif
 
 // relative jumps: 111 <cond:3> <offs:10>
@@ -264,7 +269,7 @@ always @(*) begin
             w_rspn = r_rsp + 1;
         end else if (w_op_rsp_RPC && w_op_alu_j_cond_fullfilled) begin
             w_rspn = r_rsp + 1;
-        end else if (w_op_rsp_dec) begin
+        end else if (w_op_rsp_dec || w_return) begin
             w_rspn = r_rsp - 1;
         end else begin
             w_rspn = r_rsp;
