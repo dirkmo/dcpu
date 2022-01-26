@@ -152,13 +152,15 @@ always @(*)
         5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JNZ
         5'h12: w_alu = {16'h00, r_carry};
         5'h13: w_alu = {1'b0, ~T};
+        5'h14: w_alu = {1'b0, T}; // for NOP
         default: w_alu = 0;
     endcase
 
 // side effects for alu operations
-wire w_op_alu_MEMT = (w_op_alu_op == 5'h3);
-wire w_op_alu_jz   = (w_op_alu_op == 5'h10);
-wire w_op_alu_jnz  = (w_op_alu_op == 5'h11);
+wire w_op_alu_nop  = w_op_alu && (w_op_alu_op == 5'h14);
+wire w_op_alu_MEMT = w_op_alu && (w_op_alu_op == 5'h3) && ~w_op_alu_nop;
+wire w_op_alu_jz   = w_op_alu && (w_op_alu_op == 5'h10);
+wire w_op_alu_jnz  = w_op_alu && (w_op_alu_op == 5'h11);
 wire w_op_alu_j_cond_fullfilled = (w_op_alu_jz  && (T==0))
                                || (w_op_alu_jnz && (T!=0));
 wire w_op_alu_RPC_branch_taken = w_op_alu && w_op_rsp_RPC && w_op_alu_j_cond_fullfilled;
@@ -256,7 +258,7 @@ always @(posedge i_clk)
             r_dstack[w_dspn] <= {3'b000, w_op_litl_val[12:0]};
         else if (w_op_lith)
             r_dstack[w_dspn] <= {w_op_lith_val[7:0], r_dstack[r_dsp][7:0]};
-        else if (w_op_alu && w_op_alu_dst_T)
+        else if (w_op_alu && w_op_alu_dst_T && ~w_op_alu_nop)
             r_dstack[w_dspn] <= w_alu[15:0];
     end
 
@@ -295,7 +297,7 @@ always @(posedge i_clk)
     if (s_execute && w_state_changed) begin
         r_rstack[w_rspn] <= w_op_call ? (r_pc+1) :
             w_op_alu_RPC_branch_taken ? (r_pc+1) :
-                       w_op_alu_dst_R ? w_alu[15:0] :
+      w_op_alu_dst_R && ~w_op_alu_nop ? w_alu[15:0] :
                                         r_rstack[w_rspn];
     end
 

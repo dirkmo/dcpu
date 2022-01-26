@@ -75,6 +75,7 @@
 #define ALU_JNZ     17
 #define ALU_CARRY   18
 #define ALU_INV     19
+#define ALU_NOP     20
 
 // for simulation
 #define OP_SIM_END (OP_LITH | OP_LITH_UNUSED(0xf))

@@ -14,8 +14,8 @@
 
 
 lit 1
-lit 0x1000
-call  _dup_body
+lit 2
+call  _tuck_body
 
 .word SIM_END
 
@@ -52,10 +52,10 @@ _swap:      # (a b -- b a)
             .cstr "swap"
             .word _dup_body
 _swap_body:
-            a:t r d- r+    # (a b -- a r:b)
-            a:t t d+       # (a r:b -- a a r:b)
-            a:r t d- r-    # (a a r:b -- b a)
-            a:r r d+ [ret] # (b a -- b a)
+            a:t r d- r+      # (a b -- a r:b)
+            a:t t d+         # (a r:b -- a a r:b)
+            a:r t d- r-      # (a a r:b -- b a)
+            a:nop t d+ [ret] # (b a -- b a)
 
 
 _over:      # (a b -- a b a)
@@ -75,7 +75,7 @@ _nip:       # (a b -- b)
             .cstr "nip"
             .word _rot_body
 _nip_body:  
-            a:n t d- [ret]
+            a:t t d- [ret]
 
 
 _tuck:      # (a b -- b a b)
@@ -83,7 +83,7 @@ _tuck:      # (a b -- b a b)
             .word _nip_body
 _tuck_body: 
             call _swap_body # ( a b -- b a)
-            call _over_body # ( b a -- b a b)
+            #call _over_body # ( b a -- b a b)
             a:t t [ret]
 
 

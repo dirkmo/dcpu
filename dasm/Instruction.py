@@ -171,6 +171,7 @@ class OpAlu(OpBase):
         "JNZ":     17 << 7,
         "CARRY":   18 << 7,
         "INV":     19 << 7,
+        "NOP":     20 << 7,
         # destination of alu op
         "DST_T":    0 << 4, # T = alu
         "DST_R":    1 << 4, # R = alu
@@ -197,6 +198,7 @@ class OpAlu(OpBase):
             assert t.type in self._options, f"ERROR on line {t.line}, column {t.column}: Unknown token '{t.value}'."
             op = op | self._options[t.type]
         assert op != 0
+        # TODO: prevent [ret] and r+
         return [op]
 
 

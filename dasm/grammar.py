@@ -45,6 +45,7 @@ _aluop: ALU_T
     | JNZ
     | CARRY
     | INV
+    | NOP
 
 _dst: DST_T | DST_R | DST_MEM | DST_PC
 _dsp: DP | DM
@@ -98,6 +99,7 @@ JZ:   "jz"i
 JNZ:  "jnz"i
 CARRY: "c"i
 INV:  "inv"i
+NOP:  "nop"i
 
 EQU:  ".equ"i
 ORG:  ".org"i
