@@ -32,13 +32,13 @@ _store:     # (d addr -- )
             .word _fetch_body
 _store_body:
             a:n mem d-
-            a:r r d- [ret]
+            a:nop r d- [ret]
 
 
 _drop:      .cstr "drop"
             .word _store_body
 _drop_body:
-            a:r r d- [ret]
+            a:nop t d- [ret]
 
 
 _dup:       # (a -- a a)
@@ -83,8 +83,8 @@ _tuck:      # (a b -- b a b)
             .word _nip_body
 _tuck_body: 
             call _swap_body # ( a b -- b a)
-            #call _over_body # ( b a -- b a b)
-            a:t t [ret]
+            call _over_body # ( b a -- b a b)
+            a:nop t [ret]
 
 
 _wait_uart_tx_can_send: # ( -- )
@@ -93,7 +93,7 @@ _wait_uart_tx_can_send: # ( -- )
             lit MASK_UART_TX_FULL
             a:and t d-
             rj.nz _wait_uart_tx_can_send
-            a:t t [ret]
+            a:nop t [ret]
 
 
 _emit:      # (c --)
