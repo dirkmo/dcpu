@@ -13,8 +13,11 @@
 # Hint how to inc/dec dsp:  a:r r d+
 
 
+lit 1
+lit 0x1000
+call  _dup_body
 
-rj 0
+.word SIM_END
 
 
 _fetch:     # (addr -- n)

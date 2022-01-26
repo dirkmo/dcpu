@@ -28,9 +28,9 @@ verilator: $(VERILOGSRC) $(CPPSRC)
 
 top: verilator
 	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vtop.mk
+	../dasm/dasm.py -i forth.asm -o forth
 
 sim: top
-	../dasm/dasm.py -i forth.asm -o forth
 	$(VERILATOR_OUTPUTDIR)/Vtop forth.bin
 
 wave: sim

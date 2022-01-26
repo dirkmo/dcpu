@@ -108,7 +108,7 @@ void print_cpustate(Vtop *pCore) {
         printf(" %x", pCore->top->cpu0->r_rstack[i]);
     }
     printf("\n");
-    printf("PC %04x: %s\n", pc, dcpu_disasm(mem[pc]));
+    printf("PC %04x: %s\n\n", pc, dcpu_disasm(mem[pc]));
 }
 
 int user_interaction(void) {
@@ -125,7 +125,7 @@ int main(int argc, char *argv[]) {
 
     opentrace("trace.vcd");
 
-    printf("dcpu simulator\n");
+    printf("dcpu simulator\n\n");
     if (argc < 2) {
         fprintf(stderr, "Missing file name\n");
         return -1;
@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
     }
 
     reset();
-
+    run = true;
     print_cpustate(pCore);
     int step = 0;
     while(step < 30 && !Verilated::gotFinish()) {
@@ -147,10 +147,11 @@ int main(int argc, char *argv[]) {
         if(handle(pCore)) {
             break;
         }
-        if (pCore->top->cpu0->s_fetch && pCore->top->cpu0->w_state_changed && (step&2)) {
+        if (pCore->top->cpu0->s_fetch && pCore->top->cpu0->w_state_changed) {
             print_cpustate(pCore);
         }
-        tick((step & 1) ? 1 : 2);
+        // tick((step & 1) ? 1 : 2);
+        tick(3);
         step++;
     }
 

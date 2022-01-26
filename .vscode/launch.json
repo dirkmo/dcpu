@@ -21,7 +21,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/sim/verilator/Vtop",
             "args": [
-                "test.bin"
+                "forth.bin"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/sim",
@@ -34,7 +34,8 @@
                     "text": "-enable-pretty-printing",
                     "ignoreFailures": true
                 }
-            ]
+            ],
+            "preLaunchTask": "build and simulate"
         }
     ]
 }
