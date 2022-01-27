@@ -14,7 +14,7 @@ module UartMasterSlave(
     input  [7:0] i_slave_data,
     output [7:0] o_slave_data,
     input        i_slave_addr,
-    output reg   o_slave_ack,
+    output       o_slave_ack,
     input        i_slave_we,
     input        i_slave_cs,
     output       o_int,
@@ -26,7 +26,7 @@ module UartMasterSlave(
 );
 
 parameter
-    BAUDRATE /* verilator public */ = 1152000,
+    BAUDRATE /* verilator public */ = 25000000 / 2,
     SYS_FREQ /* verilator public */ = 25000000;
 
 wire uart_tx_ready /* verilator public */;
@@ -138,8 +138,7 @@ wire [7:0] status = { 4'd0, fifo_tx_full, fifo_tx_empty, fifo_rx_full, fifo_rx_e
 
 assign o_slave_data = i_slave_addr ? fifo_rx_dat : status;
 
-always @(posedge i_clk)
-    o_slave_ack  <= i_slave_cs;
+assign o_slave_ack = i_slave_cs;
 
 assign fifo_tx_push = i_slave_cs && i_slave_we && i_slave_addr;
 assign fifo_rx_pop = i_slave_cs && ~i_slave_we && ~i_slave_addr;

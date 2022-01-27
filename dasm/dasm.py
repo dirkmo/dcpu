@@ -85,8 +85,8 @@ def main():
 
     program = Program(n.children)
 
+    (path, name) = os.path.split(fn) # remove path
     if args.output_filebase == None:
-        (path, name) = os.path.split(fn) # remove path
         outfn_noext = os.path.splitext(name)[0] # remove extension
     else:
         outfn_noext = args.output_filebase
@@ -96,6 +96,9 @@ def main():
     program.write_as_cfile(outfn_noext+".c")
     program.write_as_listing(outfn_noext+".list", lines)
     program.write_symbols(outfn_noext+".symbols")
+
+    size = program.end_address - program.start_address + 1
+    print(f"File '{name}' assembled\nOutput size: {size} words")
 
 if __name__ == "__main__":
     sys.exit(main())

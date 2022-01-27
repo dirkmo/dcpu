@@ -30,7 +30,7 @@ static void disasm_alu(char *s, uint16_t op) {
     int dst   = (op >> 4) & MASK(2);
     int dsp   = (op >> 2) & MASK(2);
     int rsp   = (op >> 0) & MASK(2);
-    sprintf(s, "%s %s %s %s %s", s_aluop[aluop], s_dst[dst], s_ret[ret], s_dsp[dsp], s_rsp[rsp]);
+    sprintf(s, "%s %s %s %s %s", s_aluop[aluop], s_dst[dst], s_dsp[dsp], s_rsp[rsp], s_ret[ret]);
 }
 
 const char *dcpu_disasm(uint16_t op) {

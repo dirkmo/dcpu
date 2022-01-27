@@ -12,9 +12,13 @@
 
 # Hint how to inc/dec dsp:  a:r r d+
 
+lit 65
+call _emit_body
+
 
 lit 1
 lit 2
+call  _tuck_body
 call  _tuck_body
 
 .word SIM_END
@@ -100,10 +104,10 @@ _emit:      # (c --)
             .cstr "emit"
             .word _tuck_body
 _emit_body:
-            call _wait_uart_tx_can_send
+            // call _wait_uart_tx_can_send
             lit ADDR_UART_TX
             call _store_body
-            a:r r [ret]
+            a:nop t [ret]
 
 
 _wait_uart_rx_has_data: # ( -- )
@@ -112,7 +116,7 @@ _wait_uart_rx_has_data: # ( -- )
             lit MASK_UART_RX_EMPTY
             a:and t d-
             rj.z _wait_uart_rx_has_data
-            a:t t [ret]
+            a:nop t [ret]
 
 
 _key:       # ( -- key)

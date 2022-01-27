@@ -18,7 +18,7 @@ endif
 CXXFLAGS=-g -Wall -O0
 LDFLAGS=-lreadline
 
-CPPSRC=sim.cpp dcpu.c
+CPPSRC=sim.cpp dcpu.c uart.cpp
 VERILOGSRC=top.v ../rtl/dcpu.v uartmaster/fifo.v uartmaster/UartProtocol.v uartmaster/UartMasterSlave.v uartmaster/uart_tx.v uartmaster/uart_rx.v
 
 all: top

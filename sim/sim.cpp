@@ -5,15 +5,23 @@
 #include "Vtop.h"
 #include "Vtop_top.h"
 #include "Vtop_dcpu.h"
+#include "Vtop_UartMasterSlave.h"
 #include "dcpu.h"
+#include "uart.h"
 #include <vector>
 #include <readline/readline.h>
 
 using namespace std;
 
 #define ARRSIZE(a) (sizeof(a) / sizeof(a[0]))
+#define BLACK "\033[30m"
 #define RED "\033[31m"
 #define GREEN "\033[32m"
+#define ORANGE "\033[33m"
+#define BLUE "\033[34m"
+#define PINK "\033[35m"
+#define CYAN "\033[36m"
+#define GREY "\033[37m"
 #define NORMAL "\033[0m"
 
 VerilatedVcdC *pTrace = NULL;
@@ -123,6 +131,9 @@ int main(int argc, char *argv[]) {
     Verilated::traceEverOn(true);
     pCore = new Vtop();
 
+    int uart_tick = pCore->top->uart0->SYS_FREQ / pCore->top->uart0->BAUDRATE;
+    uart_init(&pCore->i_uart_rx, &pCore->o_uart_tx, &pCore->i_clk, uart_tick);
+
     opentrace("trace.vcd");
 
     printf("dcpu simulator\n\n");
@@ -139,18 +150,21 @@ int main(int argc, char *argv[]) {
     reset();
     run = true;
     print_cpustate(pCore);
+    int rxbyte;
     int step = 0;
-    while(step < 30 && !Verilated::gotFinish()) {
+    while(step < 100 && !Verilated::gotFinish()) {
         if (!run) {
             user_interaction();
         }
         if(handle(pCore)) {
             break;
         }
+        if (uart_handle(&rxbyte)) {
+            printf(GREEN "UART-RX: " NORMAL "%c\n", rxbyte);
+        }
         if (pCore->top->cpu0->s_fetch && pCore->top->cpu0->w_state_changed) {
             print_cpustate(pCore);
         }
-        // tick((step & 1) ? 1 : 2);
         tick(3);
         step++;
     }
