@@ -1,7 +1,6 @@
 .equ ADDR_UART_ST $fffe
 .equ ADDR_UART_RX $ffff
 .equ ADDR_UART_TX $ffff
-# wire [7:0] status = { 4'd0, fifo_tx_full, fifo_tx_empty, fifo_rx_full, fifo_rx_empty };
 .equ MASK_UART_TX_FULL 8
 .equ MASK_UART_TX_EMPTY 4
 .equ MASK_UART_RX_FULL 2
@@ -18,7 +17,6 @@ call _emit_body
 
 lit 1
 lit 2
-call  _tuck_body
 call  _tuck_body
 
 .word SIM_END
@@ -104,7 +102,7 @@ _emit:      # (c --)
             .cstr "emit"
             .word _tuck_body
 _emit_body:
-            // call _wait_uart_tx_can_send
+            call _wait_uart_tx_can_send
             lit ADDR_UART_TX
             call _store_body
             a:nop t [ret]
