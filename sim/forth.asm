@@ -5,54 +5,84 @@
 .equ MASK_UART_TX_EMPTY 4
 .equ MASK_UART_RX_FULL 2
 .equ MASK_UART_RX_EMPTY 1
-
 .equ SIM_END $be00
 
 
-# Hint how to inc/dec dsp:  a:r r d+
-
-lit 65
-call _emit_body
-
-
-lit 1
-lit 2
-call  _tuck_body
 
 .word SIM_END
 
+# variables
+state: .word 0 # 0: interpreting, -1: compiling
+ntib: .word 9   # number of chars in tib
+tib: .ascii "drop dup "
+
+base: .word 10
+
+latest: .word 0 # last word in dictionary
+dp: .word 0 # first free cell after dict
+
+# dictionary
+
+_latest:    # ( -- addr)
+            .word 0
+            .cstr "latest"
+_latest_body:
+            lit latest [ret]
+
+
+_tib:       # ( -- addr)
+            .word _latest
+            .cstr "tib"
+_tib_body:
+            lit tib [ret]
+
+
+_to_in:     # ( -- n )
+            .word _tib
+            .cstr ">in"
+_to_in_body:
+            lit ntib [ret]
+
+
+_base:      # ( -- addr)
+            .word _to_in
+            .cstr "base"
+_base_body:
+            lit base [ret]
+
 
 _fetch:     # (addr -- n)
+            .word _base
             .cstr "@"
-            .word 0
 _fetch_body:
             a:mem t [ret]
 
 
 _store:     # (d addr -- )
+            .word _fetch
             .cstr "!"
-            .word _fetch_body
 _store_body:
             a:n mem d-
             a:nop r d- [ret]
 
 
-_drop:      .cstr "drop"
-            .word _store_body
+_drop:      ( n -- )
+            .word _store
+            .cstr "drop"
 _drop_body:
             a:nop t d- [ret]
 
 
 _dup:       # (a -- a a)
+            .word _drop
             .cstr "dup"
-            .word _drop_body
 _dup_body:
             a:t t d+ [ret]
 
 
 _swap:      # (a b -- b a)
+            .word _dup
             .cstr "swap"
-            .word _dup_body
 _swap_body:
             a:t r d- r+      # (a b -- a r:b)
             a:t t d+         # (a r:b -- a a r:b)
@@ -61,28 +91,28 @@ _swap_body:
 
 
 _over:      # (a b -- a b a)
+            .word _swap
             .cstr "over"
-            .word _swap_body
 _over_body:
             a:n t d+ [ret]
 
 
 _rot:       # (a b c -- b c a)
             .cstr "rot"
-            .word _over_body
+            .word _over
 _rot_body:  # todo
 
 
 _nip:       # (a b -- b)
-            .cstr "nip"
             .word _rot_body
+            .cstr "nip"
 _nip_body:  
             a:t t d- [ret]
 
 
 _tuck:      # (a b -- b a b)
+            .word _nip
             .cstr "tuck"
-            .word _nip_body
 _tuck_body: 
             call _swap_body # ( a b -- b a)
             call _over_body # ( b a -- b a b)
@@ -99,10 +129,9 @@ _wait_uart_tx_can_send: # ( -- )
 
 
 _emit:      # (c --)
+            .word _tuck
             .cstr "emit"
-            .word _tuck_body
-_emit_body:
-            call _wait_uart_tx_can_send
+_emit_body: call _wait_uart_tx_can_send
             lit ADDR_UART_TX
             call _store_body
             a:nop t [ret]
@@ -118,9 +147,18 @@ _wait_uart_rx_has_data: # ( -- )
 
 
 _key:       # ( -- key)
+            .word _emit
             .cstr "key"
-            .word _emit_body
 _key_body:
             call _wait_uart_rx_has_data
             lit ADDR_UART_RX
             a:mem t [ret]
+
+
+_word:      # ( delimiter -- addr-cstr)
+            .word _key
+            .cstr "word"
+_word_body:
+            call _tib_body
+            call _fetch_body
+            call _to_in_body
