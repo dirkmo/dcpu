@@ -7,9 +7,9 @@
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
 
-lit 3 # char-idx
-lit tib # str-addr
-call _strcfetch_body
+
+
+call _tibcfetch_body
 
 
 
@@ -18,39 +18,69 @@ call _strcfetch_body
 # variables
 state: .word 0 # 0: interpreting, -1: compiling
 ntib: .word 9   # number of chars in tib
-tib: .ascii "drop dup "
-
+tib: .ascii "drop dup " # input area
+to_in: .word 0  # current char idx in tib
 base: .word 10
-
 latest: .word 0 # last word in dictionary
 dp: .word 0 # first free cell after dict
-
+scratch: .space 33
 
 # dictionary
 
-_latest:    # ( -- addr)
+_add1:      # (n -- n+1)
             .word 0
+            .cstr "+1"
+_add1_body:
+            lit 1            # (n -- n 1)
+            a:add t d- [ret] # (n 1 -- n+1)
+
+
+_latest:    # ( -- addr)
+            .word _add1
             .cstr "latest"
 _latest_body:
             lit latest [ret]
 
 
 _tib:       # ( -- addr)
+            # input area as ascii string
             .word _latest
             .cstr "tib"
 _tib_body:
             lit tib [ret]
 
+_ntib:      # ( -- n)
+            # number of chars in input area
+            .word _tib
+            .cstr "#tib"
+_ntib_body:
+            lit ntib
+            a:mem t [ret]
+
 
 _to_in:     # ( -- n )
-            .word _tib
+            # return addr of index of current char in input buffer
+            .word _ntib
             .cstr ">in"
 _to_in_body:
-            lit ntib [ret]
+            lit to_in [ret]
+            
+
+
+_tibcfetch: # ( -- char)
+            # fetch char pointed to by >in from tib
+            .word _to_in
+            .cstr "tibc@"
+_tibcfetch_body:
+            call _to_in_body
+            call _fetch_body
+            call _tib_body
+            call _strcfetch_body
+            a:nop t [ret]
 
 
 _base:      # ( -- addr)
-            .word _to_in
+            .word _tibcfetch
             .cstr "base"
 _base_body:
             lit base [ret]
@@ -187,16 +217,34 @@ _cscfetch:  # (char-idx cstr-addr -- char)
             .cstr "csc@" # "counted string char fetch"
 _cscfetch_body:
             # add 1 because counted string
-            lit 1                 # (ci ca i -- ci ca i 1)
-            a:add t d-            # (ci ca i 1 -- ci ca i+1)
+            call _add1_body       # (ci ca i -- ci ca i+1)
             call _strcfetch_body  # (ci ca i+1 -- c)
             a:nop t [ret]
 
 
-_word:      # ( delimiter -- addr-cstr)
+_strtocstr:  # ( count idx addr -- cstr-a)
+            # means: copy chars to scratch area as c-str
             .word _cscfetch
+            .cstr "str>cstr"
+_strtocstr_body:
+            call _rot_body # (count idx addr -- idx addr count)
+            # set length field of c-str
+            call _dup_body # (count idx addr -- idx addr count count)
+            lit scratch    # (count idx addr -- idx addr count count addr)
+            call _store_body # (idx addr count count addr -- idx addr count)
+            # todo
+
+
+
+_word:      # (delimiter -- addr-str count)
+            # skip delimiters
+            # take idx of first non-delimiter
+            # 
+            .word _strtocstr
             .cstr "word"
 _word_body:
-            call _tib_body
+            call _tib_body    # (del -- del a)
+            call _dup_body    # (del a -- del a a)
+            call _to_in_body  # (del a a -- del a a idx)
             call _fetch_body
-            call _to_in_body
+            call _strcfetch_body # (del a -- )
