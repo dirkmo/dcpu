@@ -7,6 +7,10 @@
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
 
+lit 3 # char-idx
+lit tib # str-addr
+call _strcfetch_body
+
 
 
 .word SIM_END
@@ -20,6 +24,7 @@ base: .word 10
 
 latest: .word 0 # last word in dictionary
 dp: .word 0 # first free cell after dict
+
 
 # dictionary
 
@@ -66,7 +71,7 @@ _store_body:
             a:nop r d- [ret]
 
 
-_drop:      ( n -- )
+_drop:      # ( n -- )
             .word _store
             .cstr "drop"
 _drop_body:
@@ -104,7 +109,7 @@ _rot_body:  # todo
 
 
 _nip:       # (a b -- b)
-            .word _rot_body
+            .word _rot
             .cstr "nip"
 _nip_body:  
             a:t t d- [ret]
@@ -155,8 +160,41 @@ _key_body:
             a:mem t [ret]
 
 
-_word:      # ( delimiter -- addr-cstr)
+_strcfetch: # (char-idx str-addr -- c)
+            # fetch char at index from str
             .word _key
+            .cstr "sc@" # "string char fetch"
+_strcfetch_body:
+            call _over_body       # ( ci ca -- ci ca ci)
+            # divide index by 2
+            a:sr t                # (ci ca ci -- ci ca i)
+            # get addr of word containing char
+            a:add t d-            # (ci ca i -- ci ca+i)
+            call _fetch_body      # (ci ca+i -- ci w)
+            call _swap_body       # (ci w -- w ci)
+            lit 1                 # (w ci -- w ci 1)
+            a:and t d-            # (w ci 1 -- w ci&1)
+            # endianess is handled here:
+            rj.nz _strcf1         # (w ci&1 -- w) ; .nz oder .z ??
+            a:srw t               # (w -- w>>8)
+_strcf1:    lit $ff               # (w -- w $ff)
+            a:and t d- [ret]      # (w -- w&$ff)
+
+
+_cscfetch:  # (char-idx cstr-addr -- char)
+            # fetch char at index from cstr
+            .word _strcfetch
+            .cstr "csc@" # "counted string char fetch"
+_cscfetch_body:
+            # add 1 because counted string
+            lit 1                 # (ci ca i -- ci ca i 1)
+            a:add t d-            # (ci ca i 1 -- ci ca i+1)
+            call _strcfetch_body  # (ci ca i+1 -- c)
+            a:nop t [ret]
+
+
+_word:      # ( delimiter -- addr-cstr)
+            .word _cscfetch
             .cstr "word"
 _word_body:
             call _tib_body

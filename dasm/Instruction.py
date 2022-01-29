@@ -261,10 +261,10 @@ class OpAscii(OpBase):
         d = []
         for i in range(len(v)):
             if (i % 2) == 0:
-                a = (ord(v[i]) & 0xff)
+                a = ((ord(v[i]) & 0xff) << 8)
                 d.append(a)
             else:
-                d[-1] = d[-1] | ((ord(v[i]) & 0xff) << 8)
+                d[-1] = d[-1] | (ord(v[i]) & 0xff)
         return d
 
 
