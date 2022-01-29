@@ -17,6 +17,7 @@ _dir: equ
     | ascii
     | word
     | cstr
+    | space
 
 call: CALL (CNAME | UNSIGNED_NUMBER)
 litl: LITL UNSIGNED_NUMBER
@@ -56,6 +57,7 @@ org: ORG UNSIGNED_NUMBER
 ascii: (ASCII|ASCIIZ) STRING
 word: WORD [SIGNED_NUMBER|CNAME] ("," [SIGNED_NUMBER|CNAME])*
 cstr: CSTR STRING
+space: SPACE [UNSIGNED_NUMBER]
 
 RETBIT: "[ret]"i
 
@@ -107,7 +109,7 @@ WORD: ".word"i
 ASCII: ".ascii"i
 ASCIIZ: ".asciiz"i
 CSTR: ".cstr"i
-
+SPACE: ".space"i
 
 SIGNED_INT: ["+"|"-"] INT
 HEX: ("$" | "0x"i) HEXDIGIT+

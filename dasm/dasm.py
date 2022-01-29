@@ -55,6 +55,10 @@ class dcpuTransformer(lark.Transformer):
     def cstr(self, a):
         a.append(Instruction.OpCstr(a))
         return a
+    
+    def space(self, a):
+        a.append(Instruction.OpSpace(a))
+        return a
 
 
 def main():

@@ -288,3 +288,14 @@ class OpCstr(OpBase):
                 d[-1] = d[-1] | ((ord(v[i]) & 0xff) << 8)
         l = len(v)
         return [l] + d # the count is in chars, not words
+
+class OpSpace(OpBase):
+    def __init__(self, tokens):
+        super().__init__(tokens, OpBase.DATA)
+    
+    def len(self):
+        return convert_to_number(self.tokens[1].value)
+    
+    def data(self, symbols):
+        return [0] * self.len()
+    
