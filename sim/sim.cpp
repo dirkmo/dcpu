@@ -106,14 +106,18 @@ int program_load(const char *fn, uint16_t offset) {
 
 void print_cpustate(Vtop *pCore) {
     uint16_t pc = pCore->top->cpu0->r_pc;
-    printf("D(%d):", pCore->top->cpu0->r_dsp);
-    for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
-        printf(" %x", pCore->top->cpu0->r_dstack[i]);
+    printf("D(%d):", pCore->top->cpu0->r_dsp+1);
+    if (pCore->top->cpu0->r_dsp < 15) {
+        for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
+            printf(" %x", pCore->top->cpu0->r_dstack[i]);
+        }
     }
     printf("\n");
-    printf("R(%d):", pCore->top->cpu0->r_rsp);
-    for (int i = 0; i <= pCore->top->cpu0->r_rsp; i++) {
-        printf(" %x", pCore->top->cpu0->r_rstack[i]);
+    printf("R(%d):", pCore->top->cpu0->r_rsp+1);
+    if (pCore->top->cpu0->r_rsp < 15) {
+        for (int i = 0; i <= pCore->top->cpu0->r_rsp; i++) {
+            printf(" %x", pCore->top->cpu0->r_rstack[i]);
+        }
     }
     printf("\n");
     printf("PC %04x: %s\n\n", pc, dcpu_disasm(mem[pc]));
@@ -152,7 +156,7 @@ int main(int argc, char *argv[]) {
     print_cpustate(pCore);
     int rxbyte;
     int step = 0;
-    while(step < 100 && !Verilated::gotFinish()) {
+    while(step < 500 && !Verilated::gotFinish()) {
         if (!run) {
             user_interaction();
         }
@@ -171,6 +175,8 @@ int main(int argc, char *argv[]) {
 
     if(Verilated::gotFinish()) {
         printf("Simulation finished\n");
+    } else {
+        printf("Out of steps\n");
     }
 
     pCore->final();

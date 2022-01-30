@@ -6,10 +6,11 @@
 .equ MASK_UART_RX_FULL 2
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
+.equ TIB_BYTE_SIZE 80
 
 
-
-call _tibcfetch_body
+lit 32
+call _word_body
 
 
 
@@ -18,7 +19,8 @@ call _tibcfetch_body
 # variables
 state: .word 0 # 0: interpreting, -1: compiling
 ntib: .word 9   # number of chars in tib
-tib: .ascii "drop dup " # input area
+# tib: .space TIB_BYTE_SIZE
+tib: .ascii "   drop dup " # input buffer
 to_in: .word 0  # current char idx in tib
 base: .word 10
 latest: .word 0 # last word in dictionary
@@ -115,8 +117,16 @@ _dup_body:
             a:t t d+ [ret]
 
 
-_swap:      # (a b -- b a)
+_2dup:      # (a b -- a b a b)
             .word _dup
+            .cstr "2dup"
+_2dup_body:
+            a:n t d+
+            a:n t d+ [ret]
+
+
+_swap:      # (a b -- b a)
+            .word _2dup
             .cstr "swap"
 _swap_body:
             a:t r d- r+      # (a b -- a r:b)
@@ -222,29 +232,47 @@ _cscfetch_body:
             a:nop t [ret]
 
 
-_strtocstr:  # ( count idx addr -- cstr-a)
-            # means: copy chars to scratch area as c-str
-            .word _cscfetch
-            .cstr "str>cstr"
-_strtocstr_body:
-            call _rot_body # (count idx addr -- idx addr count)
-            # set length field of c-str
-            call _dup_body # (count idx addr -- idx addr count count)
-            lit scratch    # (count idx addr -- idx addr count count addr)
-            call _store_body # (idx addr count count addr -- idx addr count)
-            # todo
+_tib_eob:   # (-- flag)
+            # if >in reached end of buffer return 0
+            call _to_in_body
+            call _fetch_body
+            lit TIB_BYTE_SIZE
+            a:sub t d- [ret]
 
 
+_to_in_plus1: # (--)
+            # inc >in
+            call _to_in_body
+            call _fetch_body
+            call _add1_body
+            call _to_in_body
+            call _store_body
+            a:nop t [ret]
 
-_word:      # (delimiter -- addr-str count)
+
+_word:      # (delimiter -- count addr-str)
             # skip delimiters
             # take idx of first non-delimiter
             # 
-            .word _strtocstr
+            .word _cscfetch
             .cstr "word"
 _word_body:
-            call _tib_body    # (del -- del a)
-            call _dup_body    # (del a -- del a a)
-            call _to_in_body  # (del a a -- del a a idx)
-            call _fetch_body
-            call _strcfetch_body # (del a -- )
+            lit 0 # (del -- del c) ; helper
+_wb_del_loop:
+            call _drop_body      # (del c -- del) ; drop c from branching to _wb_del_loop
+            # reached eob?
+            call _tib_eob
+            rj.z _word_eob
+            
+            call _tibcfetch_body # (del -- del c)
+            call _to_in_plus1    # (del c -- del c)
+            call _2dup_body      # (del c -- del c del c)
+            # is char == delimiter?
+            a:sub t d-           # (del c del c -- del c f)
+            rj.z _wb_del_loop    # (del c f -- del c) ; note: c needs to be dropped if branch is taken
+
+            # now c is first non-delimiter char
+            # put this into scratch area
+
+
+_word_eob:  lit 0 [ret] # end of buffer, return 0

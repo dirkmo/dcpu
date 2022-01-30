@@ -108,15 +108,14 @@ wire [1:0] w_op_alu_rsp = r_op[1:0];
     10 PC
     11 [T]
 */
-wire w_op_alu_dst_T    = (w_op_alu_dst == 2'b00);
-wire w_op_alu_dst_R    = (w_op_alu_dst == 2'b01);
-wire w_op_alu_dst_PC   = (w_op_alu_dst == 2'b10);
-wire w_op_alu_dst_MEMT = (w_op_alu_dst == 2'b11);
+wire w_op_alu_dst_T    = w_op_alu && (w_op_alu_dst == 2'b00);
+wire w_op_alu_dst_R    = w_op_alu && (w_op_alu_dst == 2'b01);
+wire w_op_alu_dst_PC   = w_op_alu && (w_op_alu_dst == 2'b10);
+wire w_op_alu_dst_MEMT = w_op_alu && (w_op_alu_dst == 2'b11);
 
 
-
+// w_return: is true when return shall be performed
 wire w_return = (w_op_alu && w_op_alu_ret) || (w_op_lith && w_op_lith_return);
-
 
 
 /*
@@ -208,7 +207,7 @@ wire w_op_rjp_cond_fullfilled =
 // PC
 reg [15:0] w_pcn;
 always @(*)
-    if (w_op_alu && w_op_alu_dst_PC)
+    if (w_op_alu_dst_PC)
         w_pcn = w_alu[15:0];
     else if (w_op_call)
         w_pcn = {1'b0, w_op_call_addr[14:0]};
@@ -258,7 +257,7 @@ always @(posedge i_clk)
             r_dstack[w_dspn] <= {3'b000, w_op_litl_val[12:0]};
         else if (w_op_lith)
             r_dstack[w_dspn] <= {w_op_lith_val[7:0], r_dstack[r_dsp][7:0]};
-        else if (w_op_alu && w_op_alu_dst_T && ~w_op_alu_nop)
+        else if (w_op_alu_dst_T && ~w_op_alu_nop)
             r_dstack[w_dspn] <= w_alu[15:0];
     end
 
