@@ -9,6 +9,7 @@
 #include "dcpu.h"
 #include "uart.h"
 #include <vector>
+#include <algorithm>
 #include <readline/readline.h>
 
 using namespace std;
@@ -30,6 +31,8 @@ Vtop *pCore;
 uint64_t tickcount = 0;
 uint64_t ts = 1000;
 bool run = false;
+
+vector<uint16_t> m_breakpoints;
 
 void opentrace(const char *vcdname) {
     if (!pTrace) {
@@ -123,10 +126,55 @@ void print_cpustate(Vtop *pCore) {
     printf("PC %04x: %s\n\n", pc, dcpu_disasm(mem[pc]));
 }
 
+void breakpoint_set(uint16_t addr) {
+    auto it = find(m_breakpoints.begin(), m_breakpoints.end(), addr);
+    if (it == m_breakpoints.end()) {
+        printf("set breakpoint at $%04x\n", addr);
+        m_breakpoints.push_back(addr);
+    } else {
+        printf("there is already a breakpoint at $%04x\n", addr);
+    }
+}
+
+void breakpoint_delete(uint16_t addr) {
+    auto it = find(m_breakpoints.begin(), m_breakpoints.end(), addr);
+    if (it != m_breakpoints.end()) {
+        m_breakpoints.erase(it);
+        printf("Breakpoint deleted at $%04x\n", addr);
+    } else {
+        printf("No breakpoint set at $%04x\n", addr);
+    }
+}
+
+void breakpoint_list(void) {
+    printf("Breakpoints:\n");
+    for (auto it: m_breakpoints) {
+        printf("%04x\n", it);
+    }
+}
+
+bool pc_on_breakpoint(uint16_t pc) {
+    auto it = find(m_breakpoints.begin(), m_breakpoints.end(), pc);
+    return it != m_breakpoints.end();
+}
+
 int user_interaction(void) {
     char *input = readline("> ");
+    if (input == NULL) {
+        return -1;
+    }
+
+    uint32_t val;
     if (strcmp(input, "run") == 0) {
         run = true;
+    } else if (sscanf(input, "break %x", &val) == 1) {
+        breakpoint_set(val);
+    } else if (sscanf(input, "del %x", &val) == 1) {
+        breakpoint_delete(val);
+    } else if (strcmp(input, "list") == 0) {
+        breakpoint_list();
+    } else if (strlen(input) == 0) {
+        return 1;
     }
     return 0;
 }
@@ -152,14 +200,11 @@ int main(int argc, char *argv[]) {
     }
 
     reset();
-    run = true;
+    run = false;
     print_cpustate(pCore);
     int rxbyte;
     int step = 0;
     while(step < 500 && !Verilated::gotFinish()) {
-        if (!run) {
-            user_interaction();
-        }
         if(handle(pCore)) {
             break;
         }
@@ -168,15 +213,26 @@ int main(int argc, char *argv[]) {
         }
         if (pCore->top->cpu0->s_fetch && pCore->top->cpu0->w_state_changed) {
             print_cpustate(pCore);
+            if (pc_on_breakpoint(pCore->top->cpu0->r_pc)) {
+                printf("Stopped on breakpoint\n");
+                run = false;
+            }
+            while (!run) {
+                int ret = user_interaction();
+                if (ret == -1) {
+                    goto finish;
+                } else if (ret == 1) {
+                    break;
+                }
+            }
         }
         tick(3);
         step++;
     }
 
+finish:
     if(Verilated::gotFinish()) {
         printf("Simulation finished\n");
-    } else {
-        printf("Out of steps\n");
     }
 
     pCore->final();

@@ -34,7 +34,7 @@ _add1:      # (n -- n+1)
             .cstr "+1"
 _add1_body:
             lit 1            # (n -- n 1)
-            a:add t d- [ret] # (n 1 -- n+1)
+            a:add t d- r- [ret] # (n 1 -- n+1)
 
 
 _latest:    # ( -- addr)
@@ -57,7 +57,7 @@ _ntib:      # ( -- n)
             .cstr "#tib"
 _ntib_body:
             lit ntib
-            a:mem t [ret]
+            a:mem t r- [ret]
 
 
 _to_in:     # ( -- n )
@@ -78,7 +78,7 @@ _tibcfetch_body:
             call _fetch_body
             call _tib_body
             call _strcfetch_body
-            a:nop t [ret]
+            a:nop t r- [ret]
 
 
 _base:      # ( -- addr)
@@ -92,7 +92,7 @@ _fetch:     # (addr -- n)
             .word _base
             .cstr "@"
 _fetch_body:
-            a:mem t [ret]
+            a:mem t r- [ret]
 
 
 _store:     # (d addr -- )
@@ -100,21 +100,21 @@ _store:     # (d addr -- )
             .cstr "!"
 _store_body:
             a:n mem d-
-            a:nop r d- [ret]
+            a:nop r d- r- [ret]
 
 
 _drop:      # ( n -- )
             .word _store
             .cstr "drop"
 _drop_body:
-            a:nop t d- [ret]
+            a:nop t d- r- [ret]
 
 
 _dup:       # (a -- a a)
             .word _drop
             .cstr "dup"
 _dup_body:
-            a:t t d+ [ret]
+            a:t t d+ r- [ret]
 
 
 _2dup:      # (a b -- a b a b)
@@ -122,7 +122,7 @@ _2dup:      # (a b -- a b a b)
             .cstr "2dup"
 _2dup_body:
             a:n t d+
-            a:n t d+ [ret]
+            a:n t d+ r- [ret]
 
 
 _swap:      # (a b -- b a)
@@ -132,14 +132,14 @@ _swap_body:
             a:t r d- r+      # (a b -- a r:b)
             a:t t d+         # (a r:b -- a a r:b)
             a:r t d- r-      # (a a r:b -- b a)
-            a:nop t d+ [ret] # (b a -- b a)
+            a:nop t d+ r- [ret] # (b a -- b a)
 
 
 _over:      # (a b -- a b a)
             .word _swap
             .cstr "over"
 _over_body:
-            a:n t d+ [ret]
+            a:n t d+ r- [ret]
 
 
 _rot:       # (a b c -- b c a)
@@ -152,7 +152,7 @@ _nip:       # (a b -- b)
             .word _rot
             .cstr "nip"
 _nip_body:  
-            a:t t d- [ret]
+            a:t t d- r- [ret]
 
 
 _tuck:      # (a b -- b a b)
@@ -161,7 +161,7 @@ _tuck:      # (a b -- b a b)
 _tuck_body: 
             call _swap_body # ( a b -- b a)
             call _over_body # ( b a -- b a b)
-            a:nop t [ret]
+            a:nop t r- [ret]
 
 
 _wait_uart_tx_can_send: # ( -- )
@@ -170,7 +170,7 @@ _wait_uart_tx_can_send: # ( -- )
             lit MASK_UART_TX_FULL
             a:and t d-
             rj.nz _wait_uart_tx_can_send
-            a:nop t [ret]
+            a:nop t r- [ret]
 
 
 _emit:      # (c --)
@@ -179,7 +179,7 @@ _emit:      # (c --)
 _emit_body: call _wait_uart_tx_can_send
             lit ADDR_UART_TX
             call _store_body
-            a:nop t [ret]
+            a:nop t r- [ret]
 
 
 _wait_uart_rx_has_data: # ( -- )
@@ -188,7 +188,7 @@ _wait_uart_rx_has_data: # ( -- )
             lit MASK_UART_RX_EMPTY
             a:and t d-
             rj.z _wait_uart_rx_has_data
-            a:nop t [ret]
+            a:nop t r- [ret]
 
 
 _key:       # ( -- key)
@@ -197,7 +197,7 @@ _key:       # ( -- key)
 _key_body:
             call _wait_uart_rx_has_data
             lit ADDR_UART_RX
-            a:mem t [ret]
+            a:mem t r- [ret]
 
 
 _strcfetch: # (char-idx str-addr -- c)
@@ -218,7 +218,7 @@ _strcfetch_body:
             rj.nz _strcf1         # (w ci&1 -- w) ; .nz oder .z ??
             a:srw t               # (w -- w>>8)
 _strcf1:    lit $ff               # (w -- w $ff)
-            a:and t d- [ret]      # (w -- w&$ff)
+            a:and t d- r- [ret]      # (w -- w&$ff)
 
 
 _cscfetch:  # (char-idx cstr-addr -- char)
@@ -229,7 +229,7 @@ _cscfetch_body:
             # add 1 because counted string
             call _add1_body       # (ci ca i -- ci ca i+1)
             call _strcfetch_body  # (ci ca i+1 -- c)
-            a:nop t [ret]
+            a:nop t r- [ret]
 
 
 _tib_eob:   # (-- flag)
@@ -237,7 +237,7 @@ _tib_eob:   # (-- flag)
             call _to_in_body
             call _fetch_body
             lit TIB_BYTE_SIZE
-            a:sub t d- [ret]
+            a:sub t d- r- [ret]
 
 
 _to_in_plus1: # (--)
@@ -247,7 +247,7 @@ _to_in_plus1: # (--)
             call _add1_body
             call _to_in_body
             call _store_body
-            a:nop t [ret]
+            a:nop t r- [ret]
 
 
 _word:      # (delimiter -- count addr-str)
