@@ -220,6 +220,9 @@ class OpLabel(OpBase):
     def label(self):
         return self.tokens[0].value
     
+    def len(self):
+        return 0
+    
 
 class OpOrg(OpBase):
     def __init__(self, tokens):
@@ -227,7 +230,9 @@ class OpOrg(OpBase):
 
     def address(self):
         return convert_to_number(self.tokens[1].value)
-
+        
+    def len(self):
+        return 0
 
 class OpWord(OpBase):
     def __init__(self, tokens):

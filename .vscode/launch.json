@@ -11,8 +11,8 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "args": [
-                "-i", "${workspaceFolder}/sim/test.asm",
-                "-o", "${workspaceFolder}/sim/test"],
+                "-i", "${workspaceFolder}/sim/forth.asm",
+                "-o", "${workspaceFolder}/sim/forth"],
             "cwd": "${workspaceFolder}/dasm",
         },
         {

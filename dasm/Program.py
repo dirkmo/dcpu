@@ -15,8 +15,10 @@ class Program:
                 pos = pos + entry.len()
             elif entry.type == OpBase.ORG:
                 pos = entry.address()
+                entry.pos = pos
             elif entry.type == OpBase.LABEL:
                 self.symbols[entry.label()] = pos
+                entry.pos = pos
             elif entry.type == OpBase.EQU:
                 self.symbols[entry.label()] = entry.value()
         
@@ -86,6 +88,31 @@ class Program:
                     for d in data:
                         f.write(f" {d:04x}")
                     f.write("\n")
+
+
+    def write_as_simdata(self, fn, lines, endianess='big'):
+        def find_token(line):
+            for i,t in enumerate(self.tokens):
+                l = t[0].line
+                if (line == l) and (t[-1].type in [OpBase.OPCODE, OpBase.DATA, OpBase.LABEL, OpBase.ORG]):
+                    return t
+            return None
+        
+        pos = 0
+        with open(fn ,"wt") as f:
+            for i,l in enumerate(lines):
+                t = find_token(i+1)
+                if t != None:
+                    entry = t[-1]
+                    dl = entry.len()
+                    pos = entry.pos
+                    f.write(f"{pos:04x}: {l}")
+                    if entry.type == OpBase.OPCODE:
+                        for di in range(1,dl):
+                            pos = pos + 1
+                            f.write(f"{pos:04x}:\n")
+                else:
+                    f.write(f"{pos:04x}: {l}")
 
 
     def write_symbols(self, fn):

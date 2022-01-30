@@ -4,5 +4,6 @@ sim/*.bin
 sim/*.symbols
 sim/*.list
 sim/*.mem
+sim/*.sim
 sim/test.c
 sim/forth.c

@@ -100,6 +100,7 @@ def main():
     program.write_as_cfile(outfn_noext+".c")
     program.write_as_listing(outfn_noext+".list", lines)
     program.write_symbols(outfn_noext+".symbols")
+    program.write_as_simdata(outfn_noext+".sim", lines)
 
     size = program.end_address - program.start_address + 1
     print(f"File '{name}' assembled\nOutput size: {size} words")
