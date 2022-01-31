@@ -28,7 +28,7 @@ using namespace std;
 #define GREY "\033[37m"
 #define NORMAL "\033[0m"
 
-#define MSGAREA_X 40
+#define MSGAREA_W 40
 
 VerilatedVcdC *pTrace = NULL;
 Vtop *pCore;
@@ -39,8 +39,9 @@ bool run = false;
 
 uint16_t mem[0x10000];
 
-vector<uint16_t> m_breakpoints;
-vector<string> m_sourceList;
+vector<uint16_t> vBreakPoints;
+vector<string> vSourceList;
+vector<string> vMessages;
 string sUserInput;
 
 
@@ -120,7 +121,7 @@ int source_load(const char *fn) {
     string s;
     while(getline(in, s)) {
         if (s.size() > 0) {
-            m_sourceList.push_back(s);
+            vSourceList.push_back(s);
         }
     }
     return 0;
@@ -143,36 +144,32 @@ void print_cpustate(int y, int x, Vtop *pCore) {
     mvprintw(y+2, x, "PC %04x: %s", pc, dcpu_disasm(mem[pc]));
 }
 
+#include <sstream>
 void breakpoint_set(uint16_t addr) {
-    auto it = find(m_breakpoints.begin(), m_breakpoints.end(), addr);
-    if (it == m_breakpoints.end()) {
-        printf("set breakpoint at $%04x\n", addr);
-        m_breakpoints.push_back(addr);
+    auto it = find(vBreakPoints.begin(), vBreakPoints.end(), addr);
+    stringstream ss;
+    ss << hex << addr;
+    if (it == vBreakPoints.end()) {
+        vBreakPoints.push_back(addr);
+        vMessages.push_back(string("Set breakpoint at $") + ss.str());
     } else {
-        printf("there is already a breakpoint at $%04x\n", addr);
-    }
-}
-
-void breakpoint_delete(uint16_t addr) {
-    auto it = find(m_breakpoints.begin(), m_breakpoints.end(), addr);
-    if (it != m_breakpoints.end()) {
-        m_breakpoints.erase(it);
-        printf("Breakpoint deleted at $%04x\n", addr);
-    } else {
-        printf("No breakpoint set at $%04x\n", addr);
+        vBreakPoints.erase(it);
+        vMessages.push_back(string("Breakpoint deleted at $") + ss.str());
     }
 }
 
 void breakpoint_list(void) {
-    printf("Breakpoints:\n");
-    for (auto it: m_breakpoints) {
-        printf("%04x\n", it);
+    vMessages.push_back("Breakpoints:");
+    for (auto it: vBreakPoints) {
+        stringstream ss;
+        ss << hex << it;
+        vMessages.push_back(string("$") + ss.str());
     }
 }
 
 bool pc_on_breakpoint(uint16_t pc) {
-    auto it = find(m_breakpoints.begin(), m_breakpoints.end(), pc);
-    return it != m_breakpoints.end();
+    auto it = find(vBreakPoints.begin(), vBreakPoints.end(), pc);
+    return it != vBreakPoints.end();
 }
 
 int user_interaction(void) {
@@ -182,8 +179,8 @@ int user_interaction(void) {
         case 27: return -1;
         case KEY_F(5): run = true; return 0;
         case KEY_F(6): /*un-/set breakpoint */ return 0;
-        case KEY_F(10): /*step over*/ return 0;
-        case KEY_F(11): /*step into*/ return 0;
+        case KEY_DOWN: /*step over*/ return 0;
+        case KEY_LEFT: /*step into*/ return 0;
         case KEY_BACKSPACE: // fall-through
         case 127: if (sUserInput.size()>0) sUserInput.pop_back(); return 0;
         case 10: // fall-through
@@ -197,12 +194,14 @@ int user_interaction(void) {
     uint32_t val;
     if (sUserInput.size() == 0) {
         return 1;
+    } else if (sUserInput == "run") {
+        run = true;
     } else if (sscanf(sUserInput.c_str(), "break %x", &val) == 1) {
         breakpoint_set(val);
-    } else if (sscanf(sUserInput.c_str(), "del %x", &val) == 1) {
-        breakpoint_delete(val);
-    } else if (strcmp(sUserInput.c_str(), "list") == 0) {
+    } else if (sUserInput == "list") {
         breakpoint_list();
+    } else if (sUserInput == "reset") {
+
     }
     sUserInput = "";
     return 0;
@@ -212,6 +211,11 @@ void the_end(void) {
     endwin();
 }
 
+uint16_t pc_from_simline(string s) {
+    uint16_t pc = stoi(s.substr(0, 4), nullptr, 16);
+    return pc;
+}
+
 void print_source(int y, int x, int h, int w, uint16_t pc) {
     char buf[16];
     sprintf(buf, "%04x", pc);
@@ -219,7 +223,7 @@ void print_source(int y, int x, int h, int w, uint16_t pc) {
     int i = 0;
     int start = -1;
     int end = -1;
-    for (auto it: m_sourceList) {
+    for (auto it: vSourceList) {
         if (it.compare(0, 4, buf) == 0) {
             if (start == -1) {
                 start = i;
@@ -236,36 +240,47 @@ void print_source(int y, int x, int h, int w, uint16_t pc) {
     int mid = start + (end - start) / 2;
     int tl = mid - h/2;
     int y1 = max(tl, 0);
-    if (y1 + h >= m_sourceList.size()) {
-        if (y1+h-m_sourceList.size() >= 0) {
-            y1 = m_sourceList.size() - h;
+    if (y1 + h >= vSourceList.size()) {
+        if (y1+h-vSourceList.size() >= 0) {
+            y1 = vSourceList.size() - h;
         }
     }
     for (i = 0; i < h; i++) {
-        if (y1+i < m_sourceList.size()) {
-            string s = m_sourceList[y1+i].substr(0, w-1);
+        if (y1+i < vSourceList.size()) {
+            string s = vSourceList[y1+i].substr(0, w-1);
+            bool bpline = pc_on_breakpoint(pc_from_simline(vSourceList[y1+i]));
             if (y1+i >= start && y1+i <= end) {
-                attron(A_BOLD | COLOR_PAIR(2));
+                // PC here
+                attron(COLOR_PAIR(bpline ? 4 : 2));
             } else {
-                attroff(A_BOLD);
-                attron(A_NORMAL | COLOR_PAIR(1));
+                attron(COLOR_PAIR(bpline ? 3 : 1));
             }
             mvprintw(y+i, x, s.c_str());
         }
     }
-    attroff(A_BOLD);
+    attron(COLOR_PAIR(1));
+}
+
+void print_messages(int y1, int x1, int h, int w) {
+    for (int i = 0; i < h; i++) {
+        if (i >= vMessages.size()) {
+            break;
+        }
+        string s = vMessages[vMessages.size()-i-1];
+        mvprintw(y1+h-1-i, x1, s.substr(0,w-1).c_str());
+    }
 }
 
 void print_screen(void) {
     erase();
     box(stdscr, 0, 0);
     mvprintw(0, 2, " dcpu simulator ");
-    print_source(1, 2, LINES-7-1, COLS-MSGAREA_X, pCore->top->cpu0->r_pc);
+    print_source(1, 2, LINES-7-1, COLS-MSGAREA_W, pCore->top->cpu0->r_pc);
     
     for (int y = 1; y < LINES-7; y++) {
-        mvprintw(y, COLS-MSGAREA_X, "|");
+        mvprintw(y, COLS-MSGAREA_W, "|");
     }
-
+    print_messages(1, COLS-MSGAREA_W+2, LINES-1-7, MSGAREA_W-2);
     print_cpustate(LINES-6, 2, pCore);
     for (int x = 1; x < COLS-2; x++) {
         mvprintw(LINES-7, x, "-");
@@ -307,10 +322,14 @@ int main(int argc, char *argv[]) {
     atexit(the_end);
     start_color();
     init_pair(1, COLOR_WHITE, COLOR_BLACK);
-    init_pair(2, COLOR_YELLOW, COLOR_BLACK);
+    init_pair(2, COLOR_BLACK, COLOR_WHITE);
+    init_pair(3, COLOR_RED, COLOR_BLACK);
+    init_pair(4, COLOR_RED, COLOR_WHITE);
     attron(COLOR_PAIR(1));
     keypad(stdscr, TRUE);
     noecho();
+
+    vMessages.push_back("Welcome to DCPU Simulator");
 
     run = false;
     int rxbyte;
@@ -325,7 +344,7 @@ int main(int argc, char *argv[]) {
         if (pCore->top->cpu0->w_sim_next) {
             print_screen();
             if (pc_on_breakpoint(pCore->top->cpu0->r_pc)) {
-                printw("Stopped on breakpoint\n");
+                vMessages.push_back("Stopped on breakpoint\n");
                 run = false;
             }
             while (!run) {
