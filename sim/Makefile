@@ -16,7 +16,7 @@ GTKWAVE := /Applications/gtkwave.app/Contents/MacOS/gtkwave-bin
 endif
 
 CXXFLAGS=-g -Wall -O0
-LDFLAGS=-lreadline
+LDFLAGS=-lreadline -lncurses
 
 CPPSRC=sim.cpp dcpu.c uart.cpp
 VERILOGSRC=top.v ../rtl/dcpu.v uartmaster/fifo.v uartmaster/UartProtocol.v uartmaster/UartMasterSlave.v uartmaster/uart_tx.v uartmaster/uart_rx.v
@@ -31,7 +31,7 @@ top: verilator
 	../dasm/dasm.py -i forth.asm -o forth
 
 sim: top
-	$(VERILATOR_OUTPUTDIR)/Vtop forth.bin
+	$(VERILATOR_OUTPUTDIR)/Vtop forth.bin forth.sim
 
 wave: sim
 	gtkwave sim.gtkw &

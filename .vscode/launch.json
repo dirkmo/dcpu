@@ -21,7 +21,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/sim/verilator/Vtop",
             "args": [
-                "forth.bin"
+                "forth.bin", "forth.sim"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}/sim",

@@ -10,7 +10,8 @@
 #include "uart.h"
 #include <vector>
 #include <algorithm>
-#include <readline/readline.h>
+#include <ncurses.h>
+#include <iostream>
 
 using namespace std;
 
@@ -33,6 +34,7 @@ uint64_t ts = 1000;
 bool run = false;
 
 vector<uint16_t> m_breakpoints;
+vector<string> m_sourceList;
 
 void opentrace(const char *vcdname) {
     if (!pTrace) {
@@ -107,23 +109,33 @@ int program_load(const char *fn, uint16_t offset) {
     return 0;
 }
 
-void print_cpustate(Vtop *pCore) {
+#include <fstream>
+int source_load(const char *fn) {
+    ifstream in(fn);
+    string s;
+    while(getline(in, s)) {
+        if (s.size() > 0) {
+            m_sourceList.push_back(s);
+        }
+    }
+    return 0;
+}
+
+void print_cpustate(int y, int x, Vtop *pCore) {
     uint16_t pc = pCore->top->cpu0->r_pc;
-    printf("D(%d):", pCore->top->cpu0->r_dsp+1);
+    mvprintw(y, x, "D(%d):", pCore->top->cpu0->r_dsp+1);
     if (pCore->top->cpu0->r_dsp < 15) {
         for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
-            printf(" %x", pCore->top->cpu0->r_dstack[i]);
+            printw(" %x", pCore->top->cpu0->r_dstack[i]);
         }
     }
-    printf("\n");
-    printf("R(%d):", pCore->top->cpu0->r_rsp+1);
+    mvprintw(y+1, x, "R(%d):", pCore->top->cpu0->r_rsp+1);
     if (pCore->top->cpu0->r_rsp < 15) {
         for (int i = 0; i <= pCore->top->cpu0->r_rsp; i++) {
-            printf(" %x", pCore->top->cpu0->r_rstack[i]);
+            printw(" %x", pCore->top->cpu0->r_rstack[i]);
         }
     }
-    printf("\n");
-    printf("PC %04x: %s\n\n", pc, dcpu_disasm(mem[pc]));
+    mvprintw(y+2, x, "PC %04x: %s", pc, dcpu_disasm(mem[pc]));
 }
 
 void breakpoint_set(uint16_t addr) {
@@ -159,7 +171,9 @@ bool pc_on_breakpoint(uint16_t pc) {
 }
 
 int user_interaction(void) {
-    char *input = readline("> ");
+    //char *input = readline("> ");
+    getch();
+    char *input = "";
     if (input == NULL) {
         return -1;
     }
@@ -179,6 +193,23 @@ int user_interaction(void) {
     return 0;
 }
 
+void the_end(void) {
+    endwin();
+}
+
+void print_source(int y, int x, int h, int w) {
+
+}
+
+void print_screen(void) {
+    erase();
+    box(stdscr, 0, 0);
+    mvprintw(0, 2, " dcpu simulator ");
+    print_cpustate(LINES-6, 2, pCore);
+    print_source(2, 2, LINES-6-2, COLS-4);
+    refresh();
+}
+
 int main(int argc, char *argv[]) {
     Verilated::traceEverOn(true);
     pCore = new Vtop();
@@ -189,8 +220,8 @@ int main(int argc, char *argv[]) {
     opentrace("trace.vcd");
 
     printf("dcpu simulator\n\n");
-    if (argc < 2) {
-        fprintf(stderr, "Missing file name\n");
+    if (argc < 3) {
+        fprintf(stderr, "Missing file names\n");
         return -1;
     }
     
@@ -199,9 +230,17 @@ int main(int argc, char *argv[]) {
         return -2;
     }
 
+    if (source_load(argv[2])) {
+        fprintf(stderr, "ERROR: Failed to sim file '%s'\n", argv[2]);
+        return -3;
+    }
+
     reset();
+
+    initscr();
+    atexit(the_end);
+
     run = false;
-    print_cpustate(pCore);
     int rxbyte;
     int step = 0;
     while(step < 500 && !Verilated::gotFinish()) {
@@ -209,12 +248,12 @@ int main(int argc, char *argv[]) {
             break;
         }
         if (uart_handle(&rxbyte)) {
-            printf(GREEN "UART-RX: " NORMAL "%c\n", rxbyte);
+            printw(GREEN "UART-RX: " NORMAL "%c\n", rxbyte);
         }
-        if (pCore->top->cpu0->s_fetch && pCore->top->cpu0->w_state_changed) {
-            print_cpustate(pCore);
+        if (pCore->top->cpu0->w_sim_next) {
+            print_screen();
             if (pc_on_breakpoint(pCore->top->cpu0->r_pc)) {
-                printf("Stopped on breakpoint\n");
+                printw("Stopped on breakpoint\n");
                 run = false;
             }
             while (!run) {
@@ -232,7 +271,7 @@ int main(int argc, char *argv[]) {
 
 finish:
     if(Verilated::gotFinish()) {
-        printf("Simulation finished\n");
+        printw("Simulation finished\n");
     }
 
     pCore->final();

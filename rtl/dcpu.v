@@ -28,10 +28,16 @@ wire w_state_changed /* verilator public */ = (r_state_prev != r_state);
 always @(posedge i_clk)
     r_state_prev <= r_state;
 
+
 reg [15:0] r_pc /* verilator public */; // program counter
 
 wire s_fetch   /* verilator public */ = (r_state == FETCH);
 wire s_execute /* verilator public */ = (r_state == EXECUTE);
+
+`ifdef SIM
+wire w_sim_next /* verilator public */ = w_state_changed && s_execute;
+`endif
+
 
 reg [15:0] r_op /* verilator public */; // instruction register
 always @(posedge i_clk)
