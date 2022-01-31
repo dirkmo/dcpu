@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <ncurses.h>
 #include <iostream>
+#include <fstream>
+
 
 using namespace std;
 
@@ -26,6 +28,8 @@ using namespace std;
 #define GREY "\033[37m"
 #define NORMAL "\033[0m"
 
+#define MSGAREA_X 40
+
 VerilatedVcdC *pTrace = NULL;
 Vtop *pCore;
 
@@ -33,8 +37,12 @@ uint64_t tickcount = 0;
 uint64_t ts = 1000;
 bool run = false;
 
+uint16_t mem[0x10000];
+
 vector<uint16_t> m_breakpoints;
 vector<string> m_sourceList;
+string sUserInput;
+
 
 void opentrace(const char *vcdname) {
     if (!pTrace) {
@@ -66,8 +74,6 @@ void reset() {
     tick();
     pCore->i_reset = 0;
 }
-
-uint16_t mem[0x10000];
 
 int handle(Vtop *pCore) {
     if (pCore->o_cs) {
@@ -109,7 +115,6 @@ int program_load(const char *fn, uint16_t offset) {
     return 0;
 }
 
-#include <fstream>
 int source_load(const char *fn) {
     ifstream in(fn);
     string s;
@@ -171,25 +176,35 @@ bool pc_on_breakpoint(uint16_t pc) {
 }
 
 int user_interaction(void) {
-    //char *input = readline("> ");
-    getch();
-    char *input = "";
-    if (input == NULL) {
-        return -1;
+    int key = getch();
+    switch(key) {
+        case 4: // fall-through
+        case 27: return -1;
+        case KEY_F(5): run = true; return 0;
+        case KEY_F(6): /*un-/set breakpoint */ return 0;
+        case KEY_F(10): /*step over*/ return 0;
+        case KEY_F(11): /*step into*/ return 0;
+        case KEY_BACKSPACE: // fall-through
+        case 127: if (sUserInput.size()>0) sUserInput.pop_back(); return 0;
+        case 10: // fall-through
+        case KEY_ENTER: break;
+        case KEY_RESIZE: return 0; // window resize
+        default:
+            sUserInput += (char)key;
+            return 0;
     }
 
     uint32_t val;
-    if (strcmp(input, "run") == 0) {
-        run = true;
-    } else if (sscanf(input, "break %x", &val) == 1) {
-        breakpoint_set(val);
-    } else if (sscanf(input, "del %x", &val) == 1) {
-        breakpoint_delete(val);
-    } else if (strcmp(input, "list") == 0) {
-        breakpoint_list();
-    } else if (strlen(input) == 0) {
+    if (sUserInput.size() == 0) {
         return 1;
+    } else if (sscanf(sUserInput.c_str(), "break %x", &val) == 1) {
+        breakpoint_set(val);
+    } else if (sscanf(sUserInput.c_str(), "del %x", &val) == 1) {
+        breakpoint_delete(val);
+    } else if (strcmp(sUserInput.c_str(), "list") == 0) {
+        breakpoint_list();
     }
+    sUserInput = "";
     return 0;
 }
 
@@ -197,28 +212,71 @@ void the_end(void) {
     endwin();
 }
 
-void print_source(int y, int x, int h, int w) {
-
+void print_source(int y, int x, int h, int w, uint16_t pc) {
+    char buf[16];
+    sprintf(buf, "%04x", pc);
+    string sPc(buf);
+    int i = 0;
+    int start = -1;
+    int end = -1;
+    for (auto it: m_sourceList) {
+        if (it.compare(0, 4, buf) == 0) {
+            if (start == -1) {
+                start = i;
+            }
+            end = i;
+        } else {
+            if (end != -1) {
+                break;
+            }
+        }
+        i++;
+    }
+    
+    int mid = start + (end - start) / 2;
+    int tl = mid - h/2;
+    int y1 = max(tl, 0);
+    if (y1 + h >= m_sourceList.size()) {
+        if (y1+h-m_sourceList.size() >= 0) {
+            y1 = m_sourceList.size() - h;
+        }
+    }
+    for (i = 0; i < h; i++) {
+        if (y1+i < m_sourceList.size()) {
+            string s = m_sourceList[y1+i].substr(0, w-1);
+            if (y1+i >= start && y1+i <= end) {
+                attron(A_BOLD | COLOR_PAIR(2));
+            } else {
+                attroff(A_BOLD);
+                attron(A_NORMAL | COLOR_PAIR(1));
+            }
+            mvprintw(y+i, x, s.c_str());
+        }
+    }
+    attroff(A_BOLD);
 }
 
 void print_screen(void) {
     erase();
     box(stdscr, 0, 0);
     mvprintw(0, 2, " dcpu simulator ");
+    print_source(1, 2, LINES-7-1, COLS-MSGAREA_X, pCore->top->cpu0->r_pc);
+    
+    for (int y = 1; y < LINES-7; y++) {
+        mvprintw(y, COLS-MSGAREA_X, "|");
+    }
+
     print_cpustate(LINES-6, 2, pCore);
-    print_source(2, 2, LINES-6-2, COLS-4);
+    for (int x = 1; x < COLS-2; x++) {
+        mvprintw(LINES-7, x, "-");
+        mvprintw(LINES-3, x, "-");
+    }
+    string s = "> " + sUserInput;
+    mvprintw(LINES-2, 2, s.c_str());
     refresh();
 }
 
 int main(int argc, char *argv[]) {
-    Verilated::traceEverOn(true);
-    pCore = new Vtop();
-
-    int uart_tick = pCore->top->uart0->SYS_FREQ / pCore->top->uart0->BAUDRATE;
-    uart_init(&pCore->i_uart_rx, &pCore->o_uart_tx, &pCore->i_clk, uart_tick);
-
-    opentrace("trace.vcd");
-
     printf("dcpu simulator\n\n");
     if (argc < 3) {
         fprintf(stderr, "Missing file names\n");
@@ -231,19 +289,33 @@ int main(int argc, char *argv[]) {
     }
 
     if (source_load(argv[2])) {
-        fprintf(stderr, "ERROR: Failed to sim file '%s'\n", argv[2]);
+        fprintf(stderr, "ERROR: Failed to load sim file '%s'\n", argv[2]);
         return -3;
     }
+
+    Verilated::traceEverOn(true);
+    pCore = new Vtop();
+
+    int uart_tick = pCore->top->uart0->SYS_FREQ / pCore->top->uart0->BAUDRATE;
+    uart_init(&pCore->i_uart_rx, &pCore->o_uart_tx, &pCore->i_clk, uart_tick);
+
+    opentrace("trace.vcd");
 
     reset();
 
     initscr();
     atexit(the_end);
+    start_color();
+    init_pair(1, COLOR_WHITE, COLOR_BLACK);
+    init_pair(2, COLOR_YELLOW, COLOR_BLACK);
+    attron(COLOR_PAIR(1));
+    keypad(stdscr, TRUE);
+    noecho();
 
     run = false;
     int rxbyte;
     int step = 0;
-    while(step < 500 && !Verilated::gotFinish()) {
+    while(1) {
         if(handle(pCore)) {
             break;
         }
@@ -258,6 +330,7 @@ int main(int argc, char *argv[]) {
             }
             while (!run) {
                 int ret = user_interaction();
+                print_screen();
                 if (ret == -1) {
                     goto finish;
                 } else if (ret == 1) {
