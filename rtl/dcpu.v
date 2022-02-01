@@ -88,7 +88,7 @@ wire w_op_lith_return = r_op[8];
 
 `ifdef SIM
 // for simulation
-wire w_op_sim_end = w_op_lit && (r_op[13:9] == 5'b11111) && (r_op[8:0] == 9'h0);
+wire w_op_sim_end /* verilator public */ = w_op_lit && (r_op[13:9] == 5'b11111) && (r_op[8:0] == 9'h0);
 `endif
 
 // relative jumps: 111 <cond:3> <offs:10>
@@ -346,11 +346,11 @@ assign o_we = w_op_mem_access && w_op_alu_dst_MEMT;
 
 assign o_dat = w_alu[15:0];
 
-`ifdef SIM
-// for simulation
-always @(posedge i_clk)
-    if (w_op_sim_end)
-        $finish();
-`endif
+// `ifdef SIM
+// // for simulation
+// always @(posedge i_clk)
+//     if (w_op_sim_end)
+//         $finish();
+// `endif
 
 endmodule

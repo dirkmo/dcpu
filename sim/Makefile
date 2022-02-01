@@ -15,8 +15,8 @@ VFLAGS += --compiler clang
 GTKWAVE := /Applications/gtkwave.app/Contents/MacOS/gtkwave-bin
 endif
 
-CXXFLAGS=-g -Wall -O0
-LDFLAGS=-lreadline -lncurses
+CXXFLAGS=-g -Wall -O0  # -DVL_USER_STOP
+LDFLAGS=-lncurses
 
 CPPSRC=sim.cpp dcpu.c uart.cpp
 VERILOGSRC=top.v ../rtl/dcpu.v uartmaster/fifo.v uartmaster/UartProtocol.v uartmaster/UartMasterSlave.v uartmaster/uart_tx.v uartmaster/uart_rx.v

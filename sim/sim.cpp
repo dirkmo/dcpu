@@ -13,6 +13,7 @@
 #include <ncurses.h>
 #include <iostream>
 #include <fstream>
+#include <sstream>
 
 
 using namespace std;
@@ -30,6 +31,12 @@ using namespace std;
 
 #define MSGAREA_W 40
 
+enum user_action {
+    UA_NONE,
+    UA_QUIT,
+    UA_STEP,
+};
+
 VerilatedVcdC *pTrace = NULL;
 Vtop *pCore;
 
@@ -40,6 +47,7 @@ bool run = false;
 uint16_t mem[0x10000];
 
 vector<uint16_t> vBreakPoints;
+vector<uint16_t> vSilentBreakPoints;
 vector<string> vSourceList;
 vector<string> vMessages;
 string sUserInput;
@@ -81,16 +89,15 @@ int handle(Vtop *pCore) {
         pCore->i_dat = mem[pCore->o_addr];
         if (pCore->o_we) {
             mem[pCore->o_addr] = pCore->o_dat;
-            printf("write [%04x] <- %04x\n", pCore->o_addr, pCore->o_dat);
-        }
-        if (pCore->i_dat == 0xffff && (pCore->top->cpu0->r_state == 0)) {
-            return 1;
+            char s[32];
+            sprintf(s, "write [%04x] <- %04x", pCore->o_addr, pCore->o_dat);
+            vMessages.push_back(string(s));
         }
     } else {
         pCore->i_dat = 0;
     }
     pCore->i_ack = pCore->o_cs;
-    return 0;
+    return pCore->top->cpu0->w_op_sim_end != 0;
 }
 
 int program_load(const char *fn, uint16_t offset) {
@@ -144,7 +151,6 @@ void print_cpustate(int y, int x, Vtop *pCore) {
     mvprintw(y+2, x, "PC %04x: %s", pc, dcpu_disasm(mem[pc]));
 }
 
-#include <sstream>
 void breakpoint_set(uint16_t addr) {
     auto it = find(vBreakPoints.begin(), vBreakPoints.end(), addr);
     stringstream ss;
@@ -172,28 +178,46 @@ bool pc_on_breakpoint(uint16_t pc) {
     return it != vBreakPoints.end();
 }
 
-int user_interaction(void) {
+bool pc_on_silent_breakpoint(uint16_t pc) {
+    auto it = find(vSilentBreakPoints.begin(), vSilentBreakPoints.end(), pc);
+    bool onbp = it != vSilentBreakPoints.end();
+    if (onbp) vSilentBreakPoints.erase(it);
+    return onbp;
+}
+
+void step_over(void) {
+    const uint16_t pc = pCore->top->cpu0->r_pc;
+    const uint16_t opcode = mem[pc];
+    bool isCall = ((opcode & 0x8000) == OP_CALL);
+    isCall |= (opcode & OP_ALU & RSP(RSP_RPC) & DST(DST_PC));
+    if (isCall) {
+        vSilentBreakPoints.push_back(pc+1);
+        run = true;
+    }
+}
+
+enum user_action user_interaction(void) {
     int key = getch();
     switch(key) {
         case 4: // fall-through
-        case 27: return -1;
-        case KEY_F(5): run = true; return 0;
-        case KEY_F(6): /*un-/set breakpoint */ return 0;
-        case KEY_DOWN: /*step over*/ return 0;
-        case KEY_LEFT: /*step into*/ return 0;
+        case 27: return UA_QUIT;
+        case KEY_F(5): run = true; return UA_NONE;
+        case KEY_F(6): breakpoint_set(pCore->top->cpu0->r_pc); return UA_NONE;
+        case KEY_DOWN: step_over(); return UA_STEP;
+        case KEY_RIGHT: /*step into*/ return UA_STEP;
         case KEY_BACKSPACE: // fall-through
-        case 127: if (sUserInput.size()>0) sUserInput.pop_back(); return 0;
+        case 127: if (sUserInput.size()>0) sUserInput.pop_back(); return UA_NONE;
         case 10: // fall-through
         case KEY_ENTER: break;
-        case KEY_RESIZE: return 0; // window resize
+        case KEY_RESIZE: return UA_NONE; // window resize
         default:
             sUserInput += (char)key;
-            return 0;
+            return UA_NONE;
     }
 
     uint32_t val;
     if (sUserInput.size() == 0) {
-        return 1;
+        return UA_STEP; // step into
     } else if (sUserInput == "run") {
         run = true;
     } else if (sscanf(sUserInput.c_str(), "break %x", &val) == 1) {
@@ -201,10 +225,10 @@ int user_interaction(void) {
     } else if (sUserInput == "list") {
         breakpoint_list();
     } else if (sUserInput == "reset") {
-
+        reset();
     }
     sUserInput = "";
-    return 0;
+    return UA_NONE;
 }
 
 void the_end(void) {
@@ -267,7 +291,7 @@ void print_messages(int y1, int x1, int h, int w) {
             break;
         }
         string s = vMessages[vMessages.size()-i-1];
-        mvprintw(y1+h-1-i, x1, s.substr(0,w-1).c_str());
+        mvprintw(y1+h-1-i, x1, s.substr(0,w).c_str());
     }
 }
 
@@ -280,7 +304,7 @@ void print_screen(void) {
     for (int y = 1; y < LINES-7; y++) {
         mvprintw(y, COLS-MSGAREA_W, "|");
     }
-    print_messages(1, COLS-MSGAREA_W+2, LINES-1-7, MSGAREA_W-2);
+    print_messages(1, COLS-MSGAREA_W+2, LINES-1-7, MSGAREA_W-3);
     print_cpustate(LINES-6, 2, pCore);
     for (int x = 1; x < COLS-2; x++) {
         mvprintw(LINES-7, x, "-");
@@ -329,36 +353,38 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
     noecho();
 
-    vMessages.push_back("Welcome to DCPU Simulator");
-
     run = false;
     int rxbyte;
-    int step = 0;
+    uint16_t pc = 0;
     while(1) {
         if(handle(pCore)) {
-            break;
+            vMessages.push_back("Simulation ended.");
+            run = false;
         }
+        pc = pCore->top->cpu0->r_pc;
         if (uart_handle(&rxbyte)) {
             printw(GREEN "UART-RX: " NORMAL "%c\n", rxbyte);
         }
         if (pCore->top->cpu0->w_sim_next) {
             print_screen();
-            if (pc_on_breakpoint(pCore->top->cpu0->r_pc)) {
+            if (pc_on_breakpoint(pc)) {
                 vMessages.push_back("Stopped on breakpoint\n");
                 run = false;
             }
+            if (pc_on_silent_breakpoint(pc)) {
+                run = false;
+            }
             while (!run) {
-                int ret = user_interaction();
+                enum user_action ret = user_interaction();
                 print_screen();
-                if (ret == -1) {
+                if (ret == UA_QUIT) {
                     goto finish;
-                } else if (ret == 1) {
+                } else if (ret == UA_STEP) {
                     break;
                 }
             }
         }
         tick(3);
-        step++;
     }
 
 finish:
