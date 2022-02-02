@@ -9,8 +9,7 @@
 .equ TIB_BYTE_SIZE 80
 
 
-lit 32
-call _word_body
+call _tibcfetch_body
 
 
 
@@ -20,8 +19,8 @@ call _word_body
 state: .word 0 # 0: interpreting, -1: compiling
 ntib: .word 9   # number of chars in tib
 # tib: .space TIB_BYTE_SIZE
-tib: .ascii "   drop dup " # input buffer
-to_in: .word 0  # current char idx in tib
+tib: .ascii "drop dup " # input buffer
+to_in: .word 3  # current char idx in tib
 base: .word 10
 latest: .word 0 # last word in dictionary
 dp: .word 0 # first free cell after dict
@@ -163,6 +162,18 @@ _tuck_body:
             call _over_body # ( b a -- b a b)
             a:nop t r- [ret]
 
+_to_r:      # (n -- r:n)
+            .word _tuck
+            .cstr ">r"
+_to_r_body: a:t r d- r+ [ret]
+
+
+_r_from:    # (r:n -- n)
+            .word _to_r
+            .cstr "r>"
+_r_from_body:
+            a:r t d+ r- [ret]
+
 
 _wait_uart_tx_can_send: # ( -- )
             lit ADDR_UART_ST
@@ -174,7 +185,7 @@ _wait_uart_tx_can_send: # ( -- )
 
 
 _emit:      # (c --)
-            .word _tuck
+            .word _r_from
             .cstr "emit"
 _emit_body: call _wait_uart_tx_can_send
             lit ADDR_UART_TX
@@ -200,22 +211,27 @@ _key_body:
             a:mem t r- [ret]
 
 
+_charidxwordaddr:  # (str-addr char-idx -- wa)
+            # fetch word which contains char at char-idx
+            # divide index by 2
+            a:sr t                # (sa ci -- sa i)
+            # get addr of word containing char
+            a:add t d- r- [ret]   # (sa i -- sa+i)
+
+
 _strcfetch: # (char-idx str-addr -- c)
             # fetch char at index from str
             .word _key
             .cstr "sc@" # "string char fetch"
 _strcfetch_body:
-            call _over_body       # ( ci ca -- ci ca ci)
-            # divide index by 2
-            a:sr t                # (ci ca ci -- ci ca i)
-            # get addr of word containing char
-            a:add t d-            # (ci ca i -- ci ca+i)
-            call _fetch_body      # (ci ca+i -- ci w)
+            call _over_body       # (ci sa -- ci sa ci)
+            call _charidxwordaddr # (ci sa ci -- ci wa)
+            call _fetch_body      # (ci wa -- ci w)
             call _swap_body       # (ci w -- w ci)
             lit 1                 # (w ci -- w ci 1)
             a:and t d-            # (w ci 1 -- w ci&1)
             # endianess is handled here:
-            rj.nz _strcf1         # (w ci&1 -- w) ; .nz oder .z ??
+            rj.nz _strcf1         # (w ci&1 -- w)
             a:srw t               # (w -- w>>8)
 _strcf1:    lit $ff               # (w -- w $ff)
             a:and t d- r- [ret]      # (w -- w&$ff)
@@ -230,6 +246,41 @@ _cscfetch_body:
             call _add1_body       # (ci ca i -- ci ca i+1)
             call _strcfetch_body  # (ci ca i+1 -- c)
             a:nop t r- [ret]
+
+
+_strcstore: # (char char-idx str-addr -- )
+            .word _cscfetch
+            .cstr "sc!"
+_strcstore_body:
+            call _swap_body         # (c ci sa         -- c sa ci)
+            call _over_body         # (c sa ci         -- c sa ci ci)
+            call _charidxwordaddr   # (c ci sa ci      -- c ci wa)
+            a:t r r+                # (c ci wa         -- c ci wa    R:wa)
+            call _fetch_body        # (c ci wa    R:wa -- c ci w     R:wa)
+            # for better readability, don't mention the R stack until it is used again
+            call _swap_body         # (c ci w      -- c w ci)
+            lit 1                   # (c w ci      -- c w ci 1)
+            a:and t d-              # (c w ci 1    -- c w ci&1)
+            # if t=0, put char in upper byte of w
+            # if t=1, put char in lower byte of w
+            rj.nz _strcs1           # (c w ci&1  -- c w)
+            # put char in lower byte
+            lit $ff00               # (c w       -- c w $ff00)
+            a:and t d-              # (c w $ff00 -- c wu)
+            call _swap_body         # (c wu      -- wu c)
+            rj _strcs2
+_strcs1:    # put char in upper byte
+            lit $ff                 # (c w     -- c w $ff)
+            a:and t d-              # (c w $ff -- c wl)
+            call _swap_body         # (c wl    -- wl c)
+            a:slw t                 # (wl c    -- wl c<<8)
+_strcs2:
+            a:or t d-               # (wu/wl c      -- W   R:wa)
+            call _r_from_body       # (W    R:wa -- W wa)
+            call _store_body        # (W wa      -- )
+            a:nop t r- [ret]
+
+
 
 
 _tib_eob:   # (-- flag)
@@ -254,7 +305,7 @@ _word:      # (delimiter -- count addr-str)
             # skip delimiters
             # take idx of first non-delimiter
             # 
-            .word _cscfetch
+            .word _strcstore
             .cstr "word"
 _word_body:
             lit 0 # (del -- del c) ; helper
@@ -273,6 +324,14 @@ _wb_del_loop:
 
             # now c is first non-delimiter char
             # put this into scratch area
+
+            # initialize char count to 0
+            lit 0
+            lit ntib # number of chars in tib
+            call _store_body
+
+
+
 
 
 _word_eob:  lit 0 [ret] # end of buffer, return 0
