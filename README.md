@@ -112,27 +112,27 @@ ALU opcode fields:
     - `0`: Do nothing
     - `1`: Pop from R into PC (`[ret]`)
 - `alu`: Operation to be performed by the ALU
-    - `$00`: Forward T
-    - `$01`: Forward N
-    - `$02`: Forward R
-    - `$03`: Perform memory read from address indicated by T and forward the result
-    - `$04`: Calculate `N + T`, set/clear carry flag respectively
-    - `$05`: Calculate `N - T`, set/clear carry flag respectively
-    - `$06`: TODO: Calculate `N * T`
-    - `$07`: Calculate `N and T`
-    - `$08`: Calculate `N or T`
-    - `$09`: Calculate `N xor T`
-    - `$0a`: Signed comparison: `N < T ? $ffff : 0`
-    - `$0b`: Unsigned comparison: `N < T ? $ffff : 0`
-    - `$0c`: Right shift T by 1, modifies carry flag
-    - `$0d`: Right shift T by 8, does not modify carry flag
-    - `$0e`: Left shift T by 1, modifies carry flag
-    - `$0f`: Left shift T by 8, does not modify carry flag
-    - `$10`: `T==0 ? N : PC+1`, for conditional jump to N
-    - `$11`: `T!=0 ? N : PC+1`, for conditional jump to N
-    - `$12`: Forward carry flag
-    - `$13`: `~T` (invert T)
-    - `$14`: NOP
+    - `$00`: Forward T (`a:t`)
+    - `$01`: Forward N (`a:n`)
+    - `$02`: Forward R (`a:r`)
+    - `$03`: Perform memory read from address indicated by T and forward the result (`a:mem`)
+    - `$04`: Calculate `N + T`, set/clear carry flag respectively (`a:add`)
+    - `$05`: Calculate `N - T`, set/clear carry flag respectively (`a:sub`)
+    - `$06`: TODO: Calculate `N * T` (`a:mul`)
+    - `$07`: Calculate `N and T` (`a:and`)
+    - `$08`: Calculate `N or T` (`a:or`)
+    - `$09`: Calculate `N xor T` (`a:xor`)
+    - `$0a`: Signed comparison: `N < T ? $ffff : 0` (`a:lts`)
+    - `$0b`: Unsigned comparison: `N < T ? $ffff : 0` (`a:lt`)
+    - `$0c`: Right shift T by 1, modifies carry flag (`a:sr`)
+    - `$0d`: Right shift T by 8, does not modify carry flag (`a:srw`)
+    - `$0e`: Left shift T by 1, modifies carry flag (`a:sl`)
+    - `$0f`: Left shift T by 8, does not modify carry flag (`a:slw`)
+    - `$10`: `T==0 ? N : PC+1`, for conditional jump to N (`jz`)
+    - `$11`: `T!=0 ? N : PC+1`, for conditional jump to N (`jnz`)
+    - `$12`: Forward carry flag (`a:c`)
+    - `$13`: `~T` (invert T) (`a:inv`)
+    - `$14`: NOP (`a:nop`)
 
 The mnemonic is like the opcode structure, except the return field is last:
 ```
@@ -140,7 +140,28 @@ a:<src> <dst> [dsp] [rsp] [ret]
 ```
 Every ALU instruction must begin with `a:`, then following the src, which is the alu-op to be performed. The next field is the destination where the ALU result will be written to. `dsp`, `rsp` and `[ret]` are optional fields.
 
+If the ALU operation manipulates a stack pointer, this has no effect on the source operands, but on `dst`. For example, when performing an addition:
+```
+lit 1   # ( -- 1)
+lit 2   # (1 -- 1 2)
+a:add t # (1 2 -- 1 3)
+```
+The result replaces T, because the dsp was not changed by `d+` or `d-`. Hint: The **(a b -- a c)** notation shows the stack before and after the operation.
 
+Incrementing the dsp with `d+`:
+
+```
+lit 1       # ( -- 1)
+lit 2       # (1 -- 1 2)
+a:add t d+  # (1 2 -- 1 2 3)
+```
+Decrementing the dsp with `d-`:
+
+```
+lit 1       # ( -- 1)
+lit 2       # (1 -- 1 2)
+a:add t d-  # (1 2 -- 3)
+```
 
 __Relative jumps__
 
