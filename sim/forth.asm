@@ -10,9 +10,11 @@
 
 
 lit 88 # 'X'
-lit 0
-lit tib
-call _strcstore_body # (char char-idx str-addr -- )
+
+call _to_r_body
+call _r_from_body
+call _to_r_body
+call _r_from_body
 
 
 
@@ -168,7 +170,10 @@ _tuck_body:
 _to_r:      # (n -- r:n)
             .word _tuck
             .cstr ">r"
-_to_r_body: a:t r d- r+ [ret]
+_to_r_body: a:r t d+ r-      # (n r:a -- n a)
+            call _swap_body  # (n a -- a n)
+            a:t r d- r+      # (a n -- a r:n)
+            a:t pc d-        # (a r:n -- r:n)
 
 
 _r_from:    # (r:n -- n)
@@ -178,8 +183,7 @@ _r_from_body:
             a:r t d+ r-       # (r:n a -- a r:n) ; rpop return address
             a:r t d+ r-       # (a r:n -- a n)   ; pop value to retrieve
             call _swap_body   # (a n -- n a)
-            a:t r d- r+       # (n a -- n r:a)   ; put return address back on return stack
-            a:nop t [ret]
+            a:t pc d-         # (n a -- n)
 
 
 _wait_uart_tx_can_send: # ( -- )
@@ -285,8 +289,6 @@ _strcs2:
             call _r_from_body       # (W    R:wa -- W wa)
             call _store_body        # (W wa      -- )
             a:nop t r- [ret]
-
-
 
 
 _tib_eob:   # (-- flag)

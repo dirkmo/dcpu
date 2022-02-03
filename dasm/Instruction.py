@@ -194,11 +194,18 @@ class OpAlu(OpBase):
     
     def data(self, symbols):
         op = OpBase.OP_ALU
+        rsp_dec = False
+        ret_bit = False
         for t in self.tokens[0:-1]:
             assert t.type in self._options, f"ERROR on line {t.line}, column {t.column}: Unknown token '{t.value}'."
             op = op | self._options[t.type]
+            if t.type == "RM": rsp_dec = True
+            if t.type == "RETBIT": ret_bit = True
         assert op != 0
-        # TODO: prevent [ret] and r+
+        
+        if ret_bit:
+            assert rsp_dec, f"ERROR on line {t.line}, column {t.column}: R- required when return bit is set by [ret]."
+        
         return [op]
 
 
