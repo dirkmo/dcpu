@@ -9,7 +9,10 @@
 .equ TIB_BYTE_SIZE 80
 
 
-call _tibcfetch_body
+lit 88 # 'X'
+lit 0
+lit tib
+call _strcstore_body # (char char-idx str-addr -- )
 
 
 
@@ -172,7 +175,11 @@ _r_from:    # (r:n -- n)
             .word _to_r
             .cstr "r>"
 _r_from_body:
-            a:r t d+ r- [ret]
+            a:r t d+ r-       # (r:n a -- a r:n) ; rpop return address
+            a:r t d+ r-       # (a r:n -- a n)   ; pop value to retrieve
+            call _swap_body   # (a n -- n a)
+            a:t r d- r+       # (n a -- n r:a)   ; put return address back on return stack
+            a:nop t [ret]
 
 
 _wait_uart_tx_can_send: # ( -- )
@@ -252,8 +259,7 @@ _strcstore: # (char char-idx str-addr -- )
             .word _cscfetch
             .cstr "sc!"
 _strcstore_body:
-            call _swap_body         # (c ci sa         -- c sa ci)
-            call _over_body         # (c sa ci         -- c sa ci ci)
+            call _over_body         # (c ci sa         -- c ci sa ci)
             call _charidxwordaddr   # (c ci sa ci      -- c ci wa)
             a:t r r+                # (c ci wa         -- c ci wa    R:wa)
             call _fetch_body        # (c ci wa    R:wa -- c ci w     R:wa)
@@ -263,7 +269,7 @@ _strcstore_body:
             a:and t d-              # (c w ci 1    -- c w ci&1)
             # if t=0, put char in upper byte of w
             # if t=1, put char in lower byte of w
-            rj.nz _strcs1           # (c w ci&1  -- c w)
+            rj.z _strcs1            # (c w ci&1  -- c w)
             # put char in lower byte
             lit $ff00               # (c w       -- c w $ff00)
             a:and t d-              # (c w $ff00 -- c wu)
