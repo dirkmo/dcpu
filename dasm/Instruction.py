@@ -1,7 +1,3 @@
-from distutils.command.config import LANG_EXT
-from lib2to3.pytree import convert
-
-
 def convert_to_number(s):
     sign = 1
     if s[0] == '+':
