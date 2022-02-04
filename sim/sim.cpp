@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <ctype.h>
 #include <verilated_vcd_c.h>
 #include "verilated.h"
 #include "Vtop.h"
@@ -196,6 +197,33 @@ void step_over(void) {
     }
 }
 
+char printable(char c) {
+    return (isprint(c)) ? c : '.';
+}
+
+void dump(uint16_t addr, int len) {
+    char s[MSGAREA_W+1];
+    char ss[16];
+    memset(s, 0, sizeof(s));
+    memset(ss, 0, sizeof(ss));
+    int i;
+    for (i = 0; i < len; i++) {
+        if ((i%4) == 0) {
+            sprintf(s+(i%4)*5, "%04x: ", addr+i);
+        }
+        sprintf(s+(i%4)*5+6, "%04x ", mem[addr+i]);
+        sprintf(ss+(i*2%8), "%c%c", printable(mem[addr+i] >> 8), printable(mem[addr+i] & 0xff) );
+        if ((i%4) == 3) {
+            vMessages.push_back(string(s) + string(ss));
+            memset(s, 0, sizeof(s));
+            memset(ss, 0, sizeof(ss));
+        }
+    }
+    if (strlen(s) > 0) {
+        vMessages.push_back(string(s) + string(ss));
+    }
+}
+
 enum user_action user_interaction(void) {
     int key = getch();
     switch(key) {
@@ -215,7 +243,7 @@ enum user_action user_interaction(void) {
             return UA_NONE;
     }
 
-    uint32_t val;
+    uint32_t val, val2 = 0xffffffff;
     if (sUserInput.size() == 0) {
         return UA_STEP; // step into
     } else if (sUserInput == "run") {
@@ -226,6 +254,11 @@ enum user_action user_interaction(void) {
         breakpoint_list();
     } else if (sUserInput == "reset") {
         reset();
+    } else if (sscanf(sUserInput.c_str(), "dump %x %d", &val, &val2) > 0) {
+        if (val2 > 256) {
+            val2 = 16;
+        }
+        dump(val, val2);
     }
     sUserInput = "";
     return UA_NONE;
