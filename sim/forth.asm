@@ -8,15 +8,8 @@
 .equ SIM_END $be00
 .equ TIB_BYTE_SIZE 80
 
-
-lit 88 # 'X'
-
-call _to_r_body
-call _r_from_body
-call _to_r_body
-call _r_from_body
-
-
+lit 32
+call _word_body
 
 .word SIM_END
 
@@ -25,11 +18,12 @@ state: .word 0 # 0: interpreting, -1: compiling
 ntib: .word 9   # number of chars in tib
 # tib: .space TIB_BYTE_SIZE
 tib: .ascii "drop dup " # input buffer
-to_in: .word 3  # current char idx in tib
+to_in: .word 0  # current char idx in tib
 base: .word 10
 latest: .word 0 # last word in dictionary
 dp: .word 0 # first free cell after dict
-scratch: .space 33
+
+cstrscratch: .space 33
 
 # dictionary
 
@@ -41,8 +35,22 @@ _add1_body:
             a:add t d- r- [ret] # (n 1 -- n+1)
 
 
-_latest:    # ( -- addr)
+_plus_store: # (n addr --)
+             # add n to variable at addr
             .word _add1
+            .cstr "+!"
+_plus_store_body:
+            a:mem r r+          # (n a -- n a r:w) ; fetch into r
+            call _swap_body     # (n a r:w -- a n r:w)
+            a:r t d+ r-         # (a n r:w -- a n w)
+            a:add t d-          # (a n w -- a n+w)
+            call _swap_body     # (a n+w -- n+w a)
+            a:n mem d-          # (n+w a -- n+w)
+            a:nop t d- r- [ret] # (n+w -- )
+
+
+_latest:    # ( -- addr)
+            .word _plus_store
             .cstr "latest"
 _latest_body:
             lit latest [ret]
@@ -70,7 +78,6 @@ _to_in:     # ( -- n )
             .cstr ">in"
 _to_in_body:
             lit to_in [ret]
-            
 
 
 _tibcfetch: # ( -- char)
@@ -85,8 +92,20 @@ _tibcfetch_body:
             a:nop t r- [ret]
 
 
+_tibcstore: # (c --)
+            # store char in tib at idx >in
+            .word _tibcfetch_body
+            .cstr "tibc!"
+_tibcstore_body:
+            call _to_in_body # (c -- c a)
+            call _fetch_body # (c a -- c idx)
+            call _tib_body   # (c idx -- c idx a)
+            call _strcstore_body # (c idx a -- )
+            a:nop t r- [ret]
+
+
 _base:      # ( -- addr)
-            .word _tibcfetch
+            .word _tibcstore
             .cstr "base"
 _base_body:
             lit base [ret]
@@ -291,6 +310,23 @@ _strcs2:
             a:nop t r- [ret]
 
 
+_cstr_append: # ( char cstr-addr --)
+            .word _strcstore
+            .cstr "cstra"
+_cstr_append_body:
+            call _dup_body       # (c sa -- c sa sa)
+            a:t r r+             # (c sa sa -- c sa sa r:sa)
+            # get cstring count
+            call _fetch_body     # (c sa sa -- c sa count r:sa)
+            call _swap_body      # (c sa count r:sa -- c count sa r:sa)
+            call _add1_body      # (c count sa r:sa -- c count sa r:sa)
+            call _strcstore_body # (c count sa r:sa -- r:sa)
+            lit 1                # (r:sa -- 1 r:sa)
+            a:r t d+ r-          # (1 r:sa -- 1 sa)
+            call _plus_store_body# (1 sa --)
+            a:nop t r- [ret]
+
+
 _tib_eob:   # (-- flag)
             # if >in reached end of buffer return 0
             call _to_in_body
@@ -313,7 +349,7 @@ _word:      # (delimiter -- count addr-str)
             # skip delimiters
             # take idx of first non-delimiter
             # 
-            .word _strcstore
+            .word _cstr_append
             .cstr "word"
 _word_body:
             lit 0 # (del -- del c) ; helper
@@ -321,7 +357,7 @@ _wb_del_loop:
             call _drop_body      # (del c -- del) ; drop c from branching to _wb_del_loop
             # reached eob?
             call _tib_eob
-            rj.z _word_eob
+            rj.z _word_eob2
             
             call _tibcfetch_body # (del -- del c)
             call _to_in_plus1    # (del c -- del c)
@@ -335,11 +371,26 @@ _wb_del_loop:
 
             # initialize char count to 0
             lit 0
-            lit ntib # number of chars in tib
+            lit cstrscratch
             call _store_body
 
+_wordloop:  # (del c)
 
+            # reached eob?
+            call _tib_eob
+            rj.z _word_eob1
 
+            lit cstrscratch # (del c -- del c a)
+            call _cstr_append_body # (del c a -- del)
+            
+            # fetch next char from tib
+            call _tibcfetch_body # (del -- del c)
+            call _to_in_plus1    # (del c -- del c)
+            call _2dup_body      # (del c -- del c del c)
+            # is char == delimiter?
+            a:sub t d-           # (del c del c -- del c f)
+            rj.nz _wordloop      # (del c f -- del c)
 
-
-_word_eob:  lit 0 [ret] # end of buffer, return 0
+_word_eob1: call _drop_body
+_word_eob2: call _drop_body
+            lit 0 [ret] # end of buffer, return 0
