@@ -8,8 +8,9 @@
 .equ SIM_END $be00
 .equ TIB_BYTE_SIZE 80
 
-lit 32
-call _word_body
+lit wort1
+lit wort2
+call _cstrcmp_body
 
 .word SIM_END
 
@@ -24,6 +25,10 @@ latest: .word 0 # last word in dictionary
 dp: .word 0 # first free cell after dict
 
 cstrscratch: .space 33
+
+wort1: .cstr "welt"
+wort2: .cstr "welT"
+
 
 # dictionary
 
@@ -186,8 +191,33 @@ _tuck_body:
             call _over_body # ( b a -- b a b)
             a:nop t r- [ret]
 
-_to_r:      # (n -- r:n)
+
+_min:       # (n1 n2 -- min)
             .word _tuck
+            .cstr "min"
+_min_body:
+            a:lts t d+      # (n1 n2 -- n1 n2 lt)
+            rj.nz _min__1   # (n1 n2 lt -- n1 n2)
+            call _nip_body  # (n1 n2 -- n2)
+            rj _min__2
+_min__1:    call _drop_body # (n1 n2 -- n1)
+_min__2:    a:nop t r- [ret]
+
+
+_max:       # (n1 n2 -- min)
+            .word _max
+            .cstr "max"
+_max_body:
+            a:lts t d+      # (n1 n2 -- n1 n2 lt)
+            rj.z _max__1    # (n1 n2 lt -- n1 n2)
+            call _nip_body  # (n1 n2 -- n2)
+            rj _max__2
+_max__1:    call _drop_body # (n1 n2 -- n1)
+_max__2:    a:nop t r- [ret]
+
+
+_to_r:      # (n -- r:n)
+            .word _min
             .cstr ">r"
 _to_r_body: a:r t d+ r-      # (n r:a -- n a)
             call _swap_body  # (n a -- a n)
@@ -349,8 +379,7 @@ _to_in_plus1: # (--)
 
 _word:      # (delimiter -- count addr-str)
             # skip delimiters
-            # take idx of first non-delimiter
-            # 
+            # copy word to cstrscratch
             .word _cstr_append
             .cstr "word"
 _word_body:
@@ -400,3 +429,43 @@ _wordloop:  # (del c)
 _word_eob2: call _drop_body
 _word_eob1: call _drop_body
             lit 0 [ret] # end of buffer, return 0
+
+
+_cstrcmp:   # (a1 a2 -- f)
+            .word _word
+            .cstr "cstrcmp"
+_cstrcmp_body:
+            call _2dup_body     # (a1 a2 -- a1 a2 a1 a2)
+            call _fetch_body    # (a1 a2 -- a1 a2 a1 cnt2)
+            call _swap_body     # (a1 a2 -- a1 a2 cnt2 a1)
+            call _fetch_body    # (a1 a2 -- a1 a2 cnt2 cnt1)
+            a:sub t             # (a1 a2 cnt2 cnt1 -- a1 a2 cnt2 f)
+            rj.nz _cstrcmp__ne3 # (a1 a2 cnt2 f -- a1 a2 cnt2)
+            # counts are equal
+            a:t r r+            # (a1 a2 cnt -- a1 a2 r:cnt)  ; move cnt to rstack
+            # increment addresses
+            lit 1               # (a1 a2 r:cnt -- a1 a2 1 r:cnt)
+            a:add t d-          # (a1 a2 1 r:cnt -- a1 a2+1 r:cnt)
+            call _swap_body     # (a1 a2 r:cnt -- a2 a1 r:cnt)
+            lit 1               # (a2 a1 r:cnt -- a2 a1 1 r:cnt)
+            a:add t d-          # (a2 a1 1 r:cnt -- a2 a1+1 r:cnt)
+_cstrcmp__1:
+            # (a1 a2 r:cnt)
+            # cnt is >= 0 ?
+            a:r t d+ r-         # (a1 a2 r:cnt -- a1 a2 cnt)
+
+            lit 1               # (a1 a2 cnt -- a1 a2 cnt 1)
+            a:sub t d-          # (a1 a2 cnt -- a1 a2 cnt-1)
+
+            rj.n _cstrcmp__e3   # (a1 a2 cnt cnt -- a1 a2 cnt)
+            a:t r r+            # (a1 a2 cnt -- a1 a2 r:cnt)  ; move cnt to rstack
+
+
+            # fetch chars
+
+            # not equal
+_cstrcmp__ne3: a:nop t d-        # (n n n -- n n)
+_cstrcmp__ne2: a:nop t d-        # (n n -- n)
+_cstrcmp__ne1: a:nop t d-        # (n --)
+            lit 0 [ret]
+            
