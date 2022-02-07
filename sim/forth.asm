@@ -15,9 +15,9 @@ call _word_body
 
 # variables
 state: .word 0 # 0: interpreting, -1: compiling
-ntib: .word 9   # number of chars in tib
+ntib: .word 11   # number of chars in tib
 # tib: .space TIB_BYTE_SIZE
-tib: .ascii "drop dup " # input buffer
+tib: .ascii "  drop dup " # input buffer
 to_in: .word 0  # current char idx in tib
 base: .word 10
 latest: .word 0 # last word in dictionary
@@ -314,16 +314,16 @@ _cstr_append: # ( char cstr-addr --)
             .word _strcstore
             .cstr "cstra"
 _cstr_append_body:
-            call _dup_body       # (c sa -- c sa sa)
-            a:t r r+             # (c sa sa -- c sa sa r:sa)
+            call _dup_body        # (c sa -- c sa sa)
+            a:t r r+              # (c sa sa -- c sa sa r:sa)
             # get cstring count
-            call _fetch_body     # (c sa sa -- c sa count r:sa)
-            call _swap_body      # (c sa count r:sa -- c count sa r:sa)
-            call _add1_body      # (c count sa r:sa -- c count sa r:sa)
-            call _strcstore_body # (c count sa r:sa -- r:sa)
-            lit 1                # (r:sa -- 1 r:sa)
-            a:r t d+ r-          # (1 r:sa -- 1 sa)
-            call _plus_store_body# (1 sa --)
+            call _fetch_body      # (c sa sa -- c sa count r:sa)
+            call _swap_body       # (c sa count r:sa -- c count sa r:sa)
+            call _add1_body       # (c count sa r:sa -- c count sa r:sa)
+            call _strcstore_body  # (c count sa r:sa -- r:sa)
+            lit 1                 # (r:sa -- 1 r:sa)
+            a:r t d+ r-           # (1 r:sa -- 1 sa)
+            call _plus_store_body # (1 sa --)
             a:nop t r- [ret]
 
 
@@ -331,7 +331,9 @@ _tib_eob:   # (-- flag)
             # if >in reached end of buffer return 0
             call _to_in_body
             call _fetch_body
-            lit TIB_BYTE_SIZE
+            #lit TIB_BYTE_SIZE
+            lit ntib
+            call _fetch_body
             a:sub t d- r- [ret]
 
 
@@ -356,9 +358,9 @@ _word_body:
 _wb_del_loop:
             call _drop_body      # (del c -- del) ; drop c from branching to _wb_del_loop
             # reached eob?
-            call _tib_eob
-            rj.z _word_eob2
-            
+            call _tib_eob   # (del -- del f)
+            rj.z _word_eob1 # (del f -- del)
+
             call _tibcfetch_body # (del -- del c)
             call _to_in_plus1    # (del c -- del c)
             call _2dup_body      # (del c -- del c del c)
@@ -377,8 +379,8 @@ _wb_del_loop:
 _wordloop:  # (del c)
 
             # reached eob?
-            call _tib_eob
-            rj.z _word_eob1
+            call _tib_eob   # (del c -- del c f)
+            rj.z _word_eob2 # (del c f -- del c)
 
             lit cstrscratch # (del c -- del c a)
             call _cstr_append_body # (del c a -- del)
@@ -391,6 +393,10 @@ _wordloop:  # (del c)
             a:sub t d-           # (del c del c -- del c f)
             rj.nz _wordloop      # (del c f -- del c)
 
-_word_eob1: call _drop_body
+            call _drop_body      # (del c -- del)
+            call _drop_body      # (del -- )
+            lit cstrscratch [ret] # ( -- a)
+
 _word_eob2: call _drop_body
+_word_eob1: call _drop_body
             lit 0 [ret] # end of buffer, return 0
