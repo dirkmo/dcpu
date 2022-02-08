@@ -303,8 +303,8 @@ _cscfetch:  # (char-idx cstr-addr -- char)
             .cstr "csc@" # "counted string char fetch"
 _cscfetch_body:
             # add 1 because counted string
-            call _add1_body       # (ci ca i -- ci ca i+1)
-            call _strcfetch_body  # (ci ca i+1 -- c)
+            call _add1_body       # (ci ca -- ci ca+1)
+            call _strcfetch_body  # (ci ca+1 -- c)
             a:nop t r- [ret]
 
 
@@ -442,7 +442,7 @@ _cstrcmp_body:
             a:sub t             # (a1 a2 cnt2 cnt1 -- a1 a2 cnt2 f)
             rj.nz _cstrcmp__ne3 # (a1 a2 cnt2 f -- a1 a2 cnt2)
             # counts are equal
-            a:t r r+            # (a1 a2 cnt -- a1 a2 r:cnt)  ; move cnt to rstack
+            a:t r d- r+         # (a1 a2 cnt -- a1 a2 r:cnt)  ; move cnt to rstack
             # increment addresses
             lit 1               # (a1 a2 r:cnt -- a1 a2 1 r:cnt)
             a:add t d-          # (a1 a2 1 r:cnt -- a1 a2+1 r:cnt)
@@ -451,21 +451,39 @@ _cstrcmp_body:
             a:add t d-          # (a2 a1 1 r:cnt -- a2 a1+1 r:cnt)
 _cstrcmp__1:
             # (a1 a2 r:cnt)
-            # cnt is >= 0 ?
             a:r t d+ r-         # (a1 a2 r:cnt -- a1 a2 cnt)
 
+            # cnt--
             lit 1               # (a1 a2 cnt -- a1 a2 cnt 1)
             a:sub t d-          # (a1 a2 cnt -- a1 a2 cnt-1)
-
-            rj.n _cstrcmp__e3   # (a1 a2 cnt cnt -- a1 a2 cnt)
-            a:t r r+            # (a1 a2 cnt -- a1 a2 r:cnt)  ; move cnt to rstack
-
+            # if cnt < 0 then equal
+            call _dup_body      # (a1 a2 cnt -- a1 a2 cnt cnt)
+            rj.n _cstrcmp__eq3  # (a1 a2 cnt cnt -- a1 a2 cnt)
+            a:t r d- r+         # (a1 a2 cnt -- a1 a2 r:cnt)  ; move cnt to rstack
 
             # fetch chars
+            call _2dup_body      # (a1 a2 r:cnt -- a1 a2 a1 a2 r:cnt)
+            a:r t d+             # (a1 a2 a1 a2 r:cnt -- a1 a2 a1 a2 cnt r:cnt)
+            call _swap_body      # (a1 a2 a1 a2 cnt r:cnt -- a1 a2 a1 cnt a2 r:cnt)
+            call _strcfetch_body # (a1 a2 a1 a2 cnt r:cnt -- a1 a2 a1 c2)
+            a:r t d+             # (a1 a2 a1 c2 r:cnt -- a1 a2 a1 c2 cnt r:cnt)
+            call _swap_body      # (a1 a2 a1 c2 cnt r:cnt -- a1 a2 a1 cnt c2 r:cnt)
+            a:t r d- r+          # (a1 a2 a1 cnt c2 r:cnt -- a1 a2 a1 cnt r:cnt c2)
+            call _swap_body      # (a1 a2 a1 cnt r:cnt c2 -- a1 a2 cnt a1 r:cnt c2)
+            call _strcfetch_body # (a1 a2 a1 cnt r:cnt c2 -- a1 a2 c1 r:cnt c2)
+            a:r t d+ r-          # (a1 a2 c1 r:cnt c2 -- a1 a2 c1 c2 r:cnt)
+            a:sub t d-           # (a1 a2 c1 c2 r:cnt -- a1 a2 f r:cnt)
+            rj.nz _cstrcmp__ne2  # (a1 a2 f r:cnt -- a1 a2 r:cnt)
+            rj _cstrcmp__1       # (a1 a2 r:cnt -- a1 a2 r:cnt)
+
 
             # not equal
 _cstrcmp__ne3: a:nop t d-        # (n n n -- n n)
 _cstrcmp__ne2: a:nop t d-        # (n n -- n)
 _cstrcmp__ne1: a:nop t d-        # (n --)
             lit 0 [ret]
-            
+
+_cstrcmp__eq3: a:nop t d-        # (n n n -- n n)
+_cstrcmp__eq2: a:nop t d-        # (n n -- n)
+_cstrcmp__eq1: a:nop t d-        # (n --)
+            lit $ffff [ret]
