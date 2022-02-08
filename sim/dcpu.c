@@ -41,7 +41,7 @@ const char *dcpu_disasm(uint16_t op) {
             if (op & OP_LITH_UNUSED(0xf))
                 sprintf(buf, "SIM_END");
             else
-                sprintf(buf, "LIT.H $%02x", op & MASK(8));
+                sprintf(buf, "LIT.H $%02x%s", op & MASK(8), op & OP_LITH_RET(1) ? " [ret]" : "");
             break;
         case OP_RJP:  sprintf(buf, "%s $%03x", rjp_cond(op), op & MASK(10)); break;
         case OP_ALU:  disasm_alu(buf, op); break;

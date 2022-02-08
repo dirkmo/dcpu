@@ -82,7 +82,8 @@ class OpLit(OpBase):
         super().__init__(tokens, OpBase.OPCODE)
     
     def len(self):
-        if self.tokens[1].type == "SIGNED_NUMBER":
+        retbit = len(self.tokens) > 2 and self.tokens[2].type == "RETBIT"
+        if self.tokens[1].type == "SIGNED_NUMBER" and not retbit:
             v = convert_to_number(self.tokens[1].value)
             if v < (1<<13):
                 return 1

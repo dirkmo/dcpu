@@ -480,7 +480,7 @@ _cstrcmp__1:
             # not equal
 _cstrcmp__ne3: a:nop t d-        # (n n n -- n n)
 _cstrcmp__ne2: a:nop t d-        # (n n -- n)
-_cstrcmp__ne1: a:nop t d-        # (n --)
+_cstrcmp__ne1: a:nop t d- r-     # (n --)
             lit 0 [ret]
 
 _cstrcmp__eq3: a:nop t d-        # (n n n -- n n)
