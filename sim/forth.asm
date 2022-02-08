@@ -26,8 +26,8 @@ dp: .word 0 # first free cell after dict
 
 cstrscratch: .space 33
 
-wort1: .cstr "welt"
-wort2: .cstr "welT"
+wort1: .cstr "Wfelt"
+wort2: .cstr "Wfelt"
 
 
 # dictionary
@@ -440,9 +440,9 @@ _cstrcmp_body:
             call _swap_body     # (a1 a2 -- a1 a2 cnt2 a1)
             call _fetch_body    # (a1 a2 -- a1 a2 cnt2 cnt1)
             a:sub t             # (a1 a2 cnt2 cnt1 -- a1 a2 cnt2 f)
-            rj.nz _cstrcmp__ne3 # (a1 a2 cnt2 f -- a1 a2 cnt2)
-            # counts are equal
+            rj.nz _cstrcmp__ne4 # (a1 a2 cnt2 f -- a1 a2 cnt2)
             a:t r d- r+         # (a1 a2 cnt -- a1 a2 r:cnt)  ; move cnt to rstack
+            # counts are equal
             # increment addresses
             lit 1               # (a1 a2 r:cnt -- a1 a2 1 r:cnt)
             a:add t d-          # (a1 a2 1 r:cnt -- a1 a2+1 r:cnt)
@@ -477,12 +477,14 @@ _cstrcmp__1:
             rj _cstrcmp__1       # (a1 a2 r:cnt -- a1 a2 r:cnt)
 
 
-            # not equal
+            # exit for not equal
+_cstrcmp__ne4: a:t r r+          # push to rstack to be dropped later
 _cstrcmp__ne3: a:nop t d-        # (n n n -- n n)
 _cstrcmp__ne2: a:nop t d-        # (n n -- n)
 _cstrcmp__ne1: a:nop t d- r-     # (n --)
             lit 0 [ret]
 
+            # exit for equal words
 _cstrcmp__eq3: a:nop t d-        # (n n n -- n n)
 _cstrcmp__eq2: a:nop t d-        # (n n -- n)
 _cstrcmp__eq1: a:nop t d-        # (n --)
