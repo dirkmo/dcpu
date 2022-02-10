@@ -9,8 +9,7 @@
 .equ TIB_BYTE_SIZE 80
 
 lit wort1
-lit wort2
-call _cstrcmp_body
+call _find_body
 
 .word SIM_END
 
@@ -21,12 +20,12 @@ ntib: .word 11   # number of chars in tib
 tib: .ascii "  drop dup " # input buffer
 to_in: .word 0  # current char idx in tib
 base: .word 10
-latest: .word 0 # last word in dictionary
+latest: .word _find # last word in dictionary
 dp: .word 0 # first free cell after dict
 
 cstrscratch: .space 33
 
-wort1: .cstr "Wfelt"
+wort1: .cstr "+dg1"
 wort2: .cstr "Wfelt"
 
 
@@ -58,7 +57,8 @@ _latest:    # ( -- addr)
             .cstr "latest"
             .word _plus_store
 _latest_body:
-            lit latest [ret]
+            lit latest
+            a:mem t r- [ret]
 
 
 _tib:       # ( -- addr)
@@ -489,3 +489,29 @@ _cstrcmp__eq3: a:nop t d-        # (n n n -- n n)
 _cstrcmp__eq2: a:nop t d-        # (n n -- n)
 _cstrcmp__eq1: a:nop t d-        # (n --)
             lit $ffff [ret]
+
+
+_find: # ( c-addr -- c-addr 0 | xt 1 | xt -1 )
+        .cstr "find"
+        .word _cstrcmp
+_find_body:
+        call _latest_body   # (wa -- wa it)
+_find__1:
+        call _dup_body      # (wa it -- wa it it)
+        rj.z _find_not_found # (wa it it -- wa it)
+        call _2dup_body     # (wa it -- wa it wa it)
+        call _cstrcmp_body  # (wa it wa it -- wa it f)
+        rj.nz _find_found   # (wa it f -- wa it)
+        a:mem t d+          # (wa it -- wa it cnt)
+        call _add1_body     # (wa it cnt -- wa it cnt+1)
+        a:sr t              # (wa it cnt+1 -- wa it n)
+        a:add t d-          # (wa it n -- wa a)
+        call _add1_body     # (wa a -- wa a+1)
+        a:mem t             # (wa a -- wa it)
+        rj _find__1         # (wa it -- wa it)
+_find_found:
+        call _nip_body      # (wa it -- it)
+        lit 1 [ret]         # (it -- it 1)
+_find_not_found:
+        call _drop_body
+        lit 0 [ret]
