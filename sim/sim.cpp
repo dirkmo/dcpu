@@ -365,6 +365,16 @@ void print_screen(void) {
     refresh();
 }
 
+int kbhit(void) {
+    nodelay(stdscr, TRUE);
+    int ch = getch();
+    if (ch != ERR) {
+        ungetch(ch);
+    }
+    nodelay(stdscr, FALSE);
+    return (ch != ERR);
+}
+
 int main(int argc, char *argv[]) {
     printf("dcpu simulator\n\n");
     if (argc < 3) {
@@ -421,7 +431,7 @@ int main(int argc, char *argv[]) {
                 vMessages.push_back("Stopped on breakpoint\n");
                 run = false;
             }
-            if (pc_on_silent_breakpoint(pc)) {
+            if (pc_on_silent_breakpoint(pc) || kbhit()) {
                 run = false;
             }
             while (!run) {
