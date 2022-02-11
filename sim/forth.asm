@@ -564,15 +564,20 @@ _accept_loop:
         lit 27 # BSP            # (ca key r:u1 -- ca key 27 r:u1)
         a:sub t                 # (ca key 13 r:u1 -- ca key f r:u1)
         rj.nz _accept__1        # (ca key f r:u1 -- ca key r:u1)
-        call _over_body         # ca key r:u1 -- ca key ca r:u1
-        call _cstr_pop_body     # ca key ca r:u1 -- ca key r:u1
+        call _drop_body         # (ca key r:u1 -- ca r:u1)
+        call _dup_body          # (ca r:u1 -- ca ca r:u1)
+        call _cstr_pop_body     # (ca ca r:u1 -- ca r:u1)
+        rj _accept_loop
 
 _accept__1:
-        call _over_body         # (ca key r:u1 -- ca key ca r:u1)
-        call _cstr_append_body  # (ca key ca r:u1 -- ca r:u1)
+        # decrement free space counter u1
+TODO: Prüfen, ob u1 == 0 ist. Wenn ja, Zeichen nicht anhängen
         a:r t d+ r-             # (ca r:u1 -- ca u1)
         lit 1                   # (ca u1 -- ca u1 1)
         a:sub t d-              # (ca u1 1 -- ca u1-1)
+        # append char to c-str
+        call _over_body         # (ca key r:u1 -- ca key ca r:u1)
+        call _cstr_append_body  # (ca key ca r:u1 -- ca r:u1)
         rj _accept_loop
 
 
