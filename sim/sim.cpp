@@ -224,6 +224,20 @@ void dump(uint16_t addr, int len) {
     }
 }
 
+void send_via_uart(string s) {
+    int p1 = s.find("\"");
+    if (p1 == string::npos) {
+        return;
+    }
+    int p2 = s.find("\"", p1+1);
+    if (p2 == string::npos) {
+        return;
+    }
+    s = s.substr(p1+1, p2-p1-1);
+    vMessages.push_back(string("uart-tx: ") + "'" + s + "'");
+    uart_send(0, s.c_str());
+}
+
 enum user_action user_interaction(void) {
     int key = getch();
     switch(key) {
@@ -244,6 +258,7 @@ enum user_action user_interaction(void) {
     }
 
     uint32_t val, val2 = 0xffffffff;
+    char sbuf[128];
     if (sUserInput.size() == 0) {
         return UA_STEP; // step into
     } else if (sUserInput == "run") {
@@ -259,6 +274,8 @@ enum user_action user_interaction(void) {
             val2 = 16;
         }
         dump(val, val2);
+    } else if (strstr(sUserInput.c_str(), "uart") != NULL) {
+        send_via_uart(sUserInput);
     }
     sUserInput = "";
     return UA_NONE;

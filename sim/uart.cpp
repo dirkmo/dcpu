@@ -134,9 +134,9 @@ int uart_handle(int *rxbyte) {
     return 0;
 }
 
-void uart_send(int ch, const char *dat) {
+void uart_send(int channel, const char *dat) {
     while(*dat) {
-        char c = *dat | ((!!ch) << 7);
+        char c = *dat | ((!!channel) << 7);
         fifo_send_to_fpga.push(c);
         dat++;
     }

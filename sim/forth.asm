@@ -260,7 +260,7 @@ _wait_uart_rx_has_data: # ( -- )
             a:mem t
             lit MASK_UART_RX_EMPTY
             a:and t d-
-            rj.z _wait_uart_rx_has_data
+            rj.nz _wait_uart_rx_has_data
             a:nop t r- [ret]
 
 
