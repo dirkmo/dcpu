@@ -6,27 +6,28 @@
 .equ MASK_UART_RX_FULL 2
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
-.equ TIB_BYTE_SIZE 80
+.equ TIB_WORD_COUNT 4
+
 
 lit ntib
-lit TIB_BYTE_SIZE
+lit TIB_WORD_COUNT
+a:sl t
 call _accept_body
 
 .word SIM_END
 
 # variables
-state: .word 0 # 0: interpreting, -1: compiling
-ntib: .word 11   # number of chars in tib
-# tib: .space TIB_BYTE_SIZE
-tib: .ascii "  drop dup " # input buffer
-to_in: .word 0  # current char idx in tib
+state: .word 0          # 0: interpreting, -1: compiling
+ntib: .word 0           # number of chars in tib
+tib: .space TIB_WORD_COUNT
+to_in: .word 0          # current char idx in tib
 base: .word 10
-latest: .word _find # last word in dictionary
-dp: .word 0 # first free cell after dict
+latest: .word _find     # last word in dictionary
+dp: .word 0             # first free cell after dict
 
 cstrscratch: .space 33
 
-wort1: .cstr "+dg1"
+wort1: .cstr ""
 wort2: .cstr "Wfelt"
 
 
@@ -343,7 +344,7 @@ _strcs2:
 
 
 _cstr_append: # ( char cstr-addr --)
-            .cstr "cstra"
+            .cstr "cstr-append"
             .word _strcstore
 _cstr_append_body:
             call _dup_body        # (c sa -- c sa sa)
@@ -357,6 +358,26 @@ _cstr_append_body:
             a:r t d+ r-           # (1 r:sa -- 1 sa)
             call _plus_store_body # (1 sa --)
             a:nop t r- [ret]
+
+
+_cstr_pop:  # (c-addr --)
+            # delete last char of c-str
+            .cstr "cstr-pop"
+            .word _cstr_append
+_cstr_pop_body:
+            call _dup_body      # (ca -- ca ca)
+            call _fetch_body    # (ca ca -- ca w)
+            call _dup_body      # (ca w -- ca w w)
+            # has c-str already zero length?
+            rj.z _cstr_pop__1   # (ca w w -- ca w)
+            lit 1               # (ca w -- ca w 1)
+            a:sub t d-          # (ca w 1 -- ca w-1)
+            call _swap_body     # (ca w -- w ca)
+            call _store_body    # (w ca --)
+            a:nop t r- [ret]    # (--)
+_cstr_pop__1:
+            call _drop_body     # (ca w -- ca)
+            a:nop t d- r- [ret] # (ca -- )
 
 
 _tib_eob:   # (-- flag)
@@ -383,7 +404,7 @@ _word:      # (delimiter -- count addr-str)
             # skip delimiters
             # copy word to cstrscratch
             .cstr "word"
-            .word _cstr_append
+            .word _cstr_pop
 _word_body:
             lit 0 # (del -- del c) ; helper
 _wb_del_loop:
@@ -520,23 +541,41 @@ _find_not_found:
 
 
 _accept: # (c-addr u1 -- u2)
+         # receive string until CR, put string as c-string at c-addr
+         # u1 is max char count that should be received
+         # u2 is number of chars received, excluding CR
         .cstr "accept"
         .word _find
 _accept_body:
-        # clear string at c-addr (ca)
         call _over_body         # (ca u1 -- ca u1 ca)
         lit 0                   # (ca u1 ca -- ca u1 ca 0)
+        # clear string at c-addr (ca)
         call _swap_body         # (ca u1 ca 0 -- ca u1 0 ca)
         call _store_body        # (ca u1 0 ca -- ca u1)
 _accept_loop:
-        call _key_body          # (ca u1 -- ca u1 key)
-        lit 13 # \r\n 13 10     # (ca u1 key -- ca u1 key 13)
-        a:sub t #               # (ca u1 key 13 -- ca u1 key f)
-        rj.z _accept_enter      # (ca u1 key f -- ca u1 key)
-        
-        call _drop_body
+        a:t r d- r+             # (ca u1 -- ca r:u1)
+        call _key_body          # (ca r:u1 -- ca key r:u1)
+        # is key CR?
+        lit 13 # CR             # (ca key r:u1 -- ca key 13 r:u1)
+        a:sub t                 # (ca key 13 r:u1 -- ca key f r:u1)
+        rj.z _accept_enter      # (ca key f r:u1 -- ca key r:u1)
+
+        # is key backspace?
+        lit 27 # BSP            # (ca key r:u1 -- ca key 27 r:u1)
+        a:sub t                 # (ca key 13 r:u1 -- ca key f r:u1)
+        rj.nz _accept__1        # (ca key f r:u1 -- ca key r:u1)
+        call _over_body         # ca key r:u1 -- ca key ca r:u1
+        call _cstr_pop_body     # ca key ca r:u1 -- ca key r:u1
+
+_accept__1:
+        call _over_body         # (ca key r:u1 -- ca key ca r:u1)
+        call _cstr_append_body  # (ca key ca r:u1 -- ca r:u1)
+        a:r t d+ r-             # (ca r:u1 -- ca u1)
+        lit 1                   # (ca u1 -- ca u1 1)
+        a:sub t d-              # (ca u1 1 -- ca u1-1)
         rj _accept_loop
 
-_accept_enter: #(ca u1 key)
+
+_accept_enter: #(ca key r:u1)
         
         
