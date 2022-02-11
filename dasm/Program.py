@@ -12,7 +12,7 @@ class Program:
             entry = t[-1]
             if entry.type in [OpBase.OPCODE, OpBase.DATA]:
                 entry.pos = pos
-                pos = pos + entry.len()
+                pos = pos + entry.len(self.symbols)
             elif entry.type == OpBase.ORG:
                 pos = entry.address()
                 entry.pos = pos
@@ -104,7 +104,7 @@ class Program:
                 t = find_token(i+1)
                 if t != None:
                     entry = t[-1]
-                    dl = entry.len()
+                    dl = entry.len(self.symbols)
                     pos = entry.pos
                     f.write(f"{pos:04x}: {l}")
                     if entry.type == OpBase.OPCODE:

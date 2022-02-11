@@ -428,13 +428,14 @@ int main(int argc, char *argv[]) {
         if (pCore->top->cpu0->w_sim_next) {
             print_screen();
             if (pc_on_breakpoint(pc)) {
-                vMessages.push_back("Stopped on breakpoint\n");
+                vMessages.push_back("Stopped on breakpoint");
                 run = false;
             }
             if (pc_on_silent_breakpoint(pc) || kbhit()) {
                 run = false;
             }
             while (!run) {
+                print_screen();
                 enum user_action ret = user_interaction();
                 print_screen();
                 if (ret == UA_QUIT) {

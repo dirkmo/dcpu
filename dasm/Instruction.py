@@ -44,7 +44,7 @@ class OpCall(OpBase):
         assert addr < 0x10000, f"ERROR on line {self.tokens[0].line}: Address out of range ({addr})."
         return [OpBase.OP_CALL | addr]
 
-    def len(self):
+    def len(self, symbols):
         return 1
 
 
@@ -52,7 +52,7 @@ class OpLitl(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
     
-    def len(self):
+    def len(self, symbols):
         return 1
     
     def data(self, symbols):
@@ -65,7 +65,7 @@ class OpLith(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
     
-    def len(self):
+    def len(self, symbols):
         return 1
 
     def data(self, symbols):
@@ -81,7 +81,7 @@ class OpLit(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
     
-    def len(self):
+    def len(self, symbols):
         retbit = len(self.tokens) > 2 and self.tokens[2].type == "RETBIT"
         if self.tokens[1].type == "SIGNED_NUMBER" and not retbit:
             v = convert_to_number(self.tokens[1].value)
@@ -126,7 +126,7 @@ class OpRelJmp(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
     
-    def len(self):
+    def len(self, symbols):
         return 1
     
     def data(self, symbols):
@@ -186,7 +186,7 @@ class OpAlu(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
 
-    def len(self):
+    def len(self, symbols):
         return 1
     
     def data(self, symbols):
@@ -224,7 +224,7 @@ class OpLabel(OpBase):
     def label(self):
         return self.tokens[0].value
     
-    def len(self):
+    def len(self, symbols):
         return 0
     
 
@@ -235,14 +235,14 @@ class OpOrg(OpBase):
     def address(self):
         return convert_to_number(self.tokens[1].value)
         
-    def len(self):
+    def len(self, symbols):
         return 0
 
 class OpWord(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.DATA)
 
-    def len(self):
+    def len(self, symbols):
         return len(self.tokens) - 2
 
     def data(self, symbols):
@@ -260,7 +260,7 @@ class OpAscii(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.DATA)
     
-    def len(self):
+    def len(self, symbols):
         return len(self.data(None))
 
     def data(self, symbols):
@@ -281,7 +281,7 @@ class OpCstr(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.DATA)
     
-    def len(self):
+    def len(self, symbols):
         data = self.data(None)
         return len(data)
 
@@ -302,9 +302,16 @@ class OpSpace(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.DATA)
     
-    def len(self):
-        return convert_to_number(self.tokens[1].value)
+    def len(self, symbols):
+        t = self.tokens[1]
+        if t.type == "CNAME":
+            assert t.value in symbols, f"ERROR on line {t.line}, column {t.column}: Unknown token '{t.value}'. " \
+                                        "Token must be defined before .space directive."
+            v = symbols[t.value]
+        else:
+            v = convert_to_number(t.value)
+        return v
     
     def data(self, symbols):
-        return [0] * self.len()
+        return [0] * self.len(symbols)
     
