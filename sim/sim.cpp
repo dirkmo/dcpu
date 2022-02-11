@@ -235,7 +235,7 @@ void send_via_uart(string s) {
     }
     s = s.substr(p1+1, p2-p1-1);
     vMessages.push_back(string("uart-tx: ") + "'" + s + "'");
-    uart_send(0, s.c_str());
+    uart_send(0, (s+"\r").c_str());
 }
 
 enum user_action user_interaction(void) {
