@@ -8,8 +8,9 @@
 .equ SIM_END $be00
 .equ TIB_BYTE_SIZE 80
 
-lit wort1
-call _find_body
+lit ntib
+lit TIB_BYTE_SIZE
+call _accept_body
 
 .word SIM_END
 
@@ -67,6 +68,7 @@ _tib:       # ( -- addr)
             .word _latest
 _tib_body:
             lit tib [ret]
+
 
 _ntib:      # ( -- n)
             # number of chars in input area
@@ -491,7 +493,7 @@ _cstrcmp__eq1: a:nop t d-        # (n --)
             lit $ffff [ret]
 
 
-_find: # ( c-addr -- c-addr 0 | xt 1 | xt -1 )
+_find: # ( c-addr -- c-addr 0 | xt 1)
         .cstr "find"
         .word _cstrcmp
 _find_body:
@@ -513,5 +515,28 @@ _find_found:
         call _nip_body      # (wa it -- it)
         lit 1 [ret]         # (it -- it 1)
 _find_not_found:
+        call _drop_body     # (wa it -- wa)
+        lit 0 [ret]         # (wa -- wa 0)
+
+
+_accept: # (c-addr u1 -- u2)
+        .cstr "accept"
+        .word _find
+_accept_body:
+        # clear string at c-addr (ca)
+        call _over_body         # (ca u1 -- ca u1 ca)
+        lit 0                   # (ca u1 ca -- ca u1 ca 0)
+        call _swap_body         # (ca u1 ca 0 -- ca u1 0 ca)
+        call _store_body        # (ca u1 0 ca -- ca u1)
+_accept_loop:
+        call _key_body          # (ca u1 -- ca u1 key)
+        lit 13 # \r\n 13 10     # (ca u1 key -- ca u1 key 13)
+        a:sub t #               # (ca u1 key 13 -- ca u1 key f)
+        rj.z _accept_enter      # (ca u1 key f -- ca u1 key)
+        
         call _drop_body
-        lit 0 [ret]
+        rj _accept_loop
+
+_accept_enter: #(ca u1 key)
+        
+        
