@@ -6,7 +6,7 @@
 .equ MASK_UART_RX_FULL 2
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
-.equ TIB_WORD_COUNT 4
+.equ TIB_WORD_COUNT 1
 
 
 lit ntib
@@ -141,9 +141,17 @@ _drop_body:
             a:nop t d- r- [ret]
 
 
+_2drop:     # ( n n -- )
+            .cstr "2drop"
+            .word _drop
+_2drop_body:
+            a:nop t d-
+            a:nop t d- r- [ret]
+
+
 _dup:       # (a -- a a)
             .cstr "dup"
-            .word _drop
+            .word _2drop
 _dup_body:
             a:t t d+ r- [ret]
 
@@ -552,8 +560,8 @@ _accept_body:
         # clear string at c-addr (ca)
         call _swap_body         # (ca u1 ca 0 -- ca u1 0 ca)
         call _store_body        # (ca u1 0 ca -- ca u1)
-_accept_loop:
         a:t r d- r+             # (ca u1 -- ca r:u1)
+_accept_loop:
         call _key_body          # (ca r:u1 -- ca key r:u1)
         # is key CR?
         lit 13 # CR             # (ca key r:u1 -- ca key 13 r:u1)
@@ -569,18 +577,24 @@ _accept_loop:
         call _cstr_pop_body     # (ca ca r:u1 -- ca r:u1)
         rj _accept_loop
 
-_accept__1:
+_accept__1:                     # (ca key r:u1)
+        a:r t d+ r-             # (ca key r:u1 -- ca key u1)
+        # is space left?
+        call _dup_body          # (ca key u1 -- ca key u1 u1)
+        rj.z _accept_full       # (ca key u1 u1 -- ca key u1)
         # decrement free space counter u1
-TODO: Prüfen, ob u1 == 0 ist. Wenn ja, Zeichen nicht anhängen
-        a:r t d+ r-             # (ca r:u1 -- ca u1)
-        lit 1                   # (ca u1 -- ca u1 1)
-        a:sub t d-              # (ca u1 1 -- ca u1-1)
+        lit 1                   # (ca key u1 -- ca key u1 1)
+        a:sub t d-              # (ca key u1 1 -- ca key u1-1)
         # append char to c-str
+        a:t r d- r+             # (ca key u1 -- ca key r:u1)
         call _over_body         # (ca key r:u1 -- ca key ca r:u1)
         call _cstr_append_body  # (ca key ca r:u1 -- ca r:u1)
         rj _accept_loop
 
-
 _accept_enter: #(ca key r:u1)
-        
-        
+        a:r t r-                # (ca key r:u1 -- ca u1)
+        call _drop_body         # (ca u1 -- ca)
+        a:mem t r- [ret]        # (ca -- u2)
+_accept_full: #(ca key u1)
+        call _2drop_body        # (ca key u1 -- ca)
+        a:mem t r- [ret]        # (ca -- u2)
