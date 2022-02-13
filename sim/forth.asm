@@ -6,13 +6,19 @@
 .equ MASK_UART_RX_FULL 2
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
-.equ TIB_WORD_COUNT 1
+.equ TIB_WORD_COUNT 31
 
 
+# receive line
 lit ntib
 lit TIB_WORD_COUNT
 a:sl t
 call _accept_body
+
+# create entry with first word
+
+call _create_body
+
 
 .word SIM_END
 
@@ -23,7 +29,7 @@ tib: .space TIB_WORD_COUNT
 to_in: .word 0          # current char idx in tib
 base: .word 10
 latest: .word _find     # last word in dictionary
-dp: .word 0             # first free cell after dict
+dp: .word dp_init      # first free cell after dict
 
 cstrscratch: .space 33
 
@@ -33,9 +39,64 @@ wort2: .cstr "Wfelt"
 
 # dictionary
 
+_here:      # (-- n)
+            # here returns the address of the first free cell in the data space
+            .cstr "here"
+            .word 0
+_here_body:
+            lit dp
+            a:mem t r- [ret]
+
+
+_here_add:  # (n -- )
+            # helper function, not a word
+            call _here_body     # (n -- n a)
+            a:add t d-          # (n a -- n+a)
+            lit dp              # (a -- a dp)
+            call _store_body    # (a dp -- )
+            a:nop t r- [ret]
+
+
+_comma:     # (w --)
+            # comma puts a word into the cell pointed to by here
+            # and increments the data space pointer (value returned by here)
+            .cstr ","
+            .word _here
+_comma_body:
+            call _here_body     # (w -- w a)
+            call _store_body    # (w a -- )
+            lit 1               # ( -- 1)
+            call _here_add      # (1 --)
+            a:nop t r- [ret]
+
+
+_create:    # ( "word-name" -- ) ; Parsing word, takes word from input buffer
+            # and creates new dictionary entry
+            .cstr "create"
+            .word _comma
+_create_body:
+            # get word name from input buffer
+            lit 32 # space      # ( -- del)
+            call _word_body     # (del -- ca)
+            call _dup_body      # (ca -- ca ca)
+            rj.z _create_error  # (ca ca -- ca)
+            call _here_body     # (ca -- ca here)
+
+_create_error: #(ca)
+            a:nop t d- r- [ret]
+
+
+_allot:     # (n -- )
+            .cstr "allot"
+            .word _create
+_allot_body:
+            call _here_add      # (n -- )
+            a:nop t r- [ret]
+
+
 _add1:      # (n -- n+1)
             .cstr "+1"
-            .word 0
+            .word _allot
 _add1_body:
             lit 1            # (n -- n 1)
             a:add t d- r- [ret] # (n 1 -- n+1)
@@ -408,7 +469,7 @@ _to_in_plus1: # (--)
             a:nop t r- [ret]
 
 
-_word:      # (delimiter -- count addr-str)
+_word:      # (delimiter -- cstr-addr)
             # skip delimiters
             # copy word to cstrscratch
             .cstr "word"
@@ -598,3 +659,9 @@ _accept_enter: #(ca key r:u1)
 _accept_full: #(ca key u1)
         call _2drop_body        # (ca key u1 -- ca)
         a:mem t r- [ret]        # (ca -- u2)
+
+
+
+
+dp_init: # this needs to be last in the file. Used to initialize dp, which is the
+         # value that "here" returns
