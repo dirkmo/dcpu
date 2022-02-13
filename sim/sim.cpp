@@ -258,7 +258,6 @@ enum user_action user_interaction(void) {
     }
 
     uint32_t val, val2 = 0xffffffff;
-    char sbuf[128];
     if (sUserInput.size() == 0) {
         return UA_STEP; // step into
     } else if (sUserInput == "run") {

@@ -9,6 +9,12 @@
 .equ TIB_WORD_COUNT 31
 
 
+lit wort1
+lit cstrscratch
+call _cstrcpy_body
+
+.word SIM_END
+
 # receive line
 lit ntib
 lit TIB_WORD_COUNT
@@ -33,7 +39,7 @@ dp: .word dp_init      # first free cell after dict
 
 cstrscratch: .space 33
 
-wort1: .cstr ""
+wort1: .cstr "Hallo"
 wort2: .cstr "Wfelt"
 
 
@@ -429,7 +435,7 @@ _cstr_append_body:
             a:nop t r- [ret]
 
 
-_cstr_pop:  # (c-addr --)
+_cstrpop:  # (c-addr --)
             # delete last char of c-str
             .cstr "cstr-pop"
             .word _cstr_append
@@ -469,11 +475,54 @@ _to_in_plus1: # (--)
             a:nop t r- [ret]
 
 
-_word:      # (delimiter -- cstr-addr)
+_move:      # ( a-from a-to count -- )
+            # copy count words from a-from to a-to
+            .cstr "move"
+            .word _cstrpop
+_move_body: 
+            a:t r d- r+         # (a1 a2 cnt -- a1 a2 r:cnt)
+            call _over_body     # (a1 a2 -- a1 a2 a1)
+            call _fetch_body    # (a1 a2 a1 -- a1 a2 w)
+            call _over_body     # (a1 a2 w -- a1 a2 w a2)
+            call _store_body    # (a1 a2 w a2 -- a1 a2)
+            # a1++
+            lit 1               # (a1 a2 -- a1 a2 1)
+            a:add t d-          # (a1 a2 1 -- a1 a2+1)
+            a:t r d- r+         # (a1 a2 -- a1 r:cnt a2)
+            # a2++
+            lit 1               # (a1 r:cnt a2 -- a1 1 r:cnt a2)
+            a:add t d-          # (a1 1 r:cnt a2 -- a1+1 r:cnt a2)
+            a:r t d+ r-         # (a1 r:cnt a2 -- a1 a2 r:cnt)
+            # cnt--
+            a:r t d+ r-         # (a1 a2 r:cnt -- a1 a2 cnt)
+            lit 1
+            a:sub t d-          # (a1 a2 cnt 1 -- a1 a2 cnt-1)
+            call _dup_body      # (a1 a2 cnt -- a1 a2 cnt cnt)
+            rj.nz _move_body    # (a1 a2 cnt cnt -- a1 a2 cnt)
+_move_done:
+            call _2drop_body
+            a:nop t d- r- [ret]
+
+
+_cstrcpy:   # ( ca1 ca2 -- )
+            # copy c-str at ca1 to ca2
+            .cstr "cstrcpy"
+            .word _move
+_cstrcpy_body:
+            call _over_body      # (ca1 ca2 -- ca1 ca2 ca1)
+            call _fetch_body     # (ca1 ca2 ca1 -- ca1 ca2 char-cnt)
+            lit 3
+            a:add t d-          # (ca1 ca2 char-cnt+3)
+            a:sr t              # (ca1 ca2 word-cnt)
+            call _move_body     # (ca1 ca2 cnt -- )
+            a:nop t r- [ret]
+
+
+_word:      # (delimiter cs-addr -- )
             # skip delimiters
             # copy word to cstrscratch
             .cstr "word"
-            .word _cstr_pop
+            .word _cstrcpy
 _word_body:
             lit 0 # (del -- del c) ; helper
 _wb_del_loop:
