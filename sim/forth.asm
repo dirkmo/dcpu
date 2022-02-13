@@ -477,17 +477,17 @@ _word:      # (delimiter -- cstr-addr)
 _word_body:
             lit 0 # (del -- del c) ; helper
 _wb_del_loop:
-            call _drop_body      # (del c -- del) ; drop c from branching to _wb_del_loop
+            call _drop_body         # (del c -- del) ; drop c from branching to _wb_del_loop
             # reached eob?
-            call _tib_eob   # (del -- del f)
-            rj.z _word_eob1 # (del f -- del)
+            call _tib_eob           # (del -- del f)
+            rj.z _word_eob1         # (del f -- del)
 
-            call _tibcfetch_body # (del -- del c)
-            call _to_in_plus1    # (del c -- del c)
-            call _2dup_body      # (del c -- del c del c)
+            call _tibcfetch_body    # (del -- del c)
+            call _to_in_plus1       # (del c -- del c)
+            call _2dup_body         # (del c -- del c del c)
             # is char == delimiter?
-            a:sub t d-           # (del c del c -- del c f)
-            rj.z _wb_del_loop    # (del c f -- del c) ; note: c needs to be dropped if branch is taken
+            a:sub t d-              # (del c del c -- del c f)
+            rj.z _wb_del_loop       # (del c f -- del c) ; note: c needs to be dropped if branch is taken
 
             # now c is first non-delimiter char
             # put this into scratch area
