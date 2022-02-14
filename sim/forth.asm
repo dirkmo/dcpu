@@ -6,42 +6,34 @@
 .equ MASK_UART_RX_FULL 2
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
-.equ TIB_WORD_COUNT 31
+.equ TIB_WORD_COUNT 32
 
 
 lit wort1
-lit cstrscratch
-call _cstrcpy_body
-
-.word SIM_END
-
-# receive line
 lit ntib
-lit TIB_WORD_COUNT
-a:sl t
-call _accept_body
-
-# create entry with first word
+call _cstrcpy_body
 
 call _create_body
 
-
 .word SIM_END
+
+wort1: .word 5
+.ascii "test "
+
+# ----------------------------------------------------
 
 # variables
 state: .word 0          # 0: interpreting, -1: compiling
 ntib: .word 0           # number of chars in tib
 tib: .space TIB_WORD_COUNT
+.word 13
+
 to_in: .word 0          # current char idx in tib
 base: .word 10
 latest: .word _find     # last word in dictionary
 dp: .word dp_init      # first free cell after dict
 
 cstrscratch: .space 33
-
-wort1: .cstr "Hallo"
-wort2: .cstr "Wfelt"
-
 
 # dictionary
 
@@ -82,12 +74,26 @@ _create:    # ( "word-name" -- ) ; Parsing word, takes word from input buffer
             .word _comma
 _create_body:
             # get word name from input buffer
-            lit 32 # space      # ( -- del)
-            call _word_body     # (del -- ca)
-            call _dup_body      # (ca -- ca ca)
-            rj.z _create_error  # (ca ca -- ca)
-            call _here_body     # (ca -- ca here)
-
+            lit 32 # space          # ( -- del)
+            call _word_body         # (del -- )
+            lit cstrscratch         # ( -- ca)
+            call _dup_body          # (ca -- ca ca)
+            rj.z _create_error      # (ca ca -- ca) ; if not word found, jump to error
+            # word found, put into dictionary
+            a:mem r r+              # (ca -- ca r:cnt)
+_create_cp_loop:
+            a:r t d+ r-             # (ca r:cnt -- ca cnt)
+            call _dup_body          # (ca cnt -- ca cnt cnt)
+            rj.z _create_cp_done    # (ca cnt cnt -- ca cnt)
+            lit 1                   # (ca cnt -- ca cnt 1)
+            a:sub r d- r+           # (ca cnt 1 -- ca cnt r:cnt+1)
+            call _drop_body         # (ca cnt r:cnt -- ca r:cnt)
+            a:mem t d+              # (ca r:cnt -- ca w r:cnt)
+            call _comma_body        # (ca w r:cnt -- ca r:cnt)
+            lit 1                   # (ca r:cnt -- ca 1 r:cnt)
+            a:add t d-              # (ca 1 r:cnt -- ca+1 r:cnt)
+            rj _create_cp_loop
+_create_cp_done:
 _create_error: #(ca)
             a:nop t d- r- [ret]
 
@@ -549,15 +555,18 @@ _wb_del_loop:
 _wordloop:  # (del c)
 
             # reached eob?
+            # note: this has a problem. c is a valid char here which needs to be appended,
+            # but >in is already incremented to point to the next char.
+            # c needs to be written before checking for tib_eob
             call _tib_eob   # (del c -- del c f)
-            rj.z _word_eob2 # (del c f -- del c)
+            rj.z _word_eob2 # (del c f -- del c) # this triggers one char too early
 
             lit cstrscratch # (del c -- del c a)
             call _cstr_append_body # (del c a -- del)
             
             # fetch next char from tib
-            call _tibcfetch_body # (del -- del c)
-            call _to_in_plus1    # (del c -- del c)
+            call _tibcfetch_body # (del -- del c)  # char is fetched
+            call _to_in_plus1    # (del c -- del c) # >in is incremented
             call _2dup_body      # (del c -- del c del c)
             # is char == delimiter?
             a:sub t d-           # (del c del c -- del c f)
