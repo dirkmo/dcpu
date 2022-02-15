@@ -13,12 +13,18 @@ lit wort1
 lit ntib
 call _cstrcpy_body
 
-call _create_body
+call _parse_name_body
+call _2drop_body
+
+call _parse_name_body
+call _2drop_body
+
+call _parse_name_body
+call _2drop_body
 
 .word SIM_END
 
-wort1: .word 5
-.ascii "test "
+wort1: .cstr "  test oink wau"
 
 # ----------------------------------------------------
 
@@ -75,7 +81,7 @@ _create:    # ( "word-name" -- ) ; Parsing word, takes word from input buffer
 _create_body:
             # get word name from input buffer
             lit 32 # space          # ( -- del)
-            call _word_body         # (del -- )
+            # call _word_body         # (del -- )
             lit cstrscratch         # ( -- ca)
             call _dup_body          # (ca -- ca ca)
             rj.z _create_error      # (ca ca -- ca) ; if not word found, jump to error
@@ -529,7 +535,7 @@ _parse_skip: # (del -- )
             .cstr "parse-skip"
             .word _cstrcpy
 _parse_skip_body:
-            call _tib_eob_body
+            call _tib_eob
             rj.z _parse_skip_exit
             call _tibcfetch_body    # (del -- del c)
             call _over_body         # (del c -- del c del)
@@ -542,32 +548,36 @@ _parse_skip_exit:
             a:nop t d- r- [ret]
 
 
-_parse:     # ( xchar "ccc<xchar>" – c-addr u)
+_parse:     # ( xchar "ccc<xchar>" – u1 u2)
             # Parse ccc, delimited by xchar, in the parse area.
             # c-addr u specifies the parsed string within the parse area.
             # If the parse area was empty, u is 0.
             .cstr "parse"
             .word _parse_skip
 _parse_body:
-            lit 0                   # (del -- del 0) ; the count
-            a:t r d- r+             # (del cnt -- del r:cnt)
+            call _to_in_body        # (del -- del a)
+            call _fetch_body        # (del -- del ci) ; ci: start char idx in tib
+            a:t r d- r+             # (del ci -- del r:ci)
 _parse_loop:
             call _tibcfetch_body    # (del -- del c)
             call _over_body         # (del c -- del c del)
-            a:sub t                 # (del c del -- del c f)
-            rj.z _parse_end         # (del c f -- del c)
-            a:r t d+ r-             # (del c r:cnt -- del c cnt)
-            lit 1                   # (del c cnt -- del c cnt 1)
-            a:add t d-              # (del c cnt 1 -- del c cnt+1)
-            
-            # if tib_eob_body goto ende
-_parse_end: # (del c r:cnt)
-            
+            a:sub t d-              # (del c del -- del f)
+            rj.z _parse_end         # (del f -- del)
+            call _to_in_plus1
+            call _tib_eob           # (del -- del f) ; f=0 if eob
+            rj.nz _parse_loop       # (del f -- del)
+_parse_end: # (del r:cnt)
+            call _drop_body         # (del -- )
+            a:r t d+                # (r:ci -- ci r:ci)
+            call _to_in_body        # (ci -- ci a)
+            call _fetch_body        # (ci a -- ci >in)
+            a:r t d+ r-             # (ci >in r:ci -- ci >in ci)
+            a:sub t d- r- [ret]     # (ci >in ci -- ci u)
 
 
-
-_parse_name: #( "name" – c-addr u  ) gforth “parse-name”
+_parse_name: #("name" – pos len) gforth “parse-name”
             # Get the next word from the input buffer
+            # return char position (pos) and count (len) in TIB buffer
             .cstr "parse-name"
             .word _parse
 _parse_name_body:
