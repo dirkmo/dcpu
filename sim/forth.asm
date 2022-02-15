@@ -12,15 +12,7 @@
 lit wort1
 lit ntib
 call _cstrcpy_body
-
-call _parse_name_body
-call _2drop_body
-
-call _parse_name_body
-call _2drop_body
-
-call _parse_name_body
-call _2drop_body
+call _create_body
 
 .word SIM_END
 
@@ -80,27 +72,18 @@ _create:    # ( "word-name" -- ) ; Parsing word, takes word from input buffer
             .word _comma
 _create_body:
             # get word name from input buffer
-            lit 32 # space          # ( -- del)
-            # call _word_body         # (del -- )
-            lit cstrscratch         # ( -- ca)
-            call _dup_body          # (ca -- ca ca)
-            rj.z _create_error      # (ca ca -- ca) ; if not word found, jump to error
-            # word found, put into dictionary
-            a:mem r r+              # (ca -- ca r:cnt)
-_create_cp_loop:
-            a:r t d+ r-             # (ca r:cnt -- ca cnt)
-            call _dup_body          # (ca cnt -- ca cnt cnt)
-            rj.z _create_cp_done    # (ca cnt cnt -- ca cnt)
-            lit 1                   # (ca cnt -- ca cnt 1)
-            a:sub r d- r+           # (ca cnt 1 -- ca cnt r:cnt+1)
-            call _drop_body         # (ca cnt r:cnt -- ca r:cnt)
-            a:mem t d+              # (ca r:cnt -- ca w r:cnt)
-            call _comma_body        # (ca w r:cnt -- ca r:cnt)
-            lit 1                   # (ca r:cnt -- ca 1 r:cnt)
-            a:add t d-              # (ca 1 r:cnt -- ca+1 r:cnt)
-            rj _create_cp_loop
-_create_cp_done:
-_create_error: #(ca)
+            call _parse_name_body   # ( -- c-pos c-len)
+            call _dup_body          # (cp cl -- cp cl cl)
+            rj.z _create_error      # (cp cl cl -- cp cl)
+            # allocate memory for cstr
+_create_loop: # (cp)
+
+            
+
+_create_cp_done: # (cp w cl)
+            a:nop t d-
+_create_error: # (cp cl)
+            a:nop t d-
             a:nop t d- r- [ret]
 
 
