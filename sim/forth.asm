@@ -524,66 +524,63 @@ _cstrcpy_body:
             a:nop t r- [ret]
 
 
-_word:      # (delimiter cs-addr -- )
-            # skip delimiters
-            # copy word to cstrscratch
-            .cstr "word"
+_parse_skip: # (del -- )
+             # advance >in as long as tib[>in] is a delimiter
+            .cstr "parse-skip"
             .word _cstrcpy
-_word_body:
-            lit 0 # (del -- del c) ; helper
-_wb_del_loop:
-            call _drop_body         # (del c -- del) ; drop c from branching to _wb_del_loop
-            # reached eob?
-            call _tib_eob           # (del -- del f)
-            rj.z _word_eob1         # (del f -- del)
-
+_parse_skip_body:
+            call _tib_eob_body
+            rj.z _parse_skip_exit
             call _tibcfetch_body    # (del -- del c)
-            call _to_in_plus1       # (del c -- del c)
-            call _2dup_body         # (del c -- del c del c)
+            call _over_body         # (del c -- del c del)
             # is char == delimiter?
-            a:sub t d-              # (del c del c -- del c f)
-            rj.z _wb_del_loop       # (del c f -- del c) ; note: c needs to be dropped if branch is taken
+            a:sub t d-              # (del c del -- del f)
+            rj.nz _parse_skip_exit  # (del f -- del)
+            call _to_in_plus1
+            rj _parse_skip_body
+_parse_skip_exit:
+            a:nop t d- r- [ret]
 
-            # now c is first non-delimiter char
-            # put this into scratch area
 
-            # initialize char count to 0
-            lit 0
-            lit cstrscratch
-            call _store_body
-
-_wordloop:  # (del c)
-
-            # reached eob?
-            # note: this has a problem. c is a valid char here which needs to be appended,
-            # but >in is already incremented to point to the next char.
-            # c needs to be written before checking for tib_eob
-            call _tib_eob   # (del c -- del c f)
-            rj.z _word_eob2 # (del c f -- del c) # this triggers one char too early
-
-            lit cstrscratch # (del c -- del c a)
-            call _cstr_append_body # (del c a -- del)
+_parse:     # ( xchar "ccc<xchar>" – c-addr u)
+            # Parse ccc, delimited by xchar, in the parse area.
+            # c-addr u specifies the parsed string within the parse area.
+            # If the parse area was empty, u is 0.
+            .cstr "parse"
+            .word _parse_skip
+_parse_body:
+            lit 0                   # (del -- del 0) ; the count
+            a:t r d- r+             # (del cnt -- del r:cnt)
+_parse_loop:
+            call _tibcfetch_body    # (del -- del c)
+            call _over_body         # (del c -- del c del)
+            a:sub t                 # (del c del -- del c f)
+            rj.z _parse_end         # (del c f -- del c)
+            a:r t d+ r-             # (del c r:cnt -- del c cnt)
+            lit 1                   # (del c cnt -- del c cnt 1)
+            a:add t d-              # (del c cnt 1 -- del c cnt+1)
             
-            # fetch next char from tib
-            call _tibcfetch_body # (del -- del c)  # char is fetched
-            call _to_in_plus1    # (del c -- del c) # >in is incremented
-            call _2dup_body      # (del c -- del c del c)
-            # is char == delimiter?
-            a:sub t d-           # (del c del c -- del c f)
-            rj.nz _wordloop      # (del c f -- del c)
+            # if tib_eob_body goto ende
+_parse_end: # (del c r:cnt)
+            
 
-            call _drop_body      # (del c -- del)
-            call _drop_body      # (del -- )
-            lit cstrscratch [ret] # ( -- a)
 
-_word_eob2: call _drop_body
-_word_eob1: call _drop_body
-            lit 0 [ret] # end of buffer, return 0
+
+_parse_name: #( "name" – c-addr u  ) gforth “parse-name”
+            # Get the next word from the input buffer
+            .cstr "parse-name"
+            .word _parse
+_parse_name_body:
+            lit 32 # delimiter      # ( -- del)
+            call _parse_skip_body   # (del -- )
+            lit 32 # delimiter      # ( -- del)
+            call _parse_body        # (del -- c-addr u)
+            a:nop t r- [ret]
 
 
 _cstrcmp:   # (a1 a2 -- f)
             .cstr "cstrcmp"
-            .word _word
+            .word _parse_name
 _cstrcmp_body:
             call _2dup_body     # (a1 a2 -- a1 a2 a1 a2)
             call _fetch_body    # (a1 a2 -- a1 a2 a1 cnt2)
