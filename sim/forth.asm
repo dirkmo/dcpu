@@ -33,6 +33,9 @@ dp: .word dp_init      # first free cell after dict
 
 cstrscratch: .space 33
 
+str1: .space 2 # for idx/addr pair of a string
+str2: .space 2 # for idx/addr pair of a string
+
 # dictionary
 
 _here:      # (-- n)
@@ -75,9 +78,30 @@ _create_body:
             call _parse_name_body   # ( -- c-pos c-len)
             call _dup_body          # (cp cl -- cp cl cl)
             rj.z _create_error      # (cp cl cl -- cp cl)
-            # allocate memory for cstr
-_create_loop: # (cp)
+            a:t r r+                # (cp cl -- cp cl r:cl)
 
+            # count of c-str
+            call _comma_body        # (cp cl r:cl -- cp r:cl)
+
+            # initialiize idx/pair of tib for reading
+            lit tib                 # (cp -- cp tib)
+            lit str1                # (cp tib -- cp tib a)
+            call _str_set_body      # (cp tib a -- )
+
+            # initialize idx/pair of dictionary entry for writing
+            lit 0 # idx
+            call _here_body # addr
+            lit str2
+            call _str_set_body
+
+_create_cp_loop: 
+            lit str1
+            call _str_get_body      # (a -- ci sa)
+            call _strcfetch_body    # (ci sa -- c)
+            
+            lit str1
+            call _str_advance_body
+            # _strcfetch: # (char-idx str-addr -- c)
             
 
 _create_cp_done: # (cp w cl)
@@ -708,6 +732,47 @@ _accept_full: #(ca key u1)
         call _2drop_body        # (ca key u1 -- ca)
         a:mem t r- [ret]        # (ca -- u2)
 
+
+_str_get: # (a -- idx addr)
+        # get idx/addr
+        # a: address of idx/addr pair
+        .cstr "str-get"
+        .word _accept
+_str_get_body:
+        call _dup_body      # (a -- a a)
+        call _fetch_body    # (a a -- a idx)
+        call _swap_body     # (a idx -- idx a)
+        lit 1
+        a:add t d-          # (idx a 1 -- idx a+1)
+        call _fetch_body    # (idx a -- idx addr)
+        a:nop t r- [ret]
+
+
+_str_set: # (idx addr a -- )
+        # initialize idx/addr pair at a
+        .cstr "str-set"
+        .word _str_get
+_str_set_body:
+        a:t r r+            # (idx addr a -- idx addr a r:a)
+        lit 1
+        a:add t d-          # (idx addr a 1 -- idx addr a+1)
+        call _store_body    # (idx addr a+1 -- idx r:a)
+        a:r t d+ r-         # (idx r:a -- idx a)
+        call _store_body
+        a:nop t r- [ret]
+
+
+_str_advance: # (a --)
+        .cstr "str-advance"
+        .word _str_set
+_str_advance_body:
+        call _dup_body      # (a -- a a)
+        call _fetch_body    # (a a -- a w)
+        lit 1               # (a w -- a w 1)
+        a:add t d-          # (a w 1 -- a w+1)
+        call _swap_body     # (a w -- w a)
+        call _store_body    # (w a -- )
+        a:nop t r- [ret]
 
 
 
