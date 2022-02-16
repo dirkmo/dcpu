@@ -12,6 +12,11 @@
 lit wort1
 lit ntib
 call _cstrcpy_body
+
+call _create_body
+
+call _create_body
+
 call _create_body
 
 .word SIM_END
@@ -74,40 +79,64 @@ _create:    # ( "word-name" -- ) ; Parsing word, takes word from input buffer
             .cstr "create"
             .word _comma
 _create_body:
+            # first, save "here". This the start address of the new word,
+            # will be written to "latest" later on.
+            call _here_body         # ( -- nwa) ; nwa: new-word-address
             # get word name from input buffer
-            call _parse_name_body   # ( -- c-pos c-len)
-            call _dup_body          # (cp cl -- cp cl cl)
-            rj.z _create_error      # (cp cl cl -- cp cl)
-            a:t r r+                # (cp cl -- cp cl r:cl)
+            call _parse_name_body   # (nwa -- nwa ci cl) ; char-idx, char-len
+            a:t r r+                # (nwa cp cl -- nwa cp cl r:cl)
+            rj.z _create_error_no_name # (nwa cp cl -- nwa cp r:cl)
 
-            # count of c-str
-            call _comma_body        # (cp cl r:cl -- cp r:cl)
-
-            # initialiize idx/pair of tib for reading
-            lit tib                 # (cp -- cp tib)
-            lit str1                # (cp tib -- cp tib a)
-            call _str_set_body      # (cp tib a -- )
+            # set count of c-str of word name
+            a:r t d+                # (nwa cp r:cl -- nwa cp cl r:cl)
+            call _comma_body        # (nwa cp cl r:cl -- nwa cp r:cl)
 
             # initialize idx/pair of dictionary entry for writing
             lit 0 # idx
             call _here_body # addr
             lit str2
-            call _str_set_body
+            call _str_init_body
 
-_create_cp_loop: 
-            lit str1
-            call _str_get_body      # (a -- ci sa)
-            call _strcfetch_body    # (ci sa -- c)
-            
-            lit str1
-            call _str_advance_body
-            # _strcfetch: # (char-idx str-addr -- c)
-            
+            # reserve space for string, add 1 to char-len for rounding up,
+            # then divide by two for word-count of string
+            a:r t d+                # (nwa cp r:cl -- nwa cp cl r:cl)
+            lit 1
+            a:add t d-              # (nwa cp cl 1 -- nwa cp cl+1)
+            a:sr t                  # (nwa cp cl -- nwa cp wl)
+            call _allot_body        # (nwa cp wl -- nwa cp)
 
-_create_cp_done: # (cp w cl)
-            a:nop t d-
-_create_error: # (cp cl)
-            a:nop t d-
+            # initialize idx/pair of tib for reading
+            lit tib                 # (nwa cp -- nwa cp tib)
+            lit str1                # (nwa cp tib -- nwa cp tib a)
+            call _str_init_body     # (nwa cp tib a -- nwa)
+
+_create_cp_loop: # (nwa r:cl)
+            # get char from str1
+            lit str1                 # (nwa  -- nwa a)
+            call _str_read_next_body # (nwa a -- nwa c)
+
+            # store char to str2
+            lit str2                # (nwa c -- nwa c a)
+            call _str_append_body   # (nwa c a -- nwa)
+
+            # decrement counter cl on rstack
+            a:r t d+ r-             # (nwa r:cl -- nwa cl)
+            lit 1
+            a:sub t d-              # (nwa cl 1 -- nwa cl-1)
+            a:t r r+                # (nwa cl -- nwa cl r:cl)
+            rj.nz _create_cp_loop   # (nwa cl -- nwa)
+            a:nop t r-              # (nwa r:cl -- nwa)
+
+            # now add pointer to previous word
+            call _latest_body       # (nwa -- nwa latest)
+            call _comma_body        # (nwa latest -- nwa)
+            
+            lit latest              # (nwa -- nwa latest-addr)
+            call _store_body        # (nwa latest-addr -- )
+            a:nop t r- [ret]
+
+_create_error_no_name: # (nwa cp r:cl)
+            a:nop t d- r-
             a:nop t d- r- [ret]
 
 
@@ -555,14 +584,20 @@ _parse_skip_exit:
             a:nop t d- r- [ret]
 
 
-_parse:     # ( xchar "ccc<xchar>" – u1 u2)
-            # Parse ccc, delimited by xchar, in the parse area.
-            # c-addr u specifies the parsed string within the parse area.
-            # If the parse area was empty, u is 0.
+_parse:     # ( del "ccc<xdel>" – idx clen)
+            # Parse ccc, delimited by del, in the parse area.
+            # idx is start char pos in tib, clen is char count of word.
+            # If the parse area was empty, clen is 0.
             .cstr "parse"
             .word _parse_skip
 _parse_body:
-            call _to_in_body        # (del -- del a)
+            call _tib_eob           # (del -- del f)
+            rj.nz _parse__1         # (del f -- del)
+            # tib is empty, return 0 0
+            call _drop_body         # (del -- )
+            lit 0                   # ( -- 0)
+            lit 0 [ret]             # ( -- 0 0)
+_parse__1:  call _to_in_body        # (del -- del a)
             call _fetch_body        # (del -- del ci) ; ci: start char idx in tib
             a:t r d- r+             # (del ci -- del r:ci)
 _parse_loop:
@@ -748,11 +783,11 @@ _str_get_body:
         a:nop t r- [ret]
 
 
-_str_set: # (idx addr a -- )
+_str_init: # (idx addr a -- )
         # initialize idx/addr pair at a
-        .cstr "str-set"
+        .cstr "str-init"
         .word _str_get
-_str_set_body:
+_str_init_body:
         a:t r r+            # (idx addr a -- idx addr a r:a)
         lit 1
         a:add t d-          # (idx addr a 1 -- idx addr a+1)
@@ -764,7 +799,7 @@ _str_set_body:
 
 _str_advance: # (a --)
         .cstr "str-advance"
-        .word _str_set
+        .word _str_init
 _str_advance_body:
         call _dup_body      # (a -- a a)
         call _fetch_body    # (a a -- a w)
@@ -774,6 +809,32 @@ _str_advance_body:
         call _store_body    # (w a -- )
         a:nop t r- [ret]
 
+
+_str_append: # (c a -- )
+        # append char c to string defined by idx/addr pair at address a
+        .cstr "str-append"
+        .word _str_advance
+_str_append_body:
+        a:t r r+               # (c a -- c a r:a)
+        call _str_get_body     # (c a -- c ci sa)
+        call _strcstore_body   # (c ci sa -- )
+        a:r t d+ r-            # (r:a -- a)
+        call _str_advance_body # (a --)
+        a:nop t r- [ret]
+
+
+_str_read_next: # (a -- c)
+        # read char from str (a is address of idx/addr pair)
+        # and increment idx
+        .cstr "str-read-next"
+        .word _str_append
+_str_read_next_body:
+        a:t r r+               # (a -- a r:a)
+        call _str_get_body     # (a -- ci sa)
+        call _strcfetch_body   # (ci sa -- c)
+        a:r t d+ r-            # (c -- c a)
+        call _str_advance_body # (c a -- c)
+        a:nop t r- [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
