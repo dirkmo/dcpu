@@ -154,7 +154,7 @@ class OpAlu(OpBase):
         "ALU_MEM":  3 << 7,
         "ADD":      4 << 7,
         "SUB":      5 << 7,
-        "MUL":      6 << 7,
+        "NOP":      6 << 7,
         "AND":      7 << 7,
         "OR":       8 << 7,
         "XOR":      9 << 7,
@@ -168,7 +168,8 @@ class OpAlu(OpBase):
         "JNZ":     17 << 7,
         "CARRY":   18 << 7,
         "INV":     19 << 7,
-        "NOP":     20 << 7,
+        "MULL":    20 << 7,
+        "MULH":    21 << 7,
         # destination of alu op
         "DST_T":    0 << 4, # T = alu
         "DST_R":    1 << 4, # R = alu

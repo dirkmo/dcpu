@@ -8,20 +8,26 @@
 .equ SIM_END $be00
 .equ TIB_WORD_COUNT 32
 
+lit 8
+lit 2
+a:mull t d-
+
+lit 1000
+lit 1000
+a:mulh t d-
+
+.word SIM_END
+
 
 lit wort1
 lit ntib
 call _cstrcpy_body
 
-call _create_body
 
-call _create_body
-
-call _create_body
 
 .word SIM_END
 
-wort1: .cstr "  test oink wau"
+wort1: .cstr "123 $fff0"
 
 # ----------------------------------------------------
 
@@ -29,7 +35,6 @@ wort1: .cstr "  test oink wau"
 state: .word 0          # 0: interpreting, -1: compiling
 ntib: .word 0           # number of chars in tib
 tib: .space TIB_WORD_COUNT
-.word 13
 
 to_in: .word 0          # current char idx in tib
 base: .word 10

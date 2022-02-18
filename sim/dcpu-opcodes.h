@@ -61,7 +61,7 @@
 #define ALU_MEMT    3
 #define ALU_ADD     4
 #define ALU_SUB     5
-#define ALU_MUL     6
+#define ALU_NOP     6
 #define ALU_AND     7
 #define ALU_OR      8
 #define ALU_XOR     9
@@ -75,7 +75,8 @@
 #define ALU_JNZ     17
 #define ALU_CARRY   18
 #define ALU_INV     19
-#define ALU_NOP     20
+#define ALU_MULL    20
+#define ALU_MULH    21
 
 // for simulation
 #define OP_SIM_END (OP_LITH | OP_LITH_UNUSED(0xf))

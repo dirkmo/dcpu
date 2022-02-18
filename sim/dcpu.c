@@ -21,9 +21,9 @@ static void disasm_alu(char *s, uint16_t op) {
     const char *s_rsp[] = {"", "R+", "R-", "R+PC"};
     const char *s_ret[] = {"", "[ret]"};
     const char *s_aluop[] = {
-        "a:T", "a:N", "a:R", "a:MEM", "a:ADD", "a:SUB", "a:MUL", "a:AND",
+        "a:T", "a:N", "a:R", "a:MEM", "a:ADD", "a:SUB", "a:NOP", "a:AND",
         "a:OR", "a:XOR", "a:LTS", "a:LT", "a:SR", "a:SRW", "a:SL", "a:SLW",
-        "a:JZ", "a:JNZ", "a:CARRY", "a:INV", "a:NOP"
+        "a:JZ", "a:JNZ", "a:CARRY", "a:INV", "a:MULL", "a:MULH"
     };
     int aluop = (op >> 7) & MASK(5);
     int ret   = (op >> 6) & MASK(1);

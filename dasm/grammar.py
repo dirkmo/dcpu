@@ -32,7 +32,8 @@ _aluop: ALU_T
     | ALU_MEM
     | ADD
     | SUB
-    | MUL
+    | MULL
+    | MULH
     | AND
     | OR
     | XOR
@@ -87,7 +88,7 @@ ALU_R: "r"i
 ALU_MEM: "mem"i
 ADD:  "add"i
 SUB:  "sub"i
-MUL:  "mul"i
+NOP:  "nop"i
 AND:  "and"i
 OR:   "or"i
 XOR:  "xor"i
@@ -101,7 +102,8 @@ JZ:   "jz"i
 JNZ:  "jnz"i
 CARRY: "c"i
 INV:  "inv"i
-NOP:  "nop"i
+MULL:  "mull"i
+MULH:  "mulh"i
 
 EQU:  ".equ"i
 ORG:  ".org"i

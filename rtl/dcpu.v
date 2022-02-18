@@ -135,6 +135,8 @@ always @(posedge i_clk)
     if (s_execute)
         r_carry <= carry;
 
+wire [31:0] w_alu_mul32 = {{16'd0, N} * {16'd0, T}};
+
 always @(*)
     case (w_op_alu_op[4:0])
         5'h00: w_alu = {1'b0, T};
@@ -143,7 +145,7 @@ always @(*)
         5'h03: w_alu = {1'b0, i_dat}; // [T]
         5'h04: w_alu = {1'b0, N} + {1'b0, T};
         5'h05: w_alu = {1'b0, N} - {1'b0, T};
-        5'h06: w_alu = 0; // TODO: N * T
+        5'h06: w_alu = {1'b0, T}; // for NOP
         5'h07: w_alu = {1'b0, N & T};
         5'h08: w_alu = {1'b0, N | T};
         5'h09: w_alu = {1'b0, N ^ T};
@@ -157,7 +159,8 @@ always @(*)
         5'h11: w_alu = (T!=0) ? {1'b0, N} : {1'b0, r_pc+16'b1}; // condition for JNZ
         5'h12: w_alu = {16'h00, r_carry};
         5'h13: w_alu = {1'b0, ~T};
-        5'h14: w_alu = {1'b0, T}; // for NOP
+        5'h14: w_alu = {1'b0, w_alu_mul32[15:0]};
+        5'h15: w_alu = {1'b0, w_alu_mul32[31:16]};
         default: w_alu = 0;
     endcase
 
