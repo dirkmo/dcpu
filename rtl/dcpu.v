@@ -165,7 +165,7 @@ always @(*)
     endcase
 
 // side effects for alu operations
-wire w_op_alu_nop  = w_op_alu && (w_op_alu_op == 5'h14);
+wire w_op_alu_nop  = w_op_alu && (w_op_alu_op == 5'h6);
 wire w_op_alu_MEMT = w_op_alu && (w_op_alu_op == 5'h3) && ~w_op_alu_nop;
 wire w_op_alu_jz   = w_op_alu && (w_op_alu_op == 5'h10);
 wire w_op_alu_jnz  = w_op_alu && (w_op_alu_op == 5'h11);
