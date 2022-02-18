@@ -8,26 +8,30 @@
 .equ SIM_END $be00
 .equ TIB_WORD_COUNT 32
 
-lit 8
-lit 2
-a:mull t d-
 
-lit 1000
-lit 1000
-a:mulh t d-
+lit 48 # '0'
+call _digit2number_body
 
-.word SIM_END
+lit 57 # '9'
+call _digit2number_body
+
+lit 65 # 'A'
+call _digit2number_body
+
+lit 90 # 'Z'
+call _digit2number_body
 
 
+
+call _drop_body
 lit wort1
 lit ntib
 call _cstrcpy_body
 
 
-
 .word SIM_END
 
-wort1: .cstr "123 $fff0"
+wort1: .cstr "123 $fff0 -10"
 
 # ----------------------------------------------------
 
@@ -840,6 +844,59 @@ _str_read_next_body:
         a:r t d+ r-            # (c -- c a)
         call _str_advance_body # (c a -- c)
         a:nop t r- [ret]
+
+
+_upchar: # (c -- C)
+        # convert char to upper case
+        .cstr "upchar"
+        .word _str_read_next
+_upchar_body:
+        call _dup_body  # (c -- c c)
+        lit 32          # ( c c -- c c 32)
+        a:sub t d-      # ( c c 32 -- c c-32)
+        call _dup_body  # ( c C -- c C C)
+        lit 65 # 'A'    # ( c C C -- c C C 65)
+        a:lt t d-       # ( c C C 65 -- c C f)
+        rj.nz _upchar_1 # ( c C f -- c C)
+        call _dup_body  # ( c C -- c C C)
+        lit 91 # 90='Z' # ( c C C -- c C C 91)
+        a:lt t d-       # ( c C C 91 -- c C f)
+        rj.z _upchar_1  # ( c C f -- c C)
+        call _nip_body  # ( c C -- C)
+_upchar_done:
+        a:nop t r- [ret]    # (c -- c)
+
+_upchar_1: # (c C)
+        a:nop t d- r- [ret] # (c C -- c)
+
+
+_digit2number: # (c -- n f)
+        .cstr "digit>num"
+        .word _upchar
+_digit2number_body:
+        call _upchar_body   # (c -- C)
+        lit 0               # (c -- c '0')
+        a:sub t d-          # (c '0' -- n)
+        lit _digit2number_error # (n -- n a)
+        a:lt pc d-          # (n a -- n)
+
+_digit2number_error:        # (n)
+        lit 0 [ret]         # (n -- n 0)
+
+
+_number: # ( a -- n)
+         # convert string (a is address of idx/addr pair)
+         # to number and push on stack
+        .cstr "number"
+        .word _digit2number
+_number_body:
+        # push base to R
+        call _base_body         # (a -- a a-base)
+        a:mem r d- r+           # (a a-base -- a r:base)
+        
+        call _dup_body          # (a -- a a)
+        call _str_read_next_body    # (a a -- a c)
+
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
