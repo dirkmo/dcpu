@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
         printf("Test %d: ALU: return, no rsp-\n", count++);
         uint16_t prog[] = { CALL(3), LIT_L(2), 0xffff, ALU(ALU_T, RET, DST_T, 0, 0), LIT_L(1), 0xffff };
         test_t t = new_test();
-        t.t = 2; t.n = -1; t.r = 1; t.pc = 2; t.dsp = 0; t.rsp = 0;
+        t.t = 2; t.n = -1; t.r = -1; t.pc = 2; t.dsp = 0; t.rsp = RSS-1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
