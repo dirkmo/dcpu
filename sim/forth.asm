@@ -12,18 +12,21 @@ lit wort1
 lit ntib
 call _cstrcpy_body
 
-# initialize idx/pair of dictionary entry for writing
-lit 0 # idx
-lit tib # addr
+call _parse_name_body
+
+# initialize idx/addr pair of dictionary entry for writing
+call _swap_body
+lit tib
 lit str1
 call _str_init_body
 
 lit str1
+call _swap_body
 call _number_body
 
 .word SIM_END
 
-wort1: .cstr "123 $fff0 -10"
+wort1: .cstr "123 -10"
 
 # ----------------------------------------------------
 
@@ -892,20 +895,43 @@ _digit2number_error:        # (n)
         lit 0 [ret]         # (n -- n 0)
 
 
-_number: # ( a -- n)
-         # convert string (a is address of idx/addr pair)
-         # to number and push on stack
+_number: # (a len -- n cnt)
+         # convert string (a is address of idx/addr pair), len is len of string
+         # to number n. cnt is number of chars that were not converted.
+         # cnt=0 all chars successfully converted.
         .cstr "number"
         .word _digit2number
 _number_body:
-        # push base to R
-        call _base_body         # (a -- a a-base)
-        a:mem r d- r+           # (a a-base -- a r:base)
-        
-        call _dup_body          # (a -- a a)
+        lit 0                       # (a l -- a l res)
+        a:t r d- r+                 # (a l res -- a l r:res)
+        call _dup_body              # (a l -- a l l)
+        rj.z _number_error          # (a l l -- a l) ; empty string
+        call _swap_body             # (a l -- l a)
+
+_number_loop: # (l a)
+
+hier weiter. l ist erstes Element auf Stack, fehlt im Folgenden
+erstmal auf Vorzeichen prüfen
+
+        call _dup_body              # (a -- a a)
         call _str_read_next_body    # (a a -- a c)
-
-
+        call _digit2number_body     # (a c -- a n f)
+        rj.z _number_error          # (a n f -- a n)
+        call _dup_body              # (a n -- a n n)
+        call _base_body             # (a n n -- a n n a-base)
+        call _fetch_body            # (a n n a-base -- a n n base)
+        a:lt t d-                   # (a n n base -- a n n<base)
+        rj.z _number_error          # (a n f -- a n)
+        a:r t d+ r-                 # (a n r:res -- a n res)
+        call _base_body
+        call _fetch_body            # (a n res a-base -- a n res base)
+        a:mull t d-                 # (a n res base -- a n res*base)
+        a:add r d- r+               # (a n res -- a n+res)
+        call _drop_body             # (a n - a)
+        rj _number_loop             # (a -- a)
+_number_error: # (a n)
+        call _nip_body              # (a n -- n)
+        lit 0 [ret]                 # (n -- n 0)
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
          # value that "here" returns
