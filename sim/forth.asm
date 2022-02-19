@@ -870,15 +870,23 @@ _upchar_1: # (c C)
         a:nop t d- r- [ret] # (c C -- c)
 
 
-_digit2number: # (c -- n f)
+_digit2number:  # (c -- n f)
+                # convert hexchar to int n
+                # f=0 on error, f=1 on success
         .cstr "digit>num"
         .word _upchar
 _digit2number_body:
-        call _upchar_body   # (c -- C)
-        lit 0               # (c -- c '0')
-        a:sub t d-          # (c '0' -- n)
-        lit _digit2number_error # (n -- n a)
-        a:lt pc d-          # (n a -- n)
+        call _upchar_body       # (c -- C)
+        lit 48                  # (c -- c '0')
+        a:sub t d-              # (c '0' -- n)
+        call _dup_body          # (n -- n n)
+        rj.n _digit2number_error    # (n n -- n)
+        lit 10                  # (n -- n 10)
+        a:sub t                 # (n 10 -- n n-10)
+        # if T < 0: number 0-9
+        rj.nn _digit2number_hex # (n f -- n)
+        lit 1 [ret]             # (n - n 1)
+_digit2number_hex: # (n)
 
 _digit2number_error:        # (n)
         lit 0 [ret]         # (n -- n 0)
