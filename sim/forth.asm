@@ -8,26 +8,18 @@
 .equ SIM_END $be00
 .equ TIB_WORD_COUNT 32
 
-
-lit 48 # '0'
-call _digit2number_body
-
-lit 57 # '9'
-call _digit2number_body
-
-lit 65 # 'A'
-call _digit2number_body
-
-lit 90 # 'Z'
-call _digit2number_body
-
-
-
-call _drop_body
 lit wort1
 lit ntib
 call _cstrcpy_body
 
+# initialize idx/pair of dictionary entry for writing
+lit 0 # idx
+lit tib # addr
+lit str1
+call _str_init_body
+
+lit str1
+call _number_body
 
 .word SIM_END
 
@@ -103,8 +95,8 @@ _create_body:
             # initialize idx/pair of dictionary entry for writing
             lit 0 # idx
             call _here_body # addr
-            lit str2
             call _str_init_body
+            lit str2
 
             # reserve space for string, add 1 to char-len for rounding up,
             # then divide by two for word-count of string
@@ -794,6 +786,8 @@ _str_get_body:
 
 _str_init: # (idx addr a -- )
         # initialize idx/addr pair at a
+        # a[0] = idx (char-idx)
+        # a[1] = addr (addr of str)
         .cstr "str-init"
         .word _str_get
 _str_init_body:
@@ -887,7 +881,13 @@ _digit2number_body:
         rj.nn _digit2number_hex # (n f -- n)
         lit 1 [ret]             # (n - n 1)
 _digit2number_hex: # (n)
-
+        lit 7                   # (n -- n 7)
+        a:sub t d-              # (n 7 -- n-7)
+        call _dup_body          # (n -- n n)
+        lit 16                  # (n n -- n n 16)
+        a:sub t d-              # (n n 16 -- n n-16)
+        rj.nn _digit2number_error # (n f -- n)
+        lit 1 [ret]             # (n -- n 1)
 _digit2number_error:        # (n)
         lit 0 [ret]         # (n -- n 0)
 
