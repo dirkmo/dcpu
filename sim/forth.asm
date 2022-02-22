@@ -26,7 +26,7 @@ call _number_body
 
 .word SIM_END
 
-wort1: .cstr "123 -10"
+wort1: .cstr "-$123 -10"
 
 # ----------------------------------------------------
 
@@ -134,7 +134,7 @@ _create_cp_loop: # (nwa r:cl)
             # now add pointer to previous word
             call _latest_body       # (nwa -- nwa latest)
             call _comma_body        # (nwa latest -- nwa)
-            
+
             lit latest              # (nwa -- nwa latest-addr)
             call _store_body        # (nwa latest-addr -- )
             a:nop t r- [ret]
@@ -309,14 +309,14 @@ _rot_body:  # todo
 _nip:       # (a b -- b)
             .cstr "nip"
             .word _rot
-_nip_body:  
+_nip_body:
             a:t t d- r- [ret]
 
 
 _tuck:      # (a b -- b a b)
             .cstr "tuck"
             .word _nip
-_tuck_body: 
+_tuck_body:
             call _swap_body # ( a b -- b a)
             call _over_body # ( b a -- b a b)
             a:nop t r- [ret]
@@ -531,7 +531,7 @@ _move:      # ( a-from a-to count -- )
             # copy count words from a-from to a-to
             .cstr "move"
             .word _cstrpop
-_move_body: 
+_move_body:
             a:t r d- r+         # (a1 a2 cnt -- a1 a2 r:cnt)
             call _over_body     # (a1 a2 -- a1 a2 a1)
             call _fetch_body    # (a1 a2 a1 -- a1 a2 w)
@@ -895,43 +895,111 @@ _digit2number_error:        # (n)
         lit 0 [ret]         # (n -- n 0)
 
 
-_number: # (a len -- n cnt)
-         # convert string (a is address of idx/addr pair), len is len of string
-         # to number n. cnt is number of chars that were not converted.
-         # cnt=0 all chars successfully converted.
+_number: # (a len -- n f)
+         # convert string (a is address of idx/addr pair), len is len of string,
+         # to number n. f is 0 on error, else -1
         .cstr "number"
         .word _digit2number
 _number_body:
-        lit 0                       # (a l -- a l res)
-        a:t r d- r+                 # (a l res -- a l r:res)
-        call _dup_body              # (a l -- a l l)
-        rj.z _number_error          # (a l l -- a l) ; empty string
+        # save current base
+        call _base_body
+        call _fetch_body
+        a:t r d- r+                 # (a l base -- a l r:base)
+
         call _swap_body             # (a l -- l a)
 
-_number_loop: # (l a)
-
-hier weiter. l ist erstes Element auf Stack, fehlt im Folgenden
-erstmal auf Vorzeichen prüfen
-
-        call _dup_body              # (a -- a a)
-        call _str_read_next_body    # (a a -- a c)
-        call _digit2number_body     # (a c -- a n f)
-        rj.z _number_error          # (a n f -- a n)
-        call _dup_body              # (a n -- a n n)
-        call _base_body             # (a n n -- a n n a-base)
-        call _fetch_body            # (a n n a-base -- a n n base)
-        a:lt t d-                   # (a n n base -- a n n<base)
-        rj.z _number_error          # (a n f -- a n)
-        a:r t d+ r-                 # (a n r:res -- a n res)
+        # is first char minus sign (45)?
+        # if yes, push minus? == 0 on rstack
+        # if no,  push minus? != 0 on rstack
+        call _dup_body
+        call _str_get_body
+        call _strcfetch_body
+        lit 45 # '-'
+        a:sub t d-
+        a:t r r+                # (l a minus? r:base -- l a minus? r:base minus?)
+        rj.nz _number__1        # (l a minus? r:base minus? -- l a r:base minus?)
+        # is minus sign
+        call _dup_body
+        call _str_advance_body # skip minus sign
+        # l--
+        call _swap_body         # (l a -- a l)
+        lit 1
+        a:sub t d-              # (a l 1 -- a l-1)
+        call _dup_body          # (a l -- a l l)
+        rj.z _number_error2     # (a l l -- a l)
+        call _swap_body         # (a l -- l a)
+_number__1: # (l a)
+        # is char dollar sign (36)?
+        # put 0 on rstack
+        call _dup_body
+        call _str_get_body
+        call _strcfetch_body
+        lit 36 # '$'
+        a:sub t d-              # (l a c 36 r:base minus? -- l a dollar? r:base minus?)
+        rj.nz _number__2        # (l a dollar? r:base minus? -- l a r:base minus?)
+        # is dollar, change base to 16
+        lit 16
         call _base_body
-        call _fetch_body            # (a n res a-base -- a n res base)
-        a:mull t d-                 # (a n res base -- a n res*base)
-        a:add r d- r+               # (a n res -- a n+res)
-        call _drop_body             # (a n - a)
-        rj _number_loop             # (a -- a)
-_number_error: # (a n)
-        call _nip_body              # (a n -- n)
-        lit 0 [ret]                 # (n -- n 0)
+        call _store_body
+        # skip dollar sign
+        call _dup_body
+        call _str_advance_body # skip dollar sign
+        # l--
+        call _swap_body         # (l a -- a l)
+        lit 1
+        a:sub t d-              # (a l 1 -- a l-1)
+        rj.z _number_error2     # (a l l -- a l)
+        call _swap_body         # (a l -- l a)
+_number__2: # (l a r:base minus?)
+        # put res=0 on rstack
+        lit 0
+        a:t r d- r+             # (l a 0 r:base minus? -- l a r:base minus? 0)
+
+_number_loop: # (l a r:base minus? res)
+        call _dup_body              # (l a -- l a a)
+        call _str_read_next_body    # (l a a -- l a c)
+        call _digit2number_body     # (l a c -- l a n f)
+        rj.z _number_error3         # (l a n f -- l a n)
+        call _dup_body              # (l a n -- l a n n)
+        call _base_body             # (l a n n -- l a n n a-base)
+        call _fetch_body            # (l a n n a-base -- l a n n base)
+        a:lt t d-                   # (l a n n base -- l a n n<base)
+        rj.z _number_error3         # (l a n f -- l a n)
+        a:r t d+ r-                 # (l a n r:res -- l a n res)
+        call _base_body
+        call _fetch_body            # (l a n res a-base -- l a n res base)
+        a:mull t d-                 # (l a n res base -- l a n res*base)
+        a:add r d- r+               # (l a n res -- l a n+res)
+        call _drop_body             # (l a n -- l a)
+        # l--
+        call _swap_body             # (l a -- a l)
+        lit 1
+        a:sub t d-                  # (a l 1 -- a l-1)
+        rj.z _number_done           # (a l l -- a l)
+        call _swap_body             # (a l -- l a)
+        rj _number_loop             # (l a -- l a)
+_number_error3: # (w w w r:base minus? res)
+        call _drop_body             # (w w w r:base minus? res -- w w r:base minus? res)
+_number_error2: # (w w r:base minus? res)
+        a:nop t d- r-               # (a l r:base minus? res -- a r:base minus?)
+        a:nop t r-                  # (a r:base minus? -- a r:base)
+        lit 0                       # (a -- a 0)
+        rj _number_exit
+_number_done: # (a l r:base minus? res)
+        a:nop t d-                  # (a l r:base minus? res -- a r:base minus? res)
+        a:r t r-                    # (a r:base minus? res -- res r:base minus?)
+        a:r t d+ r-                 # (res r:base minus? -- res minus? r:base)
+        rj.nz _number__3            # (res minus? r:base -- res r:base)
+        # TODO: make 2s complement for negative number
+_number__3: # (res r:base)
+        lit -1                      # (res r:base -- res f r:base)
+_number_exit: # (w f r:base -- w f base)
+        # restore base
+        a:r t d+ r-
+        call _base_body
+        call _store_body
+        a:nop t r- [ret]
+
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
          # value that "here" returns
