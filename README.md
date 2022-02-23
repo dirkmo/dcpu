@@ -92,6 +92,11 @@ ALU opcode structure:
 ```
 110 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>
 ```
+The mnemonic has the form
+```
+a:<alu-op> <dst> <dsp> <rsp> [ret]
+```
+
 ALU opcode fields:
 - `rsp`: Return stack pointer manipulation
     - `00`: Do nothing
@@ -118,7 +123,7 @@ ALU opcode fields:
     - `$03`: Perform memory read from address indicated by T and forward the result (`a:mem`)
     - `$04`: Calculate `N + T`, set/clear carry flag respectively (`a:add`)
     - `$05`: Calculate `N - T`, set/clear carry flag respectively (`a:sub`)
-    - `$06`: TODO: Calculate `N * T` (`a:mul`)
+    - `$06`: NOP (`a:nop`)
     - `$07`: Calculate `N and T` (`a:and`)
     - `$08`: Calculate `N or T` (`a:or`)
     - `$09`: Calculate `N xor T` (`a:xor`)
@@ -132,7 +137,8 @@ ALU opcode fields:
     - `$11`: `T!=0 ? N : PC+1`, for conditional jump to N (`jnz`)
     - `$12`: Forward carry flag (`a:c`)
     - `$13`: `~T` (invert T) (`a:inv`)
-    - `$14`: NOP (`a:nop`)
+    - `$14`: Calculate lower 16 bits of product `N * T` (`a:mull`)
+    - `$15`: Calculate upper 16 bits of product `N * T` (`a:mulh`)
 
 The mnemonic is like the opcode structure, except the return field is last:
 ```
@@ -170,11 +176,14 @@ Relative jumps use a 10-bit 2s complement number to manipulate the PC.
 111 <cond:3> <imm:10>
 ```
 The condition codes and mnemonics are:
-- `0xx`: `rj`, jump always
-- `100`: `rj.z`, jump if T = 0
-- `101`: `rj.nz`, jump if T != 0
-- `110`: `rj.n`, jump if T < 0 (`T[15]` is set)
-- `111`: `rj.nn`, jump if T >= 0 (`T[15]` is cleared)
+
+|Cond  | Mnemonic | Description
+|------|----------|-------------
+|`0xx` | `rj`     | jump always
+|`100` | `rj.z`   | jump if T = 0
+|`101` | `rj.nz`  | jump if T != 0
+|`110` | `rj.n`   | jump if T < 0 (`T[15]` is set)
+|`111` | `rj.nn`  | jump if T >= 0 (`T[15]` is cleared)
 
 
 ## Simulator
