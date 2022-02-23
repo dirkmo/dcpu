@@ -29,12 +29,12 @@ class OpBase:
     def __init__(self, tokens, type):
         self.tokens = tokens
         self.type = type
-        
+
 
 class OpCall(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
-    
+
     def data(self, symbols=None):
         v = self.tokens[1].value
         if v in symbols:
@@ -51,12 +51,13 @@ class OpCall(OpBase):
 class OpLitl(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
-    
+
     def len(self, symbols):
         return 1
-    
+
     def data(self, symbols):
         v = convert_to_number(self.tokens[1].value)
+        v = (0x10000 + v) & 0xffff
         assert v > 0 and v < (1<<13), f"ERROR on line {self.tokens[0].line}: Literal out of range ({v})."
         return [OpBase.OP_LITL | v]
 
@@ -64,12 +65,13 @@ class OpLitl(OpBase):
 class OpLith(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
-    
+
     def len(self, symbols):
         return 1
 
     def data(self, symbols):
         v = convert_to_number(self.tokens[1].value)
+        v = (0x10000 + v) & 0xffff
         assert v > 0 and v < (1<<8), f"ERROR on line {self.tokens[0].line}: Literal out of range ({v})."
         v = OpBase.OP_LITH | v
         if len(self.tokens) > 2 and self.tokens[2].type == "RET":
@@ -80,11 +82,12 @@ class OpLith(OpBase):
 class OpLit(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
-    
+
     def len(self, symbols):
         retbit = len(self.tokens) > 2 and self.tokens[2].type == "RETBIT"
         if self.tokens[1].type == "SIGNED_NUMBER" and not retbit:
             v = convert_to_number(self.tokens[1].value)
+            v = (0x10000 + v) & 0xffff
             if v < (1<<13):
                 return 1
         return 2
@@ -104,10 +107,12 @@ class OpLit(OpBase):
         if len(self.tokens) > 2 and self.tokens[2].type == "RETBIT":
             ret = 1
 
+        v = (0x10000 + v) & 0xffff
+
         vmasked = (v & ((1<<13)-1))
         vhmasked = ((v>>8)&0xff)
         ops = [OpBase.OP_LITL | (v & ((1<<13)-1))]
-        
+
         if sym or (v >= (1<<13)) or ret:
             ops.append(OpBase.OP_LITH | ((v>>8)&0xff) | (ret << 8))
 
@@ -125,10 +130,10 @@ class OpRelJmp(OpBase):
 
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.OPCODE)
-    
+
     def len(self, symbols):
         return 1
-    
+
     def data(self, symbols):
         t = self.tokens[0]
         v = self.tokens[1]
@@ -138,9 +143,9 @@ class OpRelJmp(OpBase):
         else:
             v = convert_to_number(v.value)
         assert (v < (1<<9)) or (v >= -(1<<9)), f"ERROR on line {self.tokens[0].line}: Relative jump is out of range (v)"
-        
+
         cond = self._cond_codes[t.type]
-        
+
         return [OpBase.OP_RJP | (cond << 10) | (v & ((1<<10)-1))]
 
 
@@ -189,7 +194,7 @@ class OpAlu(OpBase):
 
     def len(self, symbols):
         return 1
-    
+
     def data(self, symbols):
         op = OpBase.OP_ALU
         rsp_dec = False
@@ -200,17 +205,17 @@ class OpAlu(OpBase):
             if t.type == "RM": rsp_dec = True
             if t.type == "RETBIT": ret_bit = True
         assert op != 0
-        
+
         if ret_bit:
             assert rsp_dec, f"ERROR on line {t.line}, column {t.column}: R- required when return bit is set by [ret]."
-        
+
         return [op]
 
 
 class OpEqu(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.EQU)
-    
+
     def label(self):
         return self.tokens[1].value
 
@@ -221,13 +226,13 @@ class OpEqu(OpBase):
 class OpLabel(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.LABEL)
-    
+
     def label(self):
         return self.tokens[0].value
-    
+
     def len(self, symbols):
         return 0
-    
+
 
 class OpOrg(OpBase):
     def __init__(self, tokens):
@@ -235,7 +240,7 @@ class OpOrg(OpBase):
 
     def address(self):
         return convert_to_number(self.tokens[1].value)
-        
+
     def len(self, symbols):
         return 0
 
@@ -260,7 +265,7 @@ class OpWord(OpBase):
 class OpAscii(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.DATA)
-    
+
     def len(self, symbols):
         return len(self.data(None))
 
@@ -281,7 +286,7 @@ class OpAscii(OpBase):
 class OpCstr(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.DATA)
-    
+
     def len(self, symbols):
         data = self.data(None)
         return len(data)
@@ -302,7 +307,7 @@ class OpCstr(OpBase):
 class OpSpace(OpBase):
     def __init__(self, tokens):
         super().__init__(tokens, OpBase.DATA)
-    
+
     def len(self, symbols):
         t = self.tokens[1]
         if t.type == "CNAME":
@@ -312,7 +317,6 @@ class OpSpace(OpBase):
         else:
             v = convert_to_number(t.value)
         return v
-    
+
     def data(self, symbols):
         return [0] * self.len(symbols)
-    
