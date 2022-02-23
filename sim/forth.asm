@@ -13,20 +13,44 @@ lit ntib
 call _cstrcpy_body
 
 call _parse_name_body
-
 # initialize idx/addr pair of dictionary entry for writing
 call _swap_body
 lit tib
 lit str1
 call _str_init_body
-
+# convert number
 lit str1
 call _swap_body
 call _number_body
+call _drop_body
+
+call _parse_name_body
+# initialize idx/addr pair of dictionary entry for writing
+call _swap_body
+lit tib
+lit str1
+call _str_init_body
+# convert number
+lit str1
+call _swap_body
+call _number_body
+call _drop_body
+
+call _parse_name_body
+# initialize idx/addr pair of dictionary entry for writing
+call _swap_body
+lit tib
+lit str1
+call _str_init_body
+# convert number
+lit str1
+call _swap_body
+call _number_body
+call _drop_body
 
 .word SIM_END
 
-wort1: .cstr "-$123 -10"
+wort1: .cstr "-$1 123 $abcd"
 
 # ----------------------------------------------------
 
@@ -992,7 +1016,10 @@ _number_done: # (a l r:base minus? res)
         a:r t r-                    # (a r:base minus? res -- res r:base minus?)
         a:r t d+ r-                 # (res r:base minus? -- res minus? r:base)
         rj.nz _number__3            # (res minus? r:base -- res r:base)
-        # TODO: make 2s complement for negative number
+        # make 2s complement for negative number
+        lit 0                       # (res r:base -- res 0 r:base)
+        call _swap_body             # (res 0 r:base -- 0 res r:base)
+        a:sub t d-                  # (0 res r:base -- 0-res r:base)
 _number__3: # (res r:base)
         lit -1                      # (res r:base -- res f r:base)
 _number_exit: # (w f r:base -- w f base)
