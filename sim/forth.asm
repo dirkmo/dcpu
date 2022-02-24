@@ -12,45 +12,24 @@ lit wort1
 lit ntib
 call _cstrcpy_body
 
-call _parse_name_body
-# initialize idx/addr pair of dictionary entry for writing
-call _swap_body
-lit tib
-lit str1
-call _str_init_body
-# convert number
-lit str1
-call _swap_body
-call _number_body
-call _drop_body
+lit 32
+call _parse_body # ( del -- idx len)
 
-call _parse_name_body
-# initialize idx/addr pair of dictionary entry for writing
-call _swap_body
-lit tib
-lit str1
-call _str_init_body
-# convert number
-lit str1
-call _swap_body
-call _number_body
-call _drop_body
+call _swap_body # (idx len -- len idx)
+lit tib         # (len idx -- len idx a)
+lit str1        # (len idx a -- len idx a a-str1)
+call _str_init_body # (len idx a a-str1 -- len)
 
-call _parse_name_body
-# initialize idx/addr pair of dictionary entry for writing
-call _swap_body
-lit tib
-lit str1
-call _str_init_body
-# convert number
 lit str1
 call _swap_body
-call _number_body
-call _drop_body
+lit cstrscratch
+call _str_to_cstr_body # (sa len csa -- )
+
+
 
 .word SIM_END
 
-wort1: .cstr "-$1 123 $abcd"
+wort1: .cstr "number"
 
 # ----------------------------------------------------
 
@@ -73,8 +52,8 @@ str2: .space 2 # for idx/addr pair of a string
 
 _here:      # (-- n)
             # here returns the address of the first free cell in the data space
-            .cstr "here"
             .word 0
+            .cstr "here"
 _here_body:
             lit dp
             a:mem t r- [ret]
@@ -92,8 +71,8 @@ _here_add:  # (n -- )
 _comma:     # (w --)
             # comma puts a word into the cell pointed to by here
             # and increments the data space pointer (value returned by here)
-            .cstr ","
             .word _here
+            .cstr ","
 _comma_body:
             call _here_body     # (w -- w a)
             call _store_body    # (w a -- )
@@ -104,8 +83,8 @@ _comma_body:
 
 _create:    # ( "word-name" -- ) ; Parsing word, takes word from input buffer
             # and creates new dictionary entry
-            .cstr "create"
             .word _comma
+            .cstr "create"
 _create_body:
             # first, save "here". This the start address of the new word,
             # will be written to "latest" later on.
@@ -169,16 +148,16 @@ _create_error_no_name: # (nwa cp r:cl)
 
 
 _allot:     # (n -- )
-            .cstr "allot"
             .word _create
+            .cstr "allot"
 _allot_body:
             call _here_add      # (n -- )
             a:nop t r- [ret]
 
 
 _add1:      # (n -- n+1)
-            .cstr "+1"
             .word _allot
+            .cstr "+1"
 _add1_body:
             lit 1            # (n -- n 1)
             a:add t d- r- [ret] # (n 1 -- n+1)
@@ -186,8 +165,8 @@ _add1_body:
 
 _plus_store: # (n addr --)
              # add n to variable at addr
-            .cstr "+!"
             .word _add1
+            .cstr "+!"
 _plus_store_body:
             a:mem r r+          # (n a -- n a r:w) ; fetch into r
             call _swap_body     # (n a r:w -- a n r:w)
@@ -199,8 +178,8 @@ _plus_store_body:
 
 
 _latest:    # ( -- addr)
-            .cstr "latest"
             .word _plus_store
+            .cstr "latest"
 _latest_body:
             lit latest
             a:mem t r- [ret]
@@ -208,16 +187,16 @@ _latest_body:
 
 _tib:       # ( -- addr)
             # input area as ascii string
-            .cstr "tib"
             .word _latest
+            .cstr "tib"
 _tib_body:
             lit tib [ret]
 
 
 _ntib:      # ( -- n)
             # number of chars in input area
-            .cstr "#tib"
             .word _tib
+            .cstr "#tib"
 _ntib_body:
             lit ntib
             a:mem t r- [ret]
@@ -225,16 +204,16 @@ _ntib_body:
 
 _to_in:     # ( -- n )
             # return addr of index of current char in input buffer
-            .cstr ">in"
             .word _ntib
+            .cstr ">in"
 _to_in_body:
             lit to_in [ret]
 
 
 _tibcfetch: # ( -- char)
             # fetch char pointed to by >in from tib
-            .cstr "tibc@"
             .word _to_in
+            .cstr "tibc@"
 _tibcfetch_body:
             call _to_in_body
             call _fetch_body
@@ -245,8 +224,8 @@ _tibcfetch_body:
 
 _tibcstore: # (c --)
             # store char in tib at idx >in
-            .cstr "tibc!"
             .word _tibcfetch
+            .cstr "tibc!"
 _tibcstore_body:
             call _to_in_body # (c -- c a)
             call _fetch_body # (c a -- c idx)
@@ -256,60 +235,60 @@ _tibcstore_body:
 
 
 _base:      # ( -- addr)
-            .cstr "base"
             .word _tibcstore
+            .cstr "base"
 _base_body:
             lit base [ret]
 
 
 _fetch:     # (addr -- n)
-            .cstr "@"
             .word _base
+            .cstr "@"
 _fetch_body:
             a:mem t r- [ret]
 
 
 _store:     # (d addr -- )
-            .cstr "!"
             .word _fetch
+            .cstr "!"
 _store_body:
             a:n mem d-
             a:nop r d- r- [ret]
 
 
 _drop:      # ( n -- )
-            .cstr "drop"
             .word _store
+            .cstr "drop"
 _drop_body:
             a:nop t d- r- [ret]
 
 
 _2drop:     # ( n n -- )
-            .cstr "2drop"
             .word _drop
+            .cstr "2drop"
 _2drop_body:
             a:nop t d-
             a:nop t d- r- [ret]
 
 
 _dup:       # (a -- a a)
-            .cstr "dup"
             .word _2drop
+            .cstr "dup"
 _dup_body:
             a:t t d+ r- [ret]
 
 
 _2dup:      # (a b -- a b a b)
-            .cstr "2dup"
             .word _dup
+            .cstr "2dup"
 _2dup_body:
             a:n t d+
             a:n t d+ r- [ret]
 
 
 _swap:      # (a b -- b a)
-            .cstr "swap"
             .word _2dup
+            .cstr "swap"
 _swap_body:
             a:t r d- r+      # (a b -- a r:b)
             a:t t d+         # (a r:b -- a a r:b)
@@ -318,28 +297,28 @@ _swap_body:
 
 
 _over:      # (a b -- a b a)
-            .cstr "over"
             .word _swap
+            .cstr "over"
 _over_body:
             a:n t d+ r- [ret]
 
 
 _rot:       # (a b c -- b c a)
-            .cstr "rot"
             .word _over
+            .cstr "rot"
 _rot_body:  # todo
 
 
 _nip:       # (a b -- b)
-            .cstr "nip"
             .word _rot
+            .cstr "nip"
 _nip_body:
             a:t t d- r- [ret]
 
 
 _tuck:      # (a b -- b a b)
-            .cstr "tuck"
             .word _nip
+            .cstr "tuck"
 _tuck_body:
             call _swap_body # ( a b -- b a)
             call _over_body # ( b a -- b a b)
@@ -347,8 +326,8 @@ _tuck_body:
 
 
 _min:       # (n1 n2 -- min)
-            .cstr "min"
             .word _tuck
+            .cstr "min"
 _min_body:
             a:lts t d+      # (n1 n2 -- n1 n2 lt)
             rj.nz _min__1   # (n1 n2 lt -- n1 n2)
@@ -359,8 +338,8 @@ _min__2:    a:nop t r- [ret]
 
 
 _max:       # (n1 n2 -- min)
-            .cstr "max"
             .word _min
+            .cstr "max"
 _max_body:
             a:lts t d+      # (n1 n2 -- n1 n2 lt)
             rj.z _max__1    # (n1 n2 lt -- n1 n2)
@@ -371,8 +350,8 @@ _max__2:    a:nop t r- [ret]
 
 
 _to_r:      # (n -- r:n)
-            .cstr ">r"
             .word _max
+            .cstr ">r"
 _to_r_body: a:r t d+ r-      # (n r:a -- n a)
             call _swap_body  # (n a -- a n)
             a:t r d- r+      # (a n -- a r:n)
@@ -380,8 +359,8 @@ _to_r_body: a:r t d+ r-      # (n r:a -- n a)
 
 
 _r_from:    # (r:n -- n)
-            .cstr "r>"
             .word _to_r
+            .cstr "r>"
 _r_from_body:
             a:r t d+ r-       # (r:n a -- a r:n) ; rpop return address
             a:r t d+ r-       # (a r:n -- a n)   ; pop value to retrieve
@@ -399,8 +378,8 @@ _wait_uart_tx_can_send: # ( -- )
 
 
 _emit:      # (c --)
-            .cstr "emit"
             .word _r_from
+            .cstr "emit"
 _emit_body: call _wait_uart_tx_can_send
             lit ADDR_UART_TX
             call _store_body
@@ -417,8 +396,8 @@ _wait_uart_rx_has_data: # ( -- )
 
 
 _key:       # ( -- key)
-            .cstr "key"
             .word _emit
+            .cstr "key"
 _key_body:
             call _wait_uart_rx_has_data
             lit ADDR_UART_RX
@@ -435,8 +414,8 @@ _charidxwordaddr:  # (str-addr char-idx -- wa)
 
 _strcfetch: # (char-idx str-addr -- c)
             # fetch char at index from str
-            .cstr "sc@" # "string char fetch"
             .word _key
+            .cstr "sc@" # "string char fetch"
 _strcfetch_body:
             call _over_body       # (ci sa -- ci sa ci)
             call _charidxwordaddr # (ci sa ci -- ci wa)
@@ -453,8 +432,8 @@ _strcf1:    lit $ff               # (w -- w $ff)
 
 _cscfetch:  # (char-idx cstr-addr -- char)
             # fetch char at index from cstr
-            .cstr "csc@" # "counted string char fetch"
             .word _strcfetch
+            .cstr "csc@" # "counted string char fetch"
 _cscfetch_body:
             # add 1 because counted string
             call _add1_body       # (ci ca -- ci ca+1)
@@ -463,8 +442,8 @@ _cscfetch_body:
 
 
 _strcstore: # (char char-idx str-addr -- )
-            .cstr "sc!"
             .word _cscfetch
+            .cstr "sc!"
 _strcstore_body:
             call _over_body         # (c ci sa         -- c ci sa ci)
             call _charidxwordaddr   # (c ci sa ci      -- c ci wa)
@@ -495,8 +474,8 @@ _strcs2:
 
 
 _cstr_append: # ( char cstr-addr --)
-            .cstr "cstr-append"
             .word _strcstore
+            .cstr "cstr-append"
 _cstr_append_body:
             call _dup_body        # (c sa -- c sa sa)
             a:t r r+              # (c sa sa -- c sa sa r:sa)
@@ -513,8 +492,8 @@ _cstr_append_body:
 
 _cstrpop:  # (c-addr --)
             # delete last char of c-str
-            .cstr "cstr-pop"
             .word _cstr_append
+            .cstr "cstr-pop"
 _cstr_pop_body:
             call _dup_body      # (ca -- ca ca)
             call _fetch_body    # (ca ca -- ca w)
@@ -553,8 +532,8 @@ _to_in_plus1: # (--)
 
 _move:      # ( a-from a-to count -- )
             # copy count words from a-from to a-to
-            .cstr "move"
             .word _cstrpop
+            .cstr "move"
 _move_body:
             a:t r d- r+         # (a1 a2 cnt -- a1 a2 r:cnt)
             call _over_body     # (a1 a2 -- a1 a2 a1)
@@ -582,8 +561,8 @@ _move_done:
 
 _cstrcpy:   # ( ca1 ca2 -- )
             # copy c-str at ca1 to ca2
-            .cstr "cstrcpy"
             .word _move
+            .cstr "cstrcpy"
 _cstrcpy_body:
             call _over_body      # (ca1 ca2 -- ca1 ca2 ca1)
             call _fetch_body     # (ca1 ca2 ca1 -- ca1 ca2 char-cnt)
@@ -596,8 +575,8 @@ _cstrcpy_body:
 
 _parse_skip: # (del -- )
              # advance >in as long as tib[>in] is a delimiter
-            .cstr "parse-skip"
             .word _cstrcpy
+            .cstr "parse-skip"
 _parse_skip_body:
             call _tib_eob
             rj.z _parse_skip_exit
@@ -616,8 +595,8 @@ _parse:     # ( del "ccc<xdel>" – idx clen)
             # Parse ccc, delimited by del, in the parse area.
             # idx is start char pos in tib, clen is char count of word.
             # If the parse area was empty, clen is 0.
-            .cstr "parse"
             .word _parse_skip
+            .cstr "parse"
 _parse_body:
             call _tib_eob           # (del -- del f)
             rj.nz _parse__1         # (del f -- del)
@@ -648,8 +627,8 @@ _parse_end: # (del r:cnt)
 _parse_name: #("name" – pos len) gforth “parse-name”
             # Get the next word from the input buffer
             # return char position (pos) and count (len) in TIB buffer
-            .cstr "parse-name"
             .word _parse
+            .cstr "parse-name"
 _parse_name_body:
             lit 32 # delimiter      # ( -- del)
             call _parse_skip_body   # (del -- )
@@ -659,8 +638,8 @@ _parse_name_body:
 
 
 _cstrcmp:   # (a1 a2 -- f)
-            .cstr "cstrcmp"
             .word _parse_name
+            .cstr "cstrcmp"
 _cstrcmp_body:
             call _2dup_body     # (a1 a2 -- a1 a2 a1 a2)
             call _fetch_body    # (a1 a2 -- a1 a2 a1 cnt2)
@@ -719,11 +698,12 @@ _cstrcmp__eq1: a:nop t d-        # (n --)
 
 
 _find: # ( c-addr -- c-addr 0 | xt 1)
-        .cstr "find"
         .word _cstrcmp
+        .cstr "find"
 _find_body:
         call _latest_body   # (wa -- wa it)
 _find__1:
+        call _add1_body     # (wa it -- wa it+1)
         call _dup_body      # (wa it -- wa it it)
         rj.z _find_not_found # (wa it it -- wa it)
         call _2dup_body     # (wa it -- wa it wa it)
@@ -748,8 +728,8 @@ _accept: # (c-addr u1 -- u2)
          # receive string until CR, put string as c-string at c-addr
          # u1 is max char count that should be received
          # u2 is number of chars received, excluding CR
-        .cstr "accept"
         .word _find
+        .cstr "accept"
 _accept_body:
         call _over_body         # (ca u1 -- ca u1 ca)
         lit 0                   # (ca u1 ca -- ca u1 ca 0)
@@ -799,8 +779,8 @@ _accept_full: #(ca key u1)
 _str_get: # (a -- idx addr)
         # get idx/addr
         # a: address of idx/addr pair
-        .cstr "str-get"
         .word _accept
+        .cstr "str-get"
 _str_get_body:
         call _dup_body      # (a -- a a)
         call _fetch_body    # (a a -- a idx)
@@ -815,8 +795,8 @@ _str_init: # (idx addr a -- )
         # initialize idx/addr pair at a
         # a[0] = idx (char-idx)
         # a[1] = addr (addr of str)
-        .cstr "str-init"
         .word _str_get
+        .cstr "str-init"
 _str_init_body:
         a:t r r+            # (idx addr a -- idx addr a r:a)
         lit 1
@@ -828,8 +808,8 @@ _str_init_body:
 
 
 _str_advance: # (a --)
-        .cstr "str-advance"
         .word _str_init
+        .cstr "str-advance"
 _str_advance_body:
         call _dup_body      # (a -- a a)
         call _fetch_body    # (a a -- a w)
@@ -842,8 +822,8 @@ _str_advance_body:
 
 _str_append: # (c a -- )
         # append char c to string defined by idx/addr pair at address a
-        .cstr "str-append"
         .word _str_advance
+        .cstr "str-append"
 _str_append_body:
         a:t r r+               # (c a -- c a r:a)
         call _str_get_body     # (c a -- c ci sa)
@@ -856,8 +836,8 @@ _str_append_body:
 _str_read_next: # (a -- c)
         # read char from str (a is address of idx/addr pair)
         # and increment idx
-        .cstr "str-read-next"
         .word _str_append
+        .cstr "str-read-next"
 _str_read_next_body:
         a:t r r+               # (a -- a r:a)
         call _str_get_body     # (a -- ci sa)
@@ -867,10 +847,41 @@ _str_read_next_body:
         a:nop t r- [ret]
 
 
+_str_to_cstr: # (sa len csa -- )
+            # create counted string with len from a idx/addr pair string
+            # sa is address of idx/addr pair
+            # csa is address of new c-str
+            .word _str_read_next
+            .cstr "str>cstr"
+_str_to_cstr_body:
+            # first: initialize c-str count to zero
+            call _dup_body      # (sa len csa -- sa len csa csa)
+            lit 0               # (sa len csa csa-- sa len csa csa 0)
+            call _swap_body     # (sa len csa csa 0 -- sa len csa 0 csa)
+            call _store_body    # (sa len csa 0 csa -- sa len csa)
+            a:t r d- r+         # (sa len csa -- sa len r:csa)
+_str_to_cstr_loop: # (sa len r:csa)
+            # is len==0?
+            call _dup_body      # (sa len -- sa len len)
+            rj.z _str_to_cstr_done # (sa len len -- sa len)
+            call _swap_body     # (sa len -- len sa)
+            call _dup_body      # (len sa -- len sa sa)
+            call _str_read_next_body # (len sa sa -- len sa c)
+            a:r t d+            # (len sa c r:csa -- len sa c csa r:csa)
+            call _cstr_append_body # (len sa c csa -- len sa r:csa)
+            call _swap_body     # (len sa -- sa len r:csa)
+            lit 1
+            a:sub t d-          # (sa len 1 -- sa len-1 r:csa)
+            rj _str_to_cstr_loop
+_str_to_cstr_done: # (sa len r:csa)
+            a:nop t d- r-       # (sa len r:csa -- sa)
+            a:nop t d- r- [ret] # (sa -- )
+
+
 _upchar: # (c -- C)
         # convert char to upper case
+        .word _str_to_cstr
         .cstr "upchar"
-        .word _str_read_next
 _upchar_body:
         call _dup_body  # (c -- c c)
         lit 32          # ( c c -- c c 32)
@@ -894,8 +905,8 @@ _upchar_1: # (c C)
 _digit2number:  # (c -- n f)
                 # convert hexchar to int n
                 # f=0 on error, f=1 on success
-        .cstr "digit>num"
         .word _upchar
+        .cstr "digit>num"
 _digit2number_body:
         call _upchar_body       # (c -- C)
         lit 48                  # (c -- c '0')
@@ -922,8 +933,8 @@ _digit2number_error:        # (n)
 _number: # (a len -- n f)
          # convert string (a is address of idx/addr pair), len is len of string,
          # to number n. f is 0 on error, else -1
-        .cstr "number"
         .word _digit2number
+        .cstr "number"
 _number_body:
         # save current base
         call _base_body
