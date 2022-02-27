@@ -8,28 +8,15 @@
 .equ SIM_END $be00
 .equ TIB_WORD_COUNT 32
 
+
+
 lit wort1
-lit ntib
-call _cstrcpy_body
-
-lit 32
-call _parse_body # ( del -- idx len)
-
-call _swap_body # (idx len -- len idx)
-lit tib         # (len idx -- len idx a)
-lit str1        # (len idx a -- len idx a a-str1)
-call _str_init_body # (len idx a a-str1 -- len)
-
-lit str1
-call _swap_body
-lit cstrscratch
-call _str_to_cstr_body # (sa len csa -- )
-
+call _find_body
 
 
 .word SIM_END
 
-wort1: .cstr "number"
+wort1: .cstr "gibtsnicht"
 
 # ----------------------------------------------------
 
@@ -40,8 +27,8 @@ tib: .space TIB_WORD_COUNT
 
 to_in: .word 0          # current char idx in tib
 base: .word 10
-latest: .word _find     # last word in dictionary
-dp: .word dp_init      # first free cell after dict
+latest: .word _number   # last word in dictionary
+dp: .word dp_init       # first free cell after dict
 
 cstrscratch: .space 33
 
@@ -698,29 +685,38 @@ _cstrcmp__eq1: a:nop t d-        # (n --)
 
 
 _find: # ( c-addr -- c-addr 0 | xt 1)
+        # search for c-str at address c-addr in dictionary, starting at "latest"
+        # if successful, returns xt of word (address of *_body) and flag=1
+        # if not found, returns leaves c-addr on stack and flag=0
         .word _cstrcmp
         .cstr "find"
 _find_body:
         call _latest_body   # (wa -- wa it)
-_find__1:
-        call _add1_body     # (wa it -- wa it+1)
+        a:t r r+            # (wa it -- wa it r:it)
+_find__1: # (wa it r:it)
         call _dup_body      # (wa it -- wa it it)
         rj.z _find_not_found # (wa it it -- wa it)
+        call _add1_body     # (wa it -- wa it+1)
         call _2dup_body     # (wa it -- wa it wa it)
         call _cstrcmp_body  # (wa it wa it -- wa it f)
-        rj.nz _find_found   # (wa it f -- wa it)
-        a:mem t d+          # (wa it -- wa it cnt)
-        call _add1_body     # (wa it cnt -- wa it cnt+1)
-        a:sr t              # (wa it cnt+1 -- wa it n)
-        a:add t d-          # (wa it n -- wa a)
-        call _add1_body     # (wa a -- wa a+1)
-        a:mem t             # (wa a -- wa it)
-        rj _find__1         # (wa it -- wa it)
-_find_found:
-        call _nip_body      # (wa it -- it)
-        lit 1 [ret]         # (it -- it 1)
-_find_not_found:
-        call _drop_body     # (wa it -- wa)
+        call _nip_body      # (wa it f -- wa f)
+        rj.nz _find_found   # (wa f -- wa r:it)
+        a:r t d+ r-         # (wa r:it -- wa it)
+        a:mem t             # (wa it -- wa next-it)
+        a:t r r+            # (wa it -- wa it r:it)
+        rj _find__1         # (wa it -- wa it r:it)
+_find_found: # (wa r:it)
+        # word found
+        a:r t r-            # (wa r:it -- it)
+        call _add1_body     # (it -- it+1)
+        a:mem t d+          # (it -- it cnt)
+        lit 3
+        a:add t d-
+        a:sr t              # (it cnt -- it n)
+        a:add t d-          # (it n -- xt)
+        lit 1 [ret]         # (xt -- xt 1)
+_find_not_found: # (wa it r:it)
+        a:nop t d- r-       # (wa it r:it -- wa)
         lit 0 [ret]         # (wa -- wa 0)
 
 
