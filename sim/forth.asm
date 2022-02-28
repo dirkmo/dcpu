@@ -352,18 +352,65 @@ _str_cnt:
         a:mem t r- [ret]
 
 
+_str_wa_header: # (a -- swa)
+        # return address of word (wa), which contains
+        # char addressed by string tuple (si sa sc)
+        .word _str_cnt_header
+        .cstr "str-wa"
+_str_wa:
+        call _dup       # (a -- a a)
+        call _str_idx   # (a a -- a si)
+        a:sr t          # (a si -- a wi)
+        call _swap      # (a si -- si a)
+        call _str_addr  # (si a -- si wa)
+        a:add t d- [ret]
+
+
+_char_to_word_header: # (c wa f -- )
+        # put char c into word at address wa.
+        # if f is even: *wa = (*wa & 0x00ff) | (c << 8)
+        # if f is odd:  *wa = (*wa & 0xff00) | c
+        .word _str_wa_header
+        .cstr "char>word"
+_char_to_word:
+        lit 1
+        a:and t d-      # (c wa f 1 -- c wa f&1)
+        rj.z _char_to_word_lower # (c wa f -- c wa)
+        call _swap      # (c wa -- wa c)
+        a:slw t         # (wa c -- wa c<<8)
+        call _over      # (wa c' -- wa c' wa)
+        a:mem t         # (wa c' wa -- wa c' w)
+        lit $ff00
+        a:and t d-      # (wa c' w $ff00 -- wa c' w&$ff00)
+        rj _char_to_word__1
+_char_to_word_lower:    # (c wa)
+        a:mem t d+      # (c wa -- c wa w)
+        lit $ff
+        a:and t d-      # (c wa w $ff -- c wa w&$ff)
+_char_to_word__1: # (wa c' w)
+        a:or t d-       # (wa c' w -- wa (c'|w) )
+        call _swap      # (wa w -- w wa)
+        call _store     # (w wa -- )
+        a:nop r- [ret]
+
+
 _str_getc_header: # (a -- c)
         # get char of string at idx defined by tuple si/sa/sc
-        .word _str_cnt_header
+        .word _char_to_word_header
         .cstr "str-getc"
 _str_getc:
-        call _dup      # (a -- a a)
-        call _str_idx  # (a a -- a si)
+        a:t r r+        # (a -- a r:a)
+        call _str_wa    # (a -- wa r:a)
+        a:mem t         # (wa -- w r:a)
+        a:r t r-        # (w r:a -- w a)
+        call _str_idx   # (w a -- w si)
         lit 1
-        a:add t d-          # (a si 1 -- a si+1) # add 1 for rounding
-        a:sr t              # (a si -- a si/2)
-        a:add t d-          # (a i -- a+i)
-        a:mem t r- [ret]
+        a:and t d-      # (w si 1 -- w si&1)
+        rj.z str_getc_upperbyte # (w f -- w)
+        lit $ff00
+        a:and t r- [ret] # (w $ff00 -- c)
+str_getc_upperbyte: # (w)
+        a:srw t r- [ret]
 
 
 _str_putc_header: # (c a -- )
@@ -372,7 +419,12 @@ _str_putc_header: # (c a -- )
         .word _str_getc_header
         .cstr "str-putc"
 _str_putc:
+        a:t r r+        # (c a -- c a r:a)
+        call _str_wa    # (c a -- c wa)
+        a:r t d+ r-     # (c wa r:a -- c wa a)
+        call _str_idx   # (c wa a -- c wa idx)
         # TODO
+
 
 
 _str_next_header: # (a -- )
