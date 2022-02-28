@@ -85,11 +85,11 @@ _add1:
             a:add t d- r- [ret] # (n 1 -- n+1)
 
 
-_plus_store: # (n addr --)
+_plus_store_header: # (n addr --)
              # add n to variable at addr
             .word _add1_header
             .cstr "+!"
-_plus_store_body:
+_plus_store:
             a:mem r r+          # (n a -- n a r:w) ; fetch into r
             call _swap     # (n a r:w -- a n r:w)
             a:r t d+ r-         # (a n r:w -- a n w)
@@ -99,48 +99,48 @@ _plus_store_body:
             a:nop t d- r- [ret] # (n+w -- )
 
 
-_latest:    # ( -- addr)
-            .word _plus_store
+_latest_header:    # ( -- addr)
+            .word _plus_store_header
             .cstr "latest"
-_latest_body:
+_latest:
             lit latest
             a:mem t r- [ret]
 
 
-_tib:       # ( -- addr)
+_tib_header:       # ( -- addr)
             # input area as ascii string
-            .word _latest
+            .word _latest_header
             .cstr "tib"
-_tib_body:
+_tib:
             lit tib [ret]
 
 
-_ntib:      # ( -- n)
+_ntib_header:      # ( -- n)
             # number of chars in input area
-            .word _tib
+            .word _tib_header
             .cstr "#tib"
-_ntib_body:
+_ntib:
             lit ntib
             a:mem t r- [ret]
 
 
-_to_in:     # ( -- n )
+_to_in_header:     # ( -- n )
             # return addr of index of current char in input buffer
-            .word _ntib
+            .word _ntib_header
             .cstr ">in"
-_to_in_body:
+_tio_in:
             lit to_in [ret]
 
 
-_base:      # ( -- addr)
-            .word _to_in
+_base_header:      # ( -- addr)
+            .word _to_in_header
             .cstr "base"
-_base_body:
+_base:
             lit base [ret]
 
 
 _fetch_header:     # (addr -- n)
-            .word _base
+            .word _base_header
             .cstr "@"
 _fetch:
             a:mem t r- [ret]
@@ -154,38 +154,38 @@ _store:
             a:nop r d- r- [ret]
 
 
-_drop:      # ( n -- )
+_drop_header:      # ( n -- )
             .word _store_header
             .cstr "drop"
-_drop_body:
+_drop:
             a:nop t d- r- [ret]
 
 
-_2drop:     # ( n n -- )
-            .word _drop
+_2drop_header:     # ( n n -- )
+            .word _drop_header
             .cstr "2drop"
-_2drop_body:
+_2drop:
             a:nop t d-
             a:nop t d- r- [ret]
 
 
 _dup_header:       # (a -- a a)
-            .word _2drop
+            .word _2drop_header
             .cstr "dup"
 _dup:
             a:t t d+ r- [ret]
 
 
-_2dup:      # (a b -- a b a b)
+_2dup_header:      # (a b -- a b a b)
             .word _dup_header
             .cstr "2dup"
-_2dup_body:
+_2dup:
             a:n t d+
             a:n t d+ r- [ret]
 
 
 _swap_header:      # (a b -- b a)
-            .word _2dup
+            .word _2dup_header
             .cstr "swap"
 _swap:
             a:t r d- r+      # (a b -- a r:b)
@@ -194,73 +194,74 @@ _swap:
             a:nop t d+ r- [ret] # (b a -- b a)
 
 
-_over:      # (a b -- a b a)
+_over_header:      # (a b -- a b a)
             .word _swap_header
             .cstr "over"
-_over_body:
+_over:
             a:n t d+ r- [ret]
 
 
-_rot:       # (a b c -- b c a)
-            .word _over
+_rot_header:       # (a b c -- b c a)
+            .word _over_header
             .cstr "rot"
-_rot_body:  # todo
-
-
-_nip:       # (a b -- b)
-            .word _rot
-            .cstr "nip"
-_nip_body:
-            a:t t d- r- [ret]
-
-
-_tuck:      # (a b -- b a b)
-            .word _nip
-            .cstr "tuck"
-_tuck_body:
-            call _swap # ( a b -- b a)
-            call _over_body # ( b a -- b a b)
+_rot:
+            a:t r d- r+     # (a b c -- a b r:c)
+            call _swap      # (a b r:c -- b a r:c)
+            a:r t d+ r-     # (b a r:c -- b a c)
+            call _swap      # (b a c -- b c a)
             a:nop t r- [ret]
 
 
-_min:       # (n1 n2 -- min)
-            .word _tuck
+_nip_header:       # (a b -- b)
+            .word _rot_header
+            .cstr "nip"
+_nip:
+            a:t t d- r- [ret]
+
+
+_tuck_header:      # (a b -- b a b)
+            .word _nip_header
+            .cstr "tuck"
+_tuck:      call _swap # ( a b -- b a)
+            call _over # ( b a -- b a b)
+            a:nop t r- [ret]
+
+
+_min_header:       # (n1 n2 -- min)
+            .word _tuck_header
             .cstr "min"
-_min_body:
-            a:lts t d+      # (n1 n2 -- n1 n2 lt)
+_min:       a:lts t d+      # (n1 n2 -- n1 n2 lt)
             rj.nz _min__1   # (n1 n2 lt -- n1 n2)
-            call _nip_body  # (n1 n2 -- n2)
+            call _nip  # (n1 n2 -- n2)
             rj _min__2
-_min__1:    call _drop_body # (n1 n2 -- n1)
+_min__1:    call _drop # (n1 n2 -- n1)
 _min__2:    a:nop t r- [ret]
 
 
-_max:       # (n1 n2 -- min)
-            .word _min
+_max_header:       # (n1 n2 -- min)
+            .word _min_header
             .cstr "max"
-_max_body:
-            a:lts t d+      # (n1 n2 -- n1 n2 lt)
+_max:       a:lts t d+      # (n1 n2 -- n1 n2 lt)
             rj.z _max__1    # (n1 n2 lt -- n1 n2)
-            call _nip_body  # (n1 n2 -- n2)
+            call _nip  # (n1 n2 -- n2)
             rj _max__2
-_max__1:    call _drop_body # (n1 n2 -- n1)
+_max__1:    call _drop # (n1 n2 -- n1)
 _max__2:    a:nop t r- [ret]
 
 
-_to_r:      # (n -- r:n)
-            .word _max
+_to_r_header:      # (n -- r:n)
+            .word _max_header
             .cstr ">r"
-_to_r_body: a:r t d+ r-      # (n r:a -- n a)
+_to_r:      a:r t d+ r-      # (n r:a -- n a)
             call _swap  # (n a -- a n)
             a:t r d- r+      # (a n -- a r:n)
             a:t pc d-        # (a r:n -- r:n)
 
 
-_r_from:    # (r:n -- n)
-            .word _to_r
+_r_from_header:    # (r:n -- n)
+            .word _to_r_header
             .cstr "r>"
-_r_from_body:
-            a:r t d+ r-       # (r:n a -- a r:n) ; rpop return address
+_r_from:    a:r t d+ r-       # (r:n a -- a r:n) ; rpop return address
             a:r t d+ r-       # (a r:n -- a n)   ; pop value to retrieve
             call _swap   # (a n -- n a)
             a:t pc d-         # (n a -- n)
@@ -275,10 +276,10 @@ _wait_uart_tx_can_send: # ( -- )
             a:nop t r- [ret]
 
 
-_emit:      # (c --)
-            .word _r_from
+_emit_header:      # (c --)
+            .word _r_from_header
             .cstr "emit"
-_emit_body: call _wait_uart_tx_can_send
+_emit:      call _wait_uart_tx_can_send
             lit ADDR_UART_TX
             call _store
             a:nop t r- [ret]
@@ -294,7 +295,7 @@ _wait_uart_rx_has_data: # ( -- )
 
 
 _key_header:       # ( -- key)
-            .word _emit
+            .word _emit_header
             .cstr "key"
 _key:
             call _wait_uart_rx_has_data
