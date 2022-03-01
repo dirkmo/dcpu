@@ -8,16 +8,35 @@
 .equ SIM_END $be00
 .equ TIB_WORD_COUNT 32
 
-
+# idx
 lit 0
+# s-addr
 lit wort1
-lit 10
+lit 1
+a:add t d-
+# cnt
+lit wort1
+a:mem t
+# tuple string addr
+lit str1
 call _str_init
+
+lit str1
+call _str_getc_next
+
+lit str1
+call _str_getc_next
+
+lit str1
+call _str_getc_next
+
+lit str1
+call _str_getc_next
 
 
 .word SIM_END
 
-wort1: .cstr "gibtsnicht"
+wort1: .cstr "DerString"
 
 # ----------------------------------------------------
 
@@ -312,16 +331,17 @@ _str_init_header: # (si sa sc a -- )
         .word _key_header
         .cstr "str-init"
 _str_init:
-        a:t r r+                # (si sa sc a -- si sa sc a r:a)
+        a:t r r+           # (si sa sc a -- si sa sc a r:a)
         lit 2
-        a:add t d-              # (si sa sc a -- si sa sc a+2)
+        a:add t d-         # (si sa sc a -- si sa sc a+2)
         call _store        # (si sa sc a -- si sa r:a)
-        a:r t d+                # (si sa r:a -- si sa a r:a)
+        a:r t d+           # (si sa r:a -- si sa a r:a)
         lit 1
-        a:add t d-              # (si sa a -- si sa a+1)
+        a:add t d-         # (si sa a -- si sa a+1)
         call _store        # (si sa a -- si r:a)
-        a:r t d+ r-             # (si r:a -- si a)
-        a:t mem d- r- [ret]
+        a:r t d+ r-        # (si r:a -- si a)
+        call _store        # (si a -- )
+        a:nop t r- [ret]
 
 
 _str_idx_header: # (a -- idx)
@@ -363,7 +383,7 @@ _str_wa:
         a:sr t          # (a si -- a wi)
         call _swap      # (a si -- si a)
         call _str_addr  # (si a -- si wa)
-        a:add t d- [ret]
+        a:add t d- r- [ret]
 
 
 _char_to_word_header: # (c wa f -- )
@@ -391,7 +411,7 @@ _char_to_word__1: # (wa c' w)
         a:or t d-       # (wa c' w -- wa (c'|w) )
         call _swap      # (wa w -- w wa)
         call _store     # (w wa -- )
-        a:nop r- [ret]
+        a:nop t r- [ret]
 
 
 _str_getc_header: # (a -- c)
@@ -402,13 +422,14 @@ _str_getc:
         a:t r r+        # (a -- a r:a)
         call _str_wa    # (a -- wa r:a)
         a:mem t         # (wa -- w r:a)
-        a:r t r-        # (w r:a -- w a)
+        a:r t d+ r-     # (w r:a -- w a)
         call _str_idx   # (w a -- w si)
         lit 1
         a:and t d-      # (w si 1 -- w si&1)
         rj.z str_getc_upperbyte # (w f -- w)
-        lit $ff00
-        a:and t r- [ret] # (w $ff00 -- c)
+        # lower byte
+        lit $ff
+        a:and t d- r- [ret] # (w $ff00 -- c)
 str_getc_upperbyte: # (w)
         a:srw t r- [ret]
 
