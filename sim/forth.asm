@@ -21,18 +21,12 @@ a:mem t
 lit str1
 call _str_init
 
-lit str1
-call _str_getc_next
 
-lit str1
-call _str_getc_next
-
-lit str1
-call _str_getc_next
-
-lit str1
-call _str_getc_next
-
+# noch zu testen:
+# _str_putc
+# _str_eos
+# _str_append
+# _str_pop
 
 .word SIM_END
 
@@ -352,9 +346,18 @@ _str_idx:
         a:mem t r- [ret]
 
 
+_str_set_idx_header: # (new-si a -- )
+        # set si of string tuple (si sa sc) to new-si
+        .word _str_idx_header
+        .cstr "str-set-idx"
+_str_set_idx:
+        call _store
+        a:nop t r- [ret]
+
+
 _str_addr_header: # (a -- sa)
         # get base address sa of string tuple (si sa sc) at address a
-        .word _str_idx_header
+        .word _str_set_idx_header
         .cstr "str-addr"
 _str_addr:
         lit 1
@@ -447,9 +450,9 @@ _str_putc:
         # TODO
 
 
-
 _str_next_header: # (a -- )
         # increase char index si of tuple si/sa/sc to next char
+        # does not care about string length
         .word _str_putc_header
         .cstr "str-next"
 _str_next:
@@ -488,17 +491,28 @@ _str_eos:
         a:lt t d- r- [ret] # (si sc -- f)
 
 
-_str_append_header: # (a c -- )
+_str_append_header: # (c a -- )
         # append char c to string tuple (si sa sc) at address a
+        # si will point after last char (si == sc)
         .word _str_eos_header
         .cstr "str-append"
 _str_append:
-        # TODO
+        a:t r r+            # (c a -- c a r:a)
+        call _dup           # (c a -- c a a)
+        call _str_cnt       # (c a a -- c a cnt)
+        call _swap          # (c a cnt -- c cnt a)
+        call _str_set_idx   # (c cnt a -- c)
+        a:r t d+            # (c r:a -- c a r:a)
+        call _str_putc      # (c a -- )
+        a:r t d+ r-         # (r:a -- a)
+        call _str_next
+        a:nop t r- [ret]
 
 
 _str_pop_header: # (a -- )
         # delete last char from string tuple (si sa sc) at address a
         # by decrementing count sc
+        # will not change si
         .word _str_append_header
         .cstr "str-pop"
 _str_pop:
