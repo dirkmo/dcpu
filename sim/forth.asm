@@ -631,7 +631,9 @@ _digit2number_error:            # (n)
 
 _number_header: # (a -- n f)
          # convert string tuple (si sa sc) at a to number n.
-         # f is 0 on error, else -1
+         # It starts parsing at index si and stops at si==sc.
+         # White space (chars with ascii value < 33) is considered as end-of-number.
+         # f is 0 on error, else -1 on success
         .word _digit2number_header
         .cstr "number"
 _number:
@@ -671,9 +673,13 @@ _number__2: # (a c r:base minus?)
         lit 0
         a:t r d- r+             # (a c 0 -- a c r:base minus? res)
 _number_loop: # (a c r:base minus? res)
-        call _digit2number      # (a c -- a n f)
 
-        # Überlegung: Parsen bis white space oder Stringende.
+        # is c white space? if yes, stop parsing
+        lit 33                  # (a c -- a c 33)
+        a:lt t                  # (a c 32 -- a c f)
+        rj.nz _number_done      # (a c f -- a c r:base minus? res)
+
+        call _digit2number      # (a c -- a n f)
         rj.z _number_error2     # (a n f -- a n r:base minus? res) # f=0: conversion failed
 
         # is number valid in current base? Means: (n < base) must be true
@@ -689,19 +695,27 @@ _number_loop: # (a c r:base minus? res)
         a:r t r- d+             # (a n base r:base minus? res -- a n base res r:base minus?)
         a:mull t                # (a n base res -- a n base*res)
         a:add t d-              # (a n res -- a n+res)
+        TODO
 
+_number_done: # (a c r:base minus? res)
+        # white space encountered. Parsing is done.
+        call _drop              # (a c -- a)
+        a:r t d- r-             # (a r:base minus? res -- res r:base minus?)
+        TODO
+        rj _number_exit
 
 _number_error2: # (a n r:base minus? res)
         a:nop t d- r-               # (a n r:base minus? res -- a r:base minus?)
         a:nop t r-                  # (a r:base minus? -- a r:base)
         lit 0                       # (a r:base -- a 0 r:base)
-        rj _number_exit
 _number_exit: # (w f r:base)
         # restore base
         a:r t d+ r-
         call _base
         call _store
         a:nop t r- [ret]
+
+
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
          # value that "here" returns
