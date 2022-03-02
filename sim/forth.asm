@@ -639,7 +639,6 @@ _number:
         call _base
         call _fetch
         a:t r d- r+             # (a base -- a r:base)
-
         # is first char minus sign (45)?
         # if yes, push minus? == 0 on rstack
         # if no,  push minus? != 0 on rstack
@@ -664,9 +663,45 @@ _number__1: # (a c r:base minus?)
         call _store
         call _drop              # (a c -- a)
         call _dup               # (a -- a a)
-        call _str_getc_next     # (a a -- a c)
         # skip dollar sign
+        call _str_getc_next     # (a a -- a c)
 _number__2: # (a c r:base minus?)
+        # now, minus '-' and/or dollar '$' are processed. Now the digit parsing starts.
+        # first, push res=0 on rstack
+        lit 0
+        a:t r d- r+             # (a c 0 -- a c r:base minus? res)
+_number_loop: # (a c r:base minus? res)
+        call _digit2number      # (a c -- a n f)
+
+        # Überlegung: Parsen bis white space oder Stringende.
+        rj.z _number_error2     # (a n f -- a n r:base minus? res) # f=0: conversion failed
+
+        # is number valid in current base? Means: (n < base) must be true
+        call _dup               # (a n -- a n n)
+        call _base
+        call _fetch
+        a:lt t d-               # (a n n base -- a n numvalid?)
+        rj.z _number_error2     # (a n numvalid? -- a n r:base minus? res)
+        # yes, n is a valid digit.
+        # now get res from rstack, multiply with base and add n
+        call _base
+        call _fetch             # (a n a-base -- a n base)
+        a:r t r- d+             # (a n base r:base minus? res -- a n base res r:base minus?)
+        a:mull t                # (a n base res -- a n base*res)
+        a:add t d-              # (a n res -- a n+res)
+
+
+_number_error2: # (a n r:base minus? res)
+        a:nop t d- r-               # (a n r:base minus? res -- a r:base minus?)
+        a:nop t r-                  # (a r:base minus? -- a r:base)
+        lit 0                       # (a r:base -- a 0 r:base)
+        rj _number_exit
+_number_exit: # (w f r:base)
+        # restore base
+        a:r t d+ r-
+        call _base
+        call _store
+        a:nop t r- [ret]
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
          # value that "here" returns
