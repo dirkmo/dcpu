@@ -40,7 +40,10 @@ class OpCall(OpBase):
         if v in symbols:
             addr = symbols[v]
         else:
-            addr = convert_to_number(v)
+            try:
+                addr = convert_to_number(v)
+            except:
+                assert False, f"ERROR on line {self.tokens[0].line}: Invalid address ({v})."
         assert addr < 0x10000, f"ERROR on line {self.tokens[0].line}: Address out of range ({addr})."
         return [OpBase.OP_CALL | addr]
 

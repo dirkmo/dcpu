@@ -21,26 +21,11 @@ a:mem t
 lit str1
 call _str_init
 
-lit 65
-lit str1
-call _str_append
 
-lit 66
-lit str1
-call _str_append
-
-lit 67
-lit str1
-call _str_append
-
-lit 68
-lit str1
-call _str_append
 
 .word SIM_END
 
 wort1: .cstr ""
-.space 10
 
 # ----------------------------------------------------
 
@@ -590,6 +575,58 @@ _str_pop:
 _str_pop__1: # (a sc)
         a:nop t d-
         a:nop t d- r- [ret]
+
+
+_upchar_header: # (c -- C)
+        # convert char to upper case
+        .word _str_pop_header
+        .cstr "upchar"
+_upchar:
+        call _dup       # (c -- c c)
+        lit 32          # ( c c -- c c 32)
+        a:sub t d-      # ( c c 32 -- c c-32)
+        call _dup       # ( c C -- c C C)
+        lit 65 # 'A'    # ( c C C -- c C C 65)
+        a:lt t d-       # ( c C C 65 -- c C f)
+        rj.nz _upchar_1 # ( c C f -- c C)
+        call _dup       # ( c C -- c C C)
+        lit 91 # 90='Z' # ( c C C -- c C C 91)
+        a:lt t d-       # ( c C C 91 -- c C f)
+        rj.z _upchar_1  # ( c C f -- c C)
+        call _nip       # ( c C -- C)
+_upchar_done:
+        a:nop t r- [ret]    # (c -- c)
+_upchar_1: # (c C)
+        a:nop t d- r- [ret] # (c C -- c)
+
+
+_digit2number_header:  # (c -- n f)
+        # convert hexchar to int n
+        # f=0 on error, f=1 on success
+        .word _upchar_header
+        .cstr "digit>num"
+_digit2number:
+        call _upchar            # (c -- C)
+        lit 48                  # (c -- c '0')
+        a:sub t d-              # (c '0' -- n)
+        call _dup               # (n -- n n)
+        rj.n _digit2number_error    # (n n -- n)
+        lit 10                  # (n -- n 10)
+        a:sub t                 # (n 10 -- n n-10)
+        # if T < 0: number 0-9
+        rj.nn _digit2number_hex # (n f -- n)
+        lit 1 [ret]             # (n - n 1)
+_digit2number_hex: # (n)
+        lit 7                   # (n -- n 7)
+        a:sub t d-              # (n 7 -- n-7)
+        call _dup               # (n -- n n)
+        lit 16                  # (n n -- n n 16)
+        a:sub t d-              # (n n 16 -- n n-16)
+        rj.nn _digit2number_error # (n f -- n)
+        lit 1 [ret]             # (n -- n 1)
+_digit2number_error:            # (n)
+        lit 0 [ret]             # (n -- n 0)
+
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
