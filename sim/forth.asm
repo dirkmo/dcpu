@@ -21,11 +21,12 @@ a:mem t
 lit str1
 call _str_init
 
-
+lit str1
+call _number
 
 .word SIM_END
 
-wort1: .cstr ""
+wort1: .cstr "-$123 -$abc 100 0"
 
 # ----------------------------------------------------
 
@@ -628,6 +629,44 @@ _digit2number_error:            # (n)
         lit 0 [ret]             # (n -- n 0)
 
 
+_number_header: # (a -- n f)
+         # convert string tuple (si sa sc) at a to number n.
+         # f is 0 on error, else -1
+        .word _digit2number_header
+        .cstr "number"
+_number:
+        # save current base
+        call _base
+        call _fetch
+        a:t r d- r+             # (a base -- a r:base)
+
+        # is first char minus sign (45)?
+        # if yes, push minus? == 0 on rstack
+        # if no,  push minus? != 0 on rstack
+        call _dup               # (a -- a a)
+        call _str_getc_next     # (a a -- a c)
+        lit 45 # '-'
+        a:sub t                 # (a c 45 -- a c minus?)
+        a:t r r+                # (a c minus? -- a c minus? r:base minus?)
+        rj.nz _number__1        # (a c minus? -- a c r:base minus?)
+        # c is minus-sign, skip it
+        call _drop              # (a c -- a)
+        call _dup               # (a -- a a)
+        call _str_getc_next     # (a a -- a c)
+_number__1: # (a c r:base minus?)
+        # is char dollar sign (36)?
+        lit 36 # '$'
+        a:sub t                 # (a c 36 -- a c dollar?)
+        rj.nz _number__2        # (a c dollar? -- a c)
+        # c is is dollar --> change base to 16
+        lit 16
+        call _base
+        call _store
+        call _drop              # (a c -- a)
+        call _dup               # (a -- a a)
+        call _str_getc_next     # (a a -- a c)
+        # skip dollar sign
+_number__2: # (a c r:base minus?)
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
          # value that "here" returns
