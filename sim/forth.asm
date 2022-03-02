@@ -21,16 +21,25 @@ a:mem t
 lit str1
 call _str_init
 
+lit 65
+lit str1
+call _str_putc
+
+lit 1
+lit str1
+call _str_set_idx
+
+lit 66
+lit str1
+call _str_putc
 
 # noch zu testen:
 # _str_putc
-# _str_eos
 # _str_append
-# _str_pop
 
 .word SIM_END
 
-wort1: .cstr "DerString"
+wort1: .cstr "Test!"
 
 # ----------------------------------------------------
 
@@ -429,25 +438,45 @@ _str_getc:
         call _str_idx   # (w a -- w si)
         lit 1
         a:and t d-      # (w si 1 -- w si&1)
-        rj.z str_getc_upperbyte # (w f -- w)
+        rj.z _str_getc_upperbyte # (w f -- w)
         # lower byte
         lit $ff
         a:and t d- r- [ret] # (w $ff00 -- c)
-str_getc_upperbyte: # (w)
+_str_getc_upperbyte: # (w)
         a:srw t r- [ret]
 
 
 _str_putc_header: # (c a -- )
         # put char c into string tuple (si sa sc) at address a
-        # c is written to char idx si
+        # c is written to char idx si, does not change char count sc
         .word _str_getc_header
         .cstr "str-putc"
 _str_putc:
         a:t r r+        # (c a -- c a r:a)
         call _str_wa    # (c a -- c wa)
-        a:r t d+ r-     # (c wa r:a -- c wa a)
-        call _str_idx   # (c wa a -- c wa idx)
-        # TODO
+        a:mem t d+      # (c wa -- c wa w)
+        a:r t d+ r-     # (c wa w r:a -- c wa w a)
+        call _str_idx   # (c wa w a -- c wa w idx)
+        lit 1
+        a:and t d-      # (c wa w idx 1 -- c wa w idx&1)
+        rj.z _str_putc_upperbyte # (c wa w f -- c wa w)
+        # odd idx --> put char into lower byte of *wa
+        lit $ff00
+        a:and t d-      # (c wa w $ff00 -- c wa w&$ff00)
+        call _rot       # (c wa h -- wa h c)
+        a:or t d-       # (wa h c -- wa w)
+        rj _str_putc__1
+_str_putc_upperbyte: # (c wa w)
+        # even idx --> put char into upper byte of *wa
+        lit $ff
+        a:and t d-      # (c wa w $ff -- c wa w&$ff)
+        call _rot       # (c wa l -- wa l c)
+        a:slw t         # (wa l c -- wa l c<<8)
+        a:or t d-       # (wa l h -- wa w)
+_str_putc__1: # (wa w)
+        call _swap      # (wa w -- w wa)
+        call _store     # (w wa -- )
+        a:nop t r- [ret]
 
 
 _str_next_header: # (a -- )
