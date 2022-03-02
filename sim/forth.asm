@@ -17,29 +17,30 @@ a:add t d-
 # cnt
 lit wort1
 a:mem t
-# tuple string addr
+
 lit str1
 call _str_init
 
 lit 65
 lit str1
-call _str_putc
-
-lit 1
-lit str1
-call _str_set_idx
+call _str_append
 
 lit 66
 lit str1
-call _str_putc
+call _str_append
 
-# noch zu testen:
-# _str_putc
-# _str_append
+lit 67
+lit str1
+call _str_append
+
+lit 68
+lit str1
+call _str_append
 
 .word SIM_END
 
-wort1: .cstr "Test!"
+wort1: .cstr ""
+.space 10
 
 # ----------------------------------------------------
 
@@ -347,9 +348,22 @@ _str_init:
         a:nop t r- [ret]
 
 
+_str_clear_header: # (a -- )
+        # set si and sc of string tuple (si sa sc) to zero
+        .word _str_init_header
+        .cstr "str-clear"
+_str_clear:
+        lit 0
+        call _swap      # (a 0 -- 0 a)
+        call _2dup      # (0 a -- 0 a)
+        call _str_set_idx # (0 a 0 a -- 0 a)
+        call _str_set_cnt # (0 a -- )
+        a:nop t r- [ret]
+
+
 _str_idx_header: # (a -- idx)
         # get current char idx of string tuple (si sa sc) at address a
-        .word _str_init_header
+        .word _str_clear_header
         .cstr "str-idx"
 _str_idx:
         a:mem t r- [ret]
@@ -384,10 +398,21 @@ _str_cnt:
         a:mem t r- [ret]
 
 
+_str_set_cnt_header: # (new-sc a -- )
+        # set sc of string tuple (si sa sc) to new-sc
+        .word _str_cnt_header
+        .cstr "str-set-cnt"
+_str_set_cnt:
+        lit 2
+        a:add t d-      # (new-sc a 2 -- new-sc a+2)
+        call _store     # (new-sc a -- )
+        a:nop t r- [ret]
+
+
 _str_wa_header: # (a -- swa)
         # return address of word (wa), which contains
         # char addressed by string tuple (si sa sc)
-        .word _str_cnt_header
+        .word _str_set_cnt_header
         .cstr "str-wa"
 _str_wa:
         call _dup       # (a -- a a)
@@ -523,12 +548,18 @@ _str_eos:
 _str_append_header: # (c a -- )
         # append char c to string tuple (si sa sc) at address a
         # si will point after last char (si == sc)
+        # sc will be incremented
         .word _str_eos_header
         .cstr "str-append"
 _str_append:
         a:t r r+            # (c a -- c a r:a)
         call _dup           # (c a -- c a a)
         call _str_cnt       # (c a a -- c a cnt)
+        call _dup           # (c a cnt -- c a cnt cnt)
+        lit 1
+        a:add t d-          # (c a cnt cnt 1 -- c a cnt cnt+1)
+        a:r t d+            # (c a cnt cnt+1 r:a -- c a cnt cnt+1 a)
+        call _str_set_cnt   # (c a cnt cnt+1 a -- c a cnt)
         call _swap          # (c a cnt -- c cnt a)
         call _str_set_idx   # (c cnt a -- c)
         a:r t d+            # (c r:a -- c a r:a)
