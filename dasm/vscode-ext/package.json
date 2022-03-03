@@ -1,0 +1,25 @@
+{
+    "name": "dasm",
+    "displayName": "dasm",
+    "description": "Syntax highlighting for DASM, the DCPU assembler",
+    "version": "0.0.1",
+    "engines": {
+        "vscode": "^1.64.0"
+    },
+    "categories": [
+        "Programming Languages"
+    ],
+    "contributes": {
+        "languages": [{
+            "id": "dasm",
+            "aliases": ["DASM", "dasm"],
+            "extensions": [".asm"],
+            "configuration": "./language-configuration.json"
+        }],
+        "grammars": [{
+            "language": "dasm",
+            "scopeName": "source.dasm",
+            "path": "./syntaxes/dasm.tmLanguage.json"
+        }]
+    }
+}

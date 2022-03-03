@@ -1,0 +1,80 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "DASM",
+	"patterns": [
+		{
+			"include": "#comments"
+		},
+		{
+			"include": "#keywords"
+		},
+		{
+			"include": "#strings"
+		},
+		{
+			"include": "#labels"
+		},
+		{
+			"include": "#directives"
+		},
+		{
+			"include": "#constants-numeric"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [{
+				"name": "keyword.control.dasm",
+				"match": "\\b(?i)(call|rj\\.z|rj\\.nz|rj\\.n|rj\\.nn|lit|litl|lith|a:(t|r|pc|mem|nop|add|sub|and|or|xor|lt|lts|sr|srw|sl|slw|jz|jnz|carry|inv|mull|mulh))\\b"
+			}]
+		},
+		"directives": {
+            "patterns": [
+                {
+                    "name": "keyword.directive.dasm",
+                    "match": "(?i)(\\.(org|equ|ascii|asciiz|cstr|space|word))\\b"
+                }
+            ]
+		},
+		"labels": {
+            "patterns": [
+                {
+                    "name": "keyword.locallabel.dasm",
+                    "match": "(?i)\\@+_[a-z0-9]+:\\b"
+                }
+            ]
+		},
+		"strings": {
+			"name": "string.quoted.double.dasm",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.dasm",
+					"match": "\\\\."
+				}
+			]
+		},
+		"comments": {
+			"patterns": [{
+				"name": "comment.line.dasm",
+				"match": "#.*$"
+			}]
+		},
+		"constants-numeric": {
+            "patterns": [
+                {
+                    "name": "constant.numeric.hexadecimal.retroasm_65c02",
+                    "match": "(?i)(\\$|0x)[0-9a-f_]+\\b",
+                    "comment": "Integer literal (hexadecimal)"
+                },
+                {
+                    "name": "constant.numeric.decimal.retroasm_65c02",
+                    "match": "(?i)\\b[0-9]+\\b",
+                    "comment": "Integer literal (decimal)"
+                }
+			]
+		}
+	},
+	"scopeName": "source.dasm"
+}
