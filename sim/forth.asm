@@ -24,9 +24,16 @@ call _str_init
 lit str1
 call _number
 
+lit str1
+call _number
+
+lit str1
+call _number
+
+
 .word SIM_END
 
-wort1: .cstr "-$123 -$abc 100 0"
+wort1: .cstr "-$123 -$abc 100"
 
 # ----------------------------------------------------
 
@@ -673,7 +680,10 @@ _number__2: # (a c r:base minus?)
         lit 0
         a:t r d- r+             # (a c 0 -- a c r:base minus? res)
 _number_loop: # (a c r:base minus? res)
-
+        # is end-of-string?
+        call _over              # (a c -- a c a)
+        call _str_eos           # (a c a -- a c eos?) # eos=0 if end of string
+        rj.z _number_done       # (a c eos? -- a c r:base minus? res)
         # is c white space? if yes, stop parsing
         lit 33                  # (a c -- a c 33)
         a:lt t                  # (a c 32 -- a c f)
@@ -692,23 +702,29 @@ _number_loop: # (a c r:base minus? res)
         # now get res from rstack, multiply with base and add n
         call _base
         call _fetch             # (a n a-base -- a n base)
-        a:r t r- d+             # (a n base r:base minus? res -- a n base res r:base minus?)
-        a:mull t                # (a n base res -- a n base*res)
+        a:r t d+ r-             # (a n base r:base minus? res -- a n base res r:base minus?)
+        a:mull t d-             # (a n base res -- a n base*res)
         a:add t d-              # (a n res -- a n+res)
-        TODO
-
+        a:t r d- r+             # (a res -- a r:base minus? res)
+        call _dup               # (a -- a a)
+        call _str_getc_next     # (a a -- a c)
+        rj _number_loop
 _number_done: # (a c r:base minus? res)
         # white space encountered. Parsing is done.
-        call _drop              # (a c -- a)
-        a:r t d- r-             # (a r:base minus? res -- res r:base minus?)
-        TODO
+        a:r t d- r-             # (a c r:base minus? res -- res r:base minus?)
+        a:r t d+ r-             # (res r:base minus? -- res minus? r:base)
+        rj.nz _number_positive  # (res minus? -- res r:base) ; minus?=0 if negative number
+        lit 0
+        call _swap              # (res 0 r:base -- 0 res r:base)
+        a:sub t d-              # (0 res r:base -- 0-res r:base)
+_number_positive:
+        lit -1                  # (res -- res f r:base) ; -1 for success
         rj _number_exit
-
 _number_error2: # (a n r:base minus? res)
         a:nop t d- r-               # (a n r:base minus? res -- a r:base minus?)
         a:nop t r-                  # (a r:base minus? -- a r:base)
         lit 0                       # (a r:base -- a 0 r:base)
-_number_exit: # (w f r:base)
+_number_exit: # (w r:base)
         # restore base
         a:r t d+ r-
         call _base
