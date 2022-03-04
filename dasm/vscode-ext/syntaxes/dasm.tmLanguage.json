@@ -25,7 +25,7 @@
 		"keywords": {
 			"patterns": [{
 				"name": "keyword.control.dasm",
-				"match": "\\b(?i)(call|rj\\.z|rj\\.nz|rj\\.n|rj\\.nn|lit|litl|lith|a:(t|r|pc|mem|nop|add|sub|and|or|xor|lt|lts|sr|srw|sl|slw|jz|jnz|carry|inv|mull|mulh))\\b"
+				"match": "\\b(?i)(call|rj|rj\\.z|rj\\.nz|rj\\.n|rj\\.nn|lit|litl|lith|a:(t|r|pc|mem|nop|add|sub|and|or|xor|lt|lts|sr|srw|sl|slw|jz|jnz|carry|inv|mull|mulh))\\b"
 			}]
 		},
 		"directives": {
@@ -39,8 +39,8 @@
 		"labels": {
             "patterns": [
                 {
-                    "name": "keyword.locallabel.dasm",
-                    "match": "(?i)\\@+_[a-z0-9]+:\\b"
+                    "name": "source.coffee.embedded.dasm",
+                    "match": "(?i)[_a-z0-9]+:"
                 }
             ]
 		},

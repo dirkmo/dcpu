@@ -21,19 +21,13 @@ a:mem t
 lit str1
 call _str_init
 
+lit 32
 lit str1
-call _number
-
-lit str1
-call _number
-
-lit str1
-call _number
-
+call _parse_skip
 
 .word SIM_END
 
-wort1: .cstr "-$123 -$abc 100"
+wort1: .cstr " "
 
 # ----------------------------------------------------
 
@@ -730,6 +724,53 @@ _number_exit: # (w r:base)
         call _base
         call _store
         a:nop t r- [ret]
+
+
+_parse_skip_header: # (del a -- )
+        # skip white space in string tuple si/sa/sc at address a
+        # this increases si until char is not equal to delimiter <del>
+        # or until end-of-string
+_parse_skip:
+        a:t r r+        # (del a -- del a r:a)
+_parse_skip_loop:
+        call _str_eos   # (del a -- del f)
+        rj.z _parse_skip_done # (del f -- del)
+        a:r t d+        # (del r:a -- del a r:a)
+        call _str_getc  # (del a -- del c r:a)
+        a:sub t         # (del c -- del f r:a)
+        rj.nz _parse_skip_done # (del f -- del r:a)
+        a:r t d+        # (del r:a -- del a r:a)
+        a:r t d+        # (del a r:a -- del a a r:a)
+        call _str_next  # (del a a -- del a r:a)
+        rj _parse_skip_loop
+_parse_skip_done: # (del r:a)
+        a:nop t d- r-   # (del r:a -- )
+        a:nop t r- [ret]
+
+
+_parse_header:
+        # Parse ccc, delimited by del
+        .word _parse_skip_header
+        .cstr "parse"
+_parse:
+
+
+
+_parse_name_header:
+        .word _parse_header
+        .cstr "parse-name"
+_parse_name:
+
+
+
+_find_header: # ( a -- c-addr 0 | xt 1)
+        # search for string defined by string tuple si/sa/sc in dictionary, starting at "latest"
+        # if found, returns xt of word and flag=1
+        # if not found, leaves c-addr on stack and flag=0
+        .word _parse_name_header
+        .cstr "find"
+_find:
+        call _latest    # (a -- a it)
 
 
 
