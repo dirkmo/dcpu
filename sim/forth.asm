@@ -7,44 +7,38 @@
 .equ MASK_UART_RX_EMPTY 1
 .equ SIM_END $be00
 .equ TIB_WORD_COUNT 32
+.equ TIB_CHAR_COUNT 64
 
-# idx
-lit 0
-# s-addr
-lit wort1
 lit 1
-a:add t d-
-# cnt
-lit wort1
-a:mem t
-
 lit str1
+lit 4
+lit tupel
 call _str_init
 
 lit 32
-lit str1
-call _parse_skip
+lit tupel
+call _parse
 
 .word SIM_END
 
-wort1: .cstr " "
-
 # ----------------------------------------------------
+
+str1: .ascii " dup"
+
+tupel: .space 3
 
 # variables
 state: .word 0          # 0: interpreting, -1: compiling
-ntib: .word 0           # number of chars in tib
-tib: .space TIB_WORD_COUNT
 
-to_in: .word 0          # current char idx in tib
 base: .word 10
 latest: .word _str_eos_header   # last word in dictionary
 dp: .word dp_init       # first free cell after dict
+tibtuple: .word 0, tib, TIB_CHAR_COUNT
+
+tib: .space TIB_WORD_COUNT
 
 cstrscratch: .space 33
 
-str1: .space 3 # for idx/addr/len tuple of a string
-str2: .space 3 # for idx/addr/len tuple of a string
 
 # dictionary
 
@@ -117,33 +111,8 @@ _latest:
             a:mem t r- [ret]
 
 
-_tib_header:       # ( -- addr)
-            # input area as ascii string
-            .word _latest_header
-            .cstr "tib"
-_tib:
-            lit tib [ret]
-
-
-_ntib_header:      # ( -- n)
-            # number of chars in input area
-            .word _tib_header
-            .cstr "#tib"
-_ntib:
-            lit ntib
-            a:mem t r- [ret]
-
-
-_to_in_header:     # ( -- n )
-            # return addr of index of current char in input buffer
-            .word _ntib_header
-            .cstr ">in"
-_tio_in:
-            lit to_in [ret]
-
-
 _base_header:      # ( -- addr)
-            .word _to_in_header
+            .word _latest_header
             .cstr "base"
 _base:
             lit base [ret]
@@ -313,13 +282,42 @@ _key:
             a:mem t r- [ret]
 
 
+_copy_header: # ( a-from a-to count -- )
+            # copy count words from a-from to a-to
+            .word _key_header
+            .cstr "move"
+_copy:
+            a:t r d- r+         # (a1 a2 cnt -- a1 a2 r:cnt)
+            call _over          # (a1 a2 -- a1 a2 a1)
+            call _fetch         # (a1 a2 a1 -- a1 a2 w)
+            call _over          # (a1 a2 w -- a1 a2 w a2)
+            call _store         # (a1 a2 w a2 -- a1 a2)
+            # a1++
+            lit 1               # (a1 a2 -- a1 a2 1)
+            a:add t d-          # (a1 a2 1 -- a1 a2+1)
+            a:t r d- r+         # (a1 a2 -- a1 r:cnt a2)
+            # a2++
+            lit 1               # (a1 r:cnt a2 -- a1 1 r:cnt a2)
+            a:add t d-          # (a1 1 r:cnt a2 -- a1+1 r:cnt a2)
+            a:r t d+ r-         # (a1 r:cnt a2 -- a1 a2 r:cnt)
+            # cnt--
+            a:r t d+ r-         # (a1 a2 r:cnt -- a1 a2 cnt)
+            lit 1
+            a:sub t d-          # (a1 a2 cnt 1 -- a1 a2 cnt-1)
+            call _dup           # (a1 a2 cnt -- a1 a2 cnt cnt)
+            rj.nz _copy         # (a1 a2 cnt cnt -- a1 a2 cnt)
+_copy_done:
+            call _2drop
+            a:nop t d- r- [ret]
+
+
 _str_init_header: # (si sa sc a -- )
         # create tuple si/sa/sc at address a
         # si: string char index
         # sa: string address
         # sc: string char count
         # a: address of new str-tuple
-        .word _key_header
+        .word _copy_header
         .cstr "str-init"
 _str_init:
         a:t r r+           # (si sa sc a -- si sa sc a r:a)
@@ -375,9 +373,20 @@ _str_addr:
         a:mem t r- [ret]
 
 
+_str_set_addr_header: # (new-sa a -- )
+        # set sa of string tuple (si sa sc) to new-sa
+        .word _str_addr_header
+        .cstr "str-set-addr"
+_str_set_addr:
+        lit 1
+        a:add t d-  # (new-sa a 1 -- new-sa a+1)
+        call _store # (new-sa a -- )
+        a:nop t r- [ret]
+
+
 _str_cnt_header: # (a -- sc)
         # get char count sc of string tuple (si sa sc) at address a
-        .word _str_addr_header
+        .word _str_set_addr_header
         .cstr "str-cnt"
 _str_cnt:
         lit 2
@@ -579,9 +588,20 @@ _str_pop__1: # (a sc)
         a:nop t d- r- [ret]
 
 
+_strdup_header: # (a1 a2 -- )
+        # duplicate string tuple a1 into a2
+        # Copies the tuple a1 to a2, not the string itself
+        .word _str_pop_header
+        .cstr "str-tup-cp"
+_strdup:
+        lit 3
+        call _copy
+        a:nop t r- [ret]
+
+
 _upchar_header: # (c -- C)
         # convert char to upper case
-        .word _str_pop_header
+        .word _strdup_header
         .cstr "upchar"
 _upchar:
         call _dup       # (c -- c c)
@@ -748,19 +768,51 @@ _parse_skip_done: # (del r:a)
         a:nop t r- [ret]
 
 
-_parse_header:
-        # Parse ccc, delimited by del
+_parse_header: # (del a1 -- a2)
+        # Parse word delimited by del in string tuple at address a1.
+        # Put parsed word to string tuple a2.
+        # advance a1.si to first delimeter after word
         .word _parse_skip_header
         .cstr "parse"
 _parse:
-
+        # put si on rstack
+        call _dup           # (del a1 -- del a1 a1)
+        call _str_idx       # (del a1 a1 -- del a1 si)
+        lit _parse_retval   # (del a1 si -- del a1 si a2)
+        call _str_set_idx   # (del a1 si a2 -- del a1)
+_parse_loop: # (del a1 r:si)
+        call _dup           # (del a1 -- del a1 a1)
+        call _str_eos       # (del a1 a1 -- del a1 f)
+        rj.z _parse_eos     # (del a1 f -- del a1)
+        a2.sc ist 1 zu klein bei eos
+        a:t r r+            # (del a1 -- del a1 a1)
+        call _str_getc      # (del a1 -- del c a1)
+        a:sub t             # (del c -- del f a1)
+        rj.z _parse_delimiter # (del f -- del a1)
+        a:r t d+            # (del -- del a1 a1)
+        call _str_next      # (del a1 -- del a1)
+        a:r t d+ r-         # (del -- del a1)
+        rj _parse_loop
+_parse_delimiter: # (del r:a1)
+        a:r t d+ r-         # (del r:a1 -- del a1)
+_parse_eos: # (del a1)
+        call _nip           # (del a1 -- a1)
+        call _dup           # (a1 -- a1 a1)
+        call _str_addr      # (a1 a1 -- a1 sa)
+        lit _parse_retval   # (a1 sa -- a1 sa a2)
+        call _str_set_addr  # (a1 sa a2 -- a1)
+        call _str_idx       # (a1 -- si1)
+        lit _parse_retval   # (si1 -- si1 a2)
+        call _str_set_cnt   # ( -- )
+        lit _parse_retval [ret] # ( -- a2)
+_parse_retval: .space 3 # this is a2
 
 
 _parse_name_header:
         .word _parse_header
         .cstr "parse-name"
 _parse_name:
-
+        # TODO
 
 
 _find_header: # ( a -- c-addr 0 | xt 1)
