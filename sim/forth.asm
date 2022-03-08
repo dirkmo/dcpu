@@ -9,21 +9,30 @@
 .equ TIB_WORD_COUNT 32
 .equ TIB_CHAR_COUNT 64
 
-lit 1
+lit 0
 lit str1
-lit 4
+lit 12
 lit tupel
 call _str_init
 
 lit 32
 lit tupel
-call _parse
+call _parse_name
+
+lit 32
+lit tupel
+call _parse_name
+
+lit 32
+lit tupel
+call _parse_name
+
 
 .word SIM_END
 
 # ----------------------------------------------------
 
-str1: .ascii " dup"
+str1: .ascii "    dup drop"
 
 tupel: .space 3
 
@@ -772,19 +781,20 @@ _parse_header: # (del a1 -- a2)
         # Parse word delimited by del in string tuple at address a1.
         # Put parsed word to string tuple a2.
         # advance a1.si to first delimeter after word
+        # note that a2 uses the same memory for every call to parse
         .word _parse_skip_header
         .cstr "parse"
 _parse:
-        # put si on rstack
+        # set a2.si = a1.si
         call _dup           # (del a1 -- del a1 a1)
         call _str_idx       # (del a1 a1 -- del a1 si)
         lit _parse_retval   # (del a1 si -- del a1 si a2)
         call _str_set_idx   # (del a1 si a2 -- del a1)
-_parse_loop: # (del a1 r:si)
         call _dup           # (del a1 -- del a1 a1)
         call _str_eos       # (del a1 a1 -- del a1 f)
         rj.z _parse_eos     # (del a1 f -- del a1)
-        a2.sc ist 1 zu klein bei eos
+_parse_loop: # (del a1)
+        # a2.sc ist 1 zu klein bei eos
         a:t r r+            # (del a1 -- del a1 a1)
         call _str_getc      # (del a1 -- del c a1)
         a:sub t             # (del c -- del f a1)
@@ -792,6 +802,9 @@ _parse_loop: # (del a1 r:si)
         a:r t d+            # (del -- del a1 a1)
         call _str_next      # (del a1 -- del a1)
         a:r t d+ r-         # (del -- del a1)
+        call _dup           # (del a1 -- del a1 a1)
+        call _str_eos       # (del a1 a1 -- del a1 f)
+        rj.z _parse_eos     # (del a1 f -- del a1)
         rj _parse_loop
 _parse_delimiter: # (del r:a1)
         a:r t d+ r-         # (del r:a1 -- del a1)
@@ -808,12 +821,23 @@ _parse_eos: # (del a1)
 _parse_retval: .space 3 # this is a2
 
 
-_parse_name_header:
+_parse_name_header: # (a1 -- a2 f)
+        # skip spaces and parse word.
+        # put found word into a2
+        # f=0xffff if word parsed successfully
+        # f=0 if parsing failed
         .word _parse_header
         .cstr "parse-name"
 _parse_name:
-        # TODO
-
+        lit 32
+        call _over          # (a1 32 -- a1 32 a1)
+        call _parse_skip    # (a1 32 a1 -- a1)
+        lit 32
+        call _swap          # (a1 32 -- 32 a1)
+        call _parse         # (32 a1 -- a2)
+        call _dup           # (a2 -- a2 a2)
+        call _str_eos       # (a2 a2 -- a2 f)
+        a:nop t r- [ret]
 
 _find_header: # ( a -- c-addr 0 | xt 1)
         # search for string defined by string tuple si/sa/sc in dictionary, starting at "latest"
