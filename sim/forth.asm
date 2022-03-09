@@ -11,30 +11,30 @@
 
 lit 0
 lit str1
-lit 12
-lit tupel
+lit 4
+lit tupel1
 call _str_init
 
-lit 32
-lit tupel
-call _parse_name
+lit 1
+lit str2
+lit 5
+lit tupel2
+call _str_init
 
-lit 32
-lit tupel
-call _parse_name
-
-lit 32
-lit tupel
-call _parse_name
-
+lit tupel1
+lit tupel2
+call _str_cmp
 
 .word SIM_END
 
 # ----------------------------------------------------
 
-str1: .ascii "    dup drop"
+str1: .ascii "Wort"
 
-tupel: .space 3
+str2: .ascii " Wort"
+
+tupel1: .space 3
+tupel2: .space 3
 
 # variables
 state: .word 0          # 0: interpreting, -1: compiling
@@ -428,11 +428,56 @@ _str_wa:
         a:add t d- r- [ret]
 
 
+_str_len_header: # (a1 -- len)
+        # determine length (char count) of t-str
+        .word _str_wa_header
+        .cstr "str-len"
+_str_len:
+        call _dup       # (a1 -- a1 a1)
+        call _str_cnt   # (a1 a1 -- a1 sc)
+        call _swap      # (a1 sc -- sc a1)
+        call _str_idx   # (sc a1 -- sc si)
+        a:sub t d- r- [ret] # (sc si -- len)
+
+
+_str_cmp_header: # (a1 a2 -- f)
+        # compare t-str a1 to t-str a2
+        # f=0: strings are equal
+        # f=$ffff: strings are different
+        .word _str_len_header
+        .cstr "str-cmp"
+_str_cmp:
+        a:t r r+        # (a1 a2 -- a1 a2 r:a2)
+        # first, compare lengths
+        call _str_len   # (a1 a2 -- a1 l2)
+        call _over      # (a1 l2 -- a1 l2 a1)
+        call _str_len   # (a1 l2 a1 -- a1 l2 l1)
+        a:sub t d-      # (a1 l2 l1 -- a1 l2-l1)
+        rj.nz _str_cmp_ne # (a1 n -- a1)
+        # len is equal, compare chars
+_str_cmp_loop: # (a1 r:a2)
+        call _dup       # (a1 -- a1 a1)
+        call _str_eos   # (a1 a1 -- a1 ~eos)
+        rj.z _str_cmp_eq # (a1 ~eos -- )
+        call _dup       # (a1 -- a1 a1)
+        call _str_getc_next # (a1 a1 -- a1 c1)
+        a:r t d+        # (a1 c1 -- a1 c1 a2)
+        call _str_getc_next # (a1 c1 a2 -- a1 c1 c2)
+        a:sub t d-      # (a1 c1 c2 -- a1 c1-c2)
+        rj.z _str_cmp_loop # (a1 f -- a1 r:a2)
+_str_cmp_ne: # (a1 r:a2)
+        a:nop t d- r-   # (a1 r:a2 -- )
+        lit $ffff [ret]
+_str_cmp_eq: # (a1 r:a2)
+        a:nop t d- r-   # (a1 r:a2 -- )
+        lit 0 [ret]
+
+
 _char_to_word_header: # (c wa f -- )
         # put char c into word at address wa.
         # if f is even: *wa = (*wa & 0x00ff) | (c << 8)
         # if f is odd:  *wa = (*wa & 0xff00) | c
-        .word _str_wa_header
+        .word _str_cmp_header
         .cstr "char>word"
 _char_to_word:
         lit 1
@@ -838,6 +883,7 @@ _parse_name:
         call _dup           # (a2 -- a2 a2)
         call _str_eos       # (a2 a2 -- a2 f)
         a:nop t r- [ret]
+
 
 _find_header: # ( a -- c-addr 0 | xt 1)
         # search for string defined by string tuple si/sa/sc in dictionary, starting at "latest"
