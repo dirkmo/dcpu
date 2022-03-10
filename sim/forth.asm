@@ -9,29 +9,19 @@
 .equ TIB_WORD_COUNT 32
 .equ TIB_CHAR_COUNT 64
 
-lit 0
 lit str1
-lit 4
 lit tupel1
-call _str_init
+call _str_init_cstr
 
-lit 1
-lit str2
-lit 5
-lit tupel2
-call _str_init
 
 lit tupel1
-lit tupel2
-call _str_cmp
+call _find
 
 .word SIM_END
 
 # ----------------------------------------------------
 
-str1: .ascii "Wort"
-
-str2: .ascii " Wort"
+str1: .cstr "here"
 
 tupel1: .space 3
 tupel2: .space 3
@@ -40,7 +30,7 @@ tupel2: .space 3
 state: .word 0          # 0: interpreting, -1: compiling
 
 base: .word 10
-latest: .word _str_eos_header   # last word in dictionary
+latest: .word _find_header   # last word in dictionary
 dp: .word dp_init       # first free cell after dict
 tibtuple: .word 0, tib, TIB_CHAR_COUNT
 
@@ -342,9 +332,28 @@ _str_init:
         a:nop t r- [ret]
 
 
+_str_init_cstr_header: # (cstr tstr -- )
+        .word _str_init_header
+        .cstr "str-init-cstr"
+        # initialize tstr from cstr
+_str_init_cstr:
+        a:t r d- r+     # (cstr tstr -- cstr r:tstr)
+        call _dup       # (cstr -- cstr cstr)
+        a:mem t         # (cstr cstr -- cstr sc)
+        a:r t d+        # (cstr sc -- cstr sc tstr)
+        call _str_set_cnt # (cstr sc tstr -- cstr)
+        lit 0
+        a:r t d+        # (cstr 0 -- cstr 0 tstr)
+        call _str_set_idx # (cstr 0 tstr -- cstr)
+        call _add1      # (cstr -- cstr+1 r:tstr)
+        a:r t d+ r-     # (sa r:tstr -- sa tstr)
+        call _str_set_addr # (sa tstr -- )
+        a:nop t r- [ret]
+
+
 _str_clear_header: # (a -- )
         # set si and sc of string tuple (si sa sc) to zero
-        .word _str_init_header
+        .word _str_init_cstr_header
         .cstr "str-clear"
 _str_clear:
         lit 0
@@ -885,16 +894,43 @@ _parse_name:
         a:nop t r- [ret]
 
 
-_find_header: # ( a -- c-addr 0 | xt 1)
-        # search for string defined by string tuple si/sa/sc in dictionary, starting at "latest"
-        # if found, returns xt of word and flag=1
-        # if not found, leaves c-addr on stack and flag=0
+_find_header: # (a -- a 0 | xt 1)
+        # search for t-str (si/sa/sc) a in dictionary, starting at "latest"
+        # if found, returns xt of word and flag=0
+        # if not found, leaves a on stack and flag=$ffff
         .word _parse_name_header
         .cstr "find"
 _find:
-        call _latest    # (a -- a it)
-
-
+        call _latest        # (a -- a it)
+        a:t r d- r+         # (a it -- a r:it)
+_find_loop: # (a r:it)
+        a:r t d+            # (a r:it -- a it r:it)
+        rj.z _find_not_found # (a it -- a r:it) ; end of dict reached
+        call _dup           # (a -- a a r:it)
+        a:r t d+            # (a a r:it -- a a it r:it)
+        call _add1          # (a a it -- a a it+1 r:it)
+        lit _find_tstr      # (a a cstr -- a a cstr tstr)
+        call _str_init_cstr # (a a cstr tstr -- a a)
+        lit _find_tstr      # (a a -- a a tstr r:it)
+        call _str_cmp       # (a a tstr -- a f r:it)
+        rj.z _find_found    # (a f -- a r:it)
+        a:r t d+ r-         # (a r:it -- a it)
+        a:mem t             # (a it -- a next-it)
+        a:t r d- r+         # (a it -- a r:it)
+        rj _find_loop
+_find_found: # (a r:it)
+        a:r t r-            # (a r:it -- it)
+        call _add1          # (it -- it+1)
+        a:mem t d+          # (a cstr -- a cnt)
+        lit 3
+        a:add t d-          # (a cnt 3 -- a cnt+3)
+        a:sr t              # (a cnt -- a cnt/2)
+        a:add t d-          # (a n -- a+n)
+        lit 0 [ret]         # (xt -- xt 0)
+_find_not_found: # (a r:it)
+        a:nop t r-          # (a r:it -- a)
+        lit $ffff [ret]     # (a -- a $ffff)
+_find_tstr: .space 3
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
          # value that "here" returns
