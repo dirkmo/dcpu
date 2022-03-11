@@ -21,7 +21,7 @@ call _find
 
 # ----------------------------------------------------
 
-str1: .cstr "here"
+str1: .cstr "str-pop"
 
 tupel1: .space 3
 tupel2: .space 3
@@ -651,12 +651,12 @@ _str_pop__1: # (a sc)
         a:nop t d- r- [ret]
 
 
-_strdup_header: # (a1 a2 -- )
+_str_dup_header: # (a1 a2 -- )
         # duplicate string tuple a1 into a2
         # Copies the tuple a1 to a2, not the string itself
         .word _str_pop_header
-        .cstr "str-tup-cp"
-_strdup:
+        .cstr "str-dup"
+_str_dup:
         lit 3
         call _copy
         a:nop t r- [ret]
@@ -664,7 +664,7 @@ _strdup:
 
 _upchar_header: # (c -- C)
         # convert char to upper case
-        .word _strdup_header
+        .word _str_dup_header
         .cstr "upchar"
 _upchar:
         call _dup       # (c -- c c)
@@ -813,6 +813,8 @@ _parse_skip_header: # (del a -- )
         # skip white space in string tuple si/sa/sc at address a
         # this increases si until char is not equal to delimiter <del>
         # or until end-of-string
+        .word _number_header
+        .cstr "parse-skip"
 _parse_skip:
         a:t r r+        # (del a -- del a r:a)
 _parse_skip_loop:
