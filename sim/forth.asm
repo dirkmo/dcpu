@@ -13,7 +13,6 @@ lit str1
 lit tupel1
 call _str_init_cstr
 
-
 lit tupel1
 call _find
 
@@ -21,7 +20,7 @@ call _find
 
 # ----------------------------------------------------
 
-str1: .cstr "str-pop"
+str1: .cstr "herea"
 
 tupel1: .space 3
 tupel2: .space 3
@@ -457,29 +456,42 @@ _str_cmp_header: # (a1 a2 -- f)
         .cstr "str-cmp"
 _str_cmp:
         a:t r r+        # (a1 a2 -- a1 a2 r:a2)
+        call _str_idx   # (a1 a2 -- a1 si2 r:a2)
+        call _swap      # (a1 si2 -- si2 a1 r:a2)
+        a:t r r+        # (si2 a1 -- si2 a1 r:a2 a1)
+        call _str_idx   # (si2 a1 -- si2 si1 r:a2 a1)
+        a:r t d+ r-     # (si2 si1 -- si2 si1 a1 r:a2)
+        a:r t d+        # (si2 si1 a1 r:a2 -- si2 si1 a1 a2 r:a2)
         # first, compare lengths
-        call _str_len   # (a1 a2 -- a1 l2)
-        call _over      # (a1 l2 -- a1 l2 a1)
-        call _str_len   # (a1 l2 a1 -- a1 l2 l1)
-        a:sub t d-      # (a1 l2 l1 -- a1 l2-l1)
-        rj.nz _str_cmp_ne # (a1 n -- a1)
+        call _str_len   # (si2 si1 a1 a2 -- si2 si1 a1 l2)
+        call _over      # (si2 si1 a1 l2 -- si2 si1 a1 l2 a1)
+        call _str_len   # (si2 si1 a1 l2 a1 -- si2 si1 a1 l2 l1)
+        a:sub t d-      # (si2 si1 a1 l2 l1 -- si2 si1 a1 l2-l1)
+        rj.nz _str_cmp_ne # (si2 si1 a1 n -- si2 si1 a1)
         # len is equal, compare chars
-_str_cmp_loop: # (a1 r:a2)
-        call _dup       # (a1 -- a1 a1)
-        call _str_eos   # (a1 a1 -- a1 ~eos)
-        rj.z _str_cmp_eq # (a1 ~eos -- )
-        call _dup       # (a1 -- a1 a1)
-        call _str_getc_next # (a1 a1 -- a1 c1)
-        a:r t d+        # (a1 c1 -- a1 c1 a2)
-        call _str_getc_next # (a1 c1 a2 -- a1 c1 c2)
-        a:sub t d-      # (a1 c1 c2 -- a1 c1-c2)
-        rj.z _str_cmp_loop # (a1 f -- a1 r:a2)
-_str_cmp_ne: # (a1 r:a2)
-        a:nop t d- r-   # (a1 r:a2 -- )
-        lit $ffff [ret]
-_str_cmp_eq: # (a1 r:a2)
-        a:nop t d- r-   # (a1 r:a2 -- )
-        lit 0 [ret]
+_str_cmp_loop: # (si2 si1 a1 r:a2)
+        call _dup       # (si2 si1 a1 -- si2 si1 a1 a1)
+        call _str_eos   # (si2 si1 a1 a1 -- si2 si1 a1 ~eos)
+        rj.z _str_cmp_eq # (si2 si1 a1 ~eos -- )
+        call _dup       # (si2 si1 a1 -- si2 si1 a1 a1)
+        call _str_getc_next # (si2 si1 a1 a1 -- si2 si1 a1 c1)
+        a:r t d+        # (si2 si1 a1 c1 -- si2 si1 a1 c1 a2)
+        call _str_getc_next # (si2 si1 a1 c1 a2 -- si2 si1 a1 c1 c2)
+        a:sub t d-      # (si2 si1 a1 c1 c2 -- si2 si1 a1 c1-c2)
+        rj.z _str_cmp_loop # (si2 si1 a1 f -- si2 si1 a1 r:a2)
+_str_cmp_ne: # (si2 si1 a1 r:a2)
+        lit $ffff
+        rj _str_cmp_ret # (si2 si1 a1 f r:a2)
+_str_cmp_eq: # (si2 si1 a1 r:a2)
+        lit 0
+_str_cmp_ret: # (si2 si1 a1 f r:a2)
+        a:t r d- r+     # (si2 si1 a1 f -- si2 si1 a1 r:a2 f)
+        call _str_set_idx # (si2 si1 a1 -- si2 r:a2 f)
+        a:r t d+ r-     # (si2 -- si2 f r:a2)
+        call _swap      # (si2 f -- f si2 r:a2)
+        a:r t d+ r-     # (f si2 -- f si2 a2)
+        call _str_set_idx # (f si2 a2 -- f)
+        a:nop t r- [ret]
 
 
 _char_to_word_header: # (c wa f -- )
