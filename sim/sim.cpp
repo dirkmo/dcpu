@@ -262,6 +262,7 @@ void send_via_uart(string s) {
     for (char c : s) {
         l_sim2dcpu.push_back(c);
     }
+    l_sim2dcpu.push_back('\r');
 }
 
 enum user_action user_interaction(void) {
@@ -434,6 +435,10 @@ int main(int argc, char *argv[]) {
     attron(COLOR_PAIR(1));
     keypad(stdscr, TRUE);
     noecho();
+
+    for (auto c: string("Hallo\r")) {
+        l_sim2dcpu.push_back(c);
+    }
 
     run = false;
     int rxbyte;

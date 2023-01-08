@@ -6,7 +6,7 @@
         {
             "label": "build and simulate",
             "type": "shell",
-            "command": "make clean top",
+            "command": "make top",
             "options": {
                 "cwd": "${workspaceFolder}/sim"
             },
