@@ -224,7 +224,7 @@ always @(*)
         w_pcn = w_rjp_pc;
     else if (w_return)
         w_pcn = R;
-    else 
+    else
         w_pcn = r_pc + 1;
 
 always @(posedge i_clk)
@@ -310,11 +310,16 @@ always @(posedge i_clk)
     end
 
 always @(posedge i_clk)
-    if (s_fetch) begin
-        R <= r_rstack[r_rsp];
-        T <= r_dstack[r_dsp];
-        N <= r_dstack[r_dsp - 1];
-    end
+    //if (s_fetch) begin
+    //    R <= r_rstack[r_rsp];
+    //    T <= r_dstack[r_dsp];
+    //    N <= r_dstack[r_dsp - 1];
+    //end
+begin
+    R = r_rstack[r_rsp];
+    T = r_dstack[r_dsp];
+    N = r_dstack[r_dsp - 1];
+end
 
 wire w_mem_access_MEMT  = (w_op_alu_MEMT || w_op_alu_dst_MEMT);
 wire w_op_mem_access    = s_execute && w_op_alu && w_mem_access_MEMT;
@@ -334,7 +339,7 @@ begin
                 r_state <= FETCH;
         end
     endcase
-    
+
     if (i_reset) begin
         r_state <= FETCH;
     end

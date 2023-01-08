@@ -3,13 +3,11 @@
 #include <ctype.h>
 #include <verilated_vcd_c.h>
 #include "verilated.h"
-#include "Vtop.h"
-#include "Vtop_top.h"
-#include "Vtop_dcpu.h"
-#include "Vtop_UartMasterSlave.h"
+#include "Vdcpu.h"
+#include "Vdcpu_dcpu.h"
 #include "dcpu.h"
-#include "uart.h"
 #include <vector>
+#include <list>
 #include <algorithm>
 #include <ncurses.h>
 #include <iostream>
@@ -39,10 +37,10 @@ enum user_action {
 };
 
 VerilatedVcdC *pTrace = NULL;
-Vtop *pCore;
+Vdcpu *pCore;
 
 uint64_t tickcount = 0;
-uint64_t ts = 1000;
+uint64_t clockcycle_ps = 10000; // clock cycle length in ps
 bool run = false;
 
 uint16_t mem[0x10000];
@@ -53,6 +51,8 @@ vector<string> vSourceList;
 vector<string> vMessages;
 string sUserInput;
 
+list<char> l_sim2dcpu;
+list<char> l_dcpu2sim;
 
 void opentrace(const char *vcdname) {
     if (!pTrace) {
@@ -62,43 +62,67 @@ void opentrace(const char *vcdname) {
     }
 }
 
-void tick(int t = 3) {
-    if (t&1) {
-        pCore->i_clk = 0;
-        pCore->eval();
-        if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
-        tickcount += ts / 2;
-    }
-    if (t&2) {
-        pCore->i_clk = 1;
-        pCore->eval();
-        if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
-        tickcount += ts / 2;
-    }
+void tick() {
+    pCore->i_clk = !pCore->i_clk;
+    tickcount += clockcycle_ps / 2;
+    pCore->eval();
+    if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
 }
 
 void reset() {
     pCore->i_reset = 1;
     pCore->i_dat = 0;
     pCore->i_ack = 0;
+    pCore->i_clk = 1;
+    tick();
     tick();
     pCore->i_reset = 0;
 }
 
-int handle(Vtop *pCore) {
+int handle(Vdcpu *pCore) {
+    static uint16_t last_addr = 0xffff;
     if (pCore->o_cs) {
-        pCore->i_dat = mem[pCore->o_addr];
-        if (pCore->o_we) {
-            mem[pCore->o_addr] = pCore->o_dat;
-            char s[32];
-            sprintf(s, "write [%04x] <- %04x", pCore->o_addr, pCore->o_dat);
-            vMessages.push_back(string(s));
+        if (pCore->o_addr < 0xfffe) {
+            // memory
+            pCore->i_dat = mem[pCore->o_addr];
+            if (pCore->o_we) {
+                mem[pCore->o_addr] = pCore->o_dat;
+                char s[32];
+                sprintf(s, "write [%04x] <- %04x", pCore->o_addr, pCore->o_dat);
+                vMessages.push_back(string(s));
+            }
+        } else {
+            // pseudo-uart
+            if (pCore->o_we) {
+                if (pCore->o_addr == 0xffff) {
+                    l_dcpu2sim.push_back(pCore->o_dat);
+                    printw(GREEN "UART-RX: " NORMAL "%c\n", pCore->o_dat);
+                }
+            } else {
+                switch(pCore->o_addr) {
+                    case 0xffff: { // rx/tx reg
+                        if (!l_sim2dcpu.empty()) {
+                            if (last_addr != pCore->o_addr) {
+                                pCore->i_dat = l_sim2dcpu.front();
+                                l_sim2dcpu.pop_front();
+                            }
+                        }
+                    }
+                    break;
+                    case 0xfffe: // status reg
+                        pCore->i_dat = !l_sim2dcpu.empty();
+                        break;
+                    default: break;
+                }
+            }
         }
+
     } else {
         pCore->i_dat = 0;
     }
     pCore->i_ack = pCore->o_cs;
-    return pCore->top->cpu0->w_op_sim_end != 0;
+    last_addr = pCore->o_addr;
+    return pCore->dcpu->w_op_sim_end != 0;
 }
 
 int program_load(const char *fn, uint16_t offset) {
@@ -135,18 +159,18 @@ int source_load(const char *fn) {
     return 0;
 }
 
-void print_cpustate(int y, int x, Vtop *pCore) {
-    uint16_t pc = pCore->top->cpu0->r_pc;
-    mvprintw(y, x, "D(%d):", pCore->top->cpu0->r_dsp+1);
-    if (pCore->top->cpu0->r_dsp < 15) {
-        for (int i = 0; i <= pCore->top->cpu0->r_dsp; i++) {
-            printw(" %x", pCore->top->cpu0->r_dstack[i]);
+void print_cpustate(int y, int x, Vdcpu *pCore) {
+    uint16_t pc = pCore->dcpu->r_pc;
+    mvprintw(y, x, "D(%d):", pCore->dcpu->r_dsp+1);
+    if (pCore->dcpu->r_dsp < 15) {
+        for (int i = 0; i <= pCore->dcpu->r_dsp; i++) {
+            printw(" %x", pCore->dcpu->r_dstack[i]);
         }
     }
-    mvprintw(y+1, x, "R(%d):", pCore->top->cpu0->r_rsp+1);
-    if (pCore->top->cpu0->r_rsp < 15) {
-        for (int i = 0; i <= pCore->top->cpu0->r_rsp; i++) {
-            printw(" %x", pCore->top->cpu0->r_rstack[i]);
+    mvprintw(y+1, x, "R(%d):", pCore->dcpu->r_rsp+1);
+    if (pCore->dcpu->r_rsp < 15) {
+        for (int i = 0; i <= pCore->dcpu->r_rsp; i++) {
+            printw(" %x", pCore->dcpu->r_rstack[i]);
         }
     }
     mvprintw(y+2, x, "PC %04x: %s", pc, dcpu_disasm(mem[pc]));
@@ -187,7 +211,7 @@ bool pc_on_silent_breakpoint(uint16_t pc) {
 }
 
 void step_over(void) {
-    const uint16_t pc = pCore->top->cpu0->r_pc;
+    const uint16_t pc = pCore->dcpu->r_pc;
     const uint16_t opcode = mem[pc];
     bool isCall = ((opcode & 0x8000) == OP_CALL);
     isCall |= (opcode & OP_ALU & RSP(RSP_RPC) & DST(DST_PC));
@@ -235,7 +259,9 @@ void send_via_uart(string s) {
     }
     s = s.substr(p1+1, p2-p1-1);
     vMessages.push_back(string("uart-tx: ") + "'" + s + "'");
-    uart_send(0, (s+"\r").c_str());
+    for (char c : s) {
+        l_sim2dcpu.push_back(c);
+    }
 }
 
 enum user_action user_interaction(void) {
@@ -244,7 +270,7 @@ enum user_action user_interaction(void) {
         case 4: // fall-through
         case 27: return UA_QUIT;
         case KEY_F(5): run = true; return UA_NONE;
-        case KEY_F(6): breakpoint_set(pCore->top->cpu0->r_pc); return UA_NONE;
+        case KEY_F(6): breakpoint_set(pCore->dcpu->r_pc); return UA_NONE;
         case KEY_DOWN: step_over(); return UA_STEP;
         case KEY_RIGHT: /*step into*/ return UA_STEP;
         case KEY_BACKSPACE: // fall-through
@@ -309,7 +335,7 @@ void print_source(int y, int x, int h, int w, uint16_t pc) {
         }
         i++;
     }
-    
+
     int mid = start + (end - start) / 2;
     int tl = mid - h/2;
     int y1 = max(tl, 0);
@@ -348,8 +374,8 @@ void print_screen(void) {
     erase();
     box(stdscr, 0, 0);
     mvprintw(0, 2, " dcpu simulator ");
-    print_source(1, 2, LINES-7-1, COLS-MSGAREA_W, pCore->top->cpu0->r_pc);
-    
+    print_source(1, 2, LINES-7-1, COLS-MSGAREA_W, pCore->dcpu->r_pc);
+
     for (int y = 1; y < LINES-7; y++) {
         mvprintw(y, COLS-MSGAREA_W, "|");
     }
@@ -380,7 +406,7 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Missing file names\n");
         return -1;
     }
-    
+
     if (program_load(argv[1], 0)) {
         fprintf(stderr, "ERROR: Failed to load file '%s'\n", argv[1]);
         return -2;
@@ -392,10 +418,7 @@ int main(int argc, char *argv[]) {
     }
 
     Verilated::traceEverOn(true);
-    pCore = new Vtop();
-
-    int uart_tick = pCore->top->uart0->SYS_FREQ / pCore->top->uart0->BAUDRATE;
-    uart_init(&pCore->i_uart_rx, &pCore->o_uart_tx, &pCore->i_clk, uart_tick);
+    pCore = new Vdcpu();
 
     opentrace("trace.vcd");
 
@@ -420,11 +443,8 @@ int main(int argc, char *argv[]) {
             vMessages.push_back("Simulation ended.");
             run = false;
         }
-        pc = pCore->top->cpu0->r_pc;
-        if (uart_handle(&rxbyte)) {
-            printw(GREEN "UART-RX: " NORMAL "%c\n", rxbyte);
-        }
-        if (pCore->top->cpu0->w_sim_next) {
+        pc = pCore->dcpu->r_pc;
+        if (pCore->dcpu->w_sim_next && pCore->i_clk) {
             print_screen();
             if (pc_on_breakpoint(pc)) {
                 vMessages.push_back("Stopped on breakpoint");
@@ -444,7 +464,7 @@ int main(int argc, char *argv[]) {
                 }
             }
         }
-        tick(3);
+        tick();
     }
 
 finish:

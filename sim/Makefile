@@ -8,7 +8,8 @@ INCDIR=-I$(VERILATOR_OUTPUTDIR) -I/usr/share/verilator/include -I/usr/share/veri
 
 DEFINES=+define+SIM=1
 
-VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" -LDFLAGS "$(LDFLAGS)" --trace $(INCDIR) --exe --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
+#VFLAGS = -O0 --cc -CFLAGS "$(CXXFLAGS)" -LDFLAGS "$(LDFLAGS)" --trace $(INCDIR) --exe --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
+VFLAGS = --cc -O0 -CFLAGS "$(CXXFLAGS)" -LDFLAGS "$(LDFLAGS)" --trace $(INCDIR) --exe --Mdir $(VERILATOR_OUTPUTDIR) $(DEFINES)
 GTKWAVE := gtkwave
 ifeq ($(UNAME),Darwin)
 VFLAGS += --compiler clang
@@ -18,8 +19,8 @@ endif
 CXXFLAGS=-g -Wall -O0  # -DVL_USER_STOP
 LDFLAGS=-lncurses
 
-CPPSRC=sim.cpp dcpu.c uart.cpp
-VERILOGSRC=top.v ../rtl/dcpu.v uartmaster/fifo.v uartmaster/UartProtocol.v uartmaster/UartMasterSlave.v uartmaster/uart_tx.v uartmaster/uart_rx.v
+CPPSRC=sim.cpp dcpu.c
+VERILOGSRC=../rtl/dcpu.v
 
 all: top
 
@@ -27,11 +28,11 @@ verilator: $(VERILOGSRC) $(CPPSRC)
 	verilator $(VFLAGS) $(VERILOGSRC) $(CPPSRC)
 
 top: verilator
-	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vtop.mk
+	make OPT_FAST="" -C $(VERILATOR_OUTPUTDIR) -j -f Vdcpu.mk
 	../dasm/dasm.py -i forth.asm -o forth
 
 sim: top
-	$(VERILATOR_OUTPUTDIR)/Vtop forth.bin forth.sim
+	$(VERILATOR_OUTPUTDIR)/Vdcpu forth.bin forth.sim
 
 wave: sim
 	gtkwave sim.gtkw &

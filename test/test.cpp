@@ -27,7 +27,7 @@ void opentrace(const char *vcdname) {
     }
 }
 
-void tick() {
+void tick_() {
     pCore->i_clk = 0;
     pCore->eval();
     if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
@@ -38,10 +38,19 @@ void tick() {
     tickcount += ts / 2;
 }
 
+void tick() {
+    pCore->i_clk = !pCore->i_clk;
+    pCore->eval();
+    if(pTrace) pTrace->dump(static_cast<vluint64_t>(tickcount));
+    tickcount += ts / 2;
+}
+
+
 void reset() {
     pCore->i_reset = 1;
     pCore->i_dat = 0;
     pCore->i_ack = 0;
+    tick();
     tick();
     pCore->i_reset = 0;
 }
@@ -63,6 +72,7 @@ int handle(Vdcpu *pCore) {
         pCore->i_dat = 0;
     }
     pCore->i_ack = pCore->o_cs;
+
     return 0;
 }
 
@@ -360,8 +370,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: N <- R\n", count++);
         uint16_t prog[] = {
-            LIT_L(33), 
-            LIT_L(34), 
+            LIT_L(33),
+            LIT_L(34),
             ALU(ALU_T, 0, DST_R, 0, RSP_I),
             0xffff
         };
@@ -373,8 +383,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: T <- MEMT\n", count++);
         uint16_t prog[] = {
-            LIT_L(82), 
-            LIT_L(0), 
+            LIT_L(82),
+            LIT_L(0),
             ALU(ALU_MEMT, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -387,8 +397,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: ADD\n", count++);
         uint16_t prog[] = {
-            LIT_L(1), 
-            LIT_L(10), 
+            LIT_L(1),
+            LIT_L(10),
             ALU(ALU_ADD, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -400,21 +410,21 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: SUB\n", count++);
         uint16_t prog[] = {
-            LIT_L(1), 
-            LIT_L(10), 
+            LIT_L(1),
+            LIT_L(10),
             ALU(ALU_SUB, 0, DST_T, DSP_I, 0),
             0xffff
         };
         test_t t = new_test();
         t.t = (uint16_t)(1-10); t.n = 10; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = -1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
-    } 
+    }
 
     {
         printf("Test %d: ALU: AND\n", count++);
         uint16_t prog[] = {
-            LIT_L(15), 
-            LIT_L(7), 
+            LIT_L(15),
+            LIT_L(7),
             ALU(ALU_AND, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -426,8 +436,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: OR\n", count++);
         uint16_t prog[] = {
-            LIT_L(0x0f), 
-            LIT_L(0x20), 
+            LIT_L(0x0f),
+            LIT_L(0x20),
             ALU(ALU_OR, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -439,8 +449,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: XOR\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xff), 
-            LIT_L(0x0f), 
+            LIT_L(0xff),
+            LIT_L(0x0f),
             ALU(ALU_XOR, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -452,8 +462,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: LTS\n", count++);
         uint16_t prog[] = {
-            LIT_L(1), 
-            LIT_L(2), 
+            LIT_L(1),
+            LIT_L(2),
             ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -465,8 +475,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: LTS\n", count++);
         uint16_t prog[] = {
-            LIT_L(2), 
-            LIT_L(1), 
+            LIT_L(2),
+            LIT_L(1),
             ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -478,9 +488,9 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: LTS\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xff), 
-            LIT_H(0xff), 
-            LIT_L(1), 
+            LIT_L(0xff),
+            LIT_H(0xff),
+            LIT_L(1),
             ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -493,8 +503,8 @@ int main(int argc, char *argv[]) {
         printf("Test %d: ALU: LTS\n", count++);
         uint16_t prog[] = {
             LIT_L(1),
-            LIT_L(0xff), 
-            LIT_H(0xff), 
+            LIT_L(0xff),
+            LIT_H(0xff),
             ALU(ALU_LTS, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -506,8 +516,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: LT\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xff), 
-            LIT_H(0xff), 
+            LIT_L(0xff),
+            LIT_H(0xff),
             LIT_L(1),
             ALU(ALU_LT, 0, DST_T, DSP_I, 0),
             0xffff
@@ -520,8 +530,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: LT\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xff), 
-            LIT_H(0xff), 
+            LIT_L(0xff),
+            LIT_H(0xff),
             LIT_L(1),
             ALU(ALU_LT, 0, DST_T, DSP_I, 0),
             0xffff
@@ -534,8 +544,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: SR\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xfe), 
-            LIT_H(0xfe), 
+            LIT_L(0xfe),
+            LIT_H(0xfe),
             ALU(ALU_SR, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -547,8 +557,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: SRW\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xfe), 
-            LIT_H(0xfe), 
+            LIT_L(0xfe),
+            LIT_H(0xfe),
             ALU(ALU_SRW, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -560,8 +570,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: SL\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xfe), 
-            LIT_H(0xfe), 
+            LIT_L(0xfe),
+            LIT_H(0xfe),
             ALU(ALU_SL, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -573,8 +583,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: SLW\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xfe), 
-            LIT_H(0xfe), 
+            LIT_L(0xfe),
+            LIT_H(0xfe),
             ALU(ALU_SLW, 0, DST_T, DSP_I, 0),
             0xffff
         };
@@ -586,8 +596,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: JZ, branch taken\n", count++);
         uint16_t prog[] = {
-            LIT_L(0x4), 
-            LIT_L(0x0), 
+            LIT_L(0x4),
+            LIT_L(0x0),
             ALU(ALU_JZ, 0, DST_PC, 0, RSP_RPC),
             0xffff,
             0xffff
@@ -600,8 +610,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: JZ, branch not taken\n", count++);
         uint16_t prog[] = {
-            LIT_L(0x4), 
-            LIT_L(0x1), 
+            LIT_L(0x4),
+            LIT_L(0x1),
             ALU(ALU_JZ, 0, DST_PC, 0, RSP_RPC),
             0xffff,
             0xffff
@@ -614,8 +624,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: JNZ, branch taken\n", count++);
         uint16_t prog[] = {
-            LIT_L(0x4), 
-            LIT_L(0x1), 
+            LIT_L(0x4),
+            LIT_L(0x1),
             ALU(ALU_JNZ, 0, DST_PC, 0, RSP_RPC),
             0xffff,
             0xffff
@@ -628,8 +638,8 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: JNZ, branch not taken\n", count++);
         uint16_t prog[] = {
-            LIT_L(0x4), 
-            LIT_L(0x0), 
+            LIT_L(0x4),
+            LIT_L(0x0),
             ALU(ALU_JNZ, 0, DST_PC, 0, RSP_RPC),
             0xffff,
             0xffff
@@ -642,9 +652,9 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: CARRY\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xff), 
-            LIT_H(0xff), 
-            LIT_L(0x3), 
+            LIT_L(0xff),
+            LIT_H(0xff),
+            LIT_L(0x3),
             ALU(ALU_ADD, 0, DST_T, DSP_I, 0),
             ALU(ALU_CARRY, 0, DST_T, DSP_I, 0),
             0xffff
@@ -657,9 +667,9 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: no CARRY\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xf0), 
-            LIT_H(0xff), 
-            LIT_L(0x3), 
+            LIT_L(0xf0),
+            LIT_H(0xff),
+            LIT_L(0x3),
             ALU(ALU_ADD, 0, DST_T, DSP_I, 0),
             ALU(ALU_CARRY, 0, DST_T, DSP_I, 0),
             0xffff
@@ -672,7 +682,7 @@ int main(int argc, char *argv[]) {
     {
         printf("Test %d: ALU: INV\n", count++);
         uint16_t prog[] = {
-            LIT_L(0xff), 
+            LIT_L(0xff),
             ALU(ALU_INV, 0, DST_T, DSP_I, 0),
             0xffff
         };
