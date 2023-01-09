@@ -85,7 +85,7 @@ int handle(Vdcpu *pCore) {
         if (pCore->o_addr < 0xfffe) {
             // memory
             pCore->i_dat = mem[pCore->o_addr];
-            if (pCore->o_we) {
+            if (pCore->o_we && pCore->i_clk) {
                 mem[pCore->o_addr] = pCore->o_dat;
                 char s[32];
                 sprintf(s, "write [%04x] <- %04x", pCore->o_addr, pCore->o_dat);

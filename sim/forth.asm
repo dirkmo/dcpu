@@ -26,6 +26,7 @@ dp: .word dp_init       # first free cell after dict
 tib_size: .word TIB_SIZE
 # the input buffer itself
 tib: .space TIB_SIZE
+.word 13 # TIB delimiter
 # offset into input buffer, 0: first char of TIB
 in: .word 0
 
@@ -151,8 +152,13 @@ _accept_full:
             # error, TIB is full
             rj _quit
 _accept_done: # (c-addr c r:u1 u2)
-            a:r t d- r-     # (c-addr c r:u1 u2 -- u2 r:u1)
-            a:nop t r-
+            # append space (13)
+            call _drop      # (ca c -- ca r:u1 u2)
+            lit 13
+            call _swap      # (ca 13 -- 13 ca r:u1 u2)
+            call _store     # (13 ca -- r:u1 u2)
+            a:r t d+ r-     # (r:u1 u2 -- u2 r:u1)
+            a:nop t r-      # (u2 r:u1 -- u2)
             a:nop t r- [ret]
 
 
