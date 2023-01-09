@@ -18,7 +18,7 @@ call _quit
 state: .word 0          # 0: interpreting, -1: compiling
 
 base: .word 10
-latest: .word _drop_header   # last word in dictionary
+latest: .word _comma_header   # last word in dictionary
 dp: .word dp_init       # first free cell after dict
 
 ## input buffer
@@ -75,19 +75,49 @@ _tib:
             lit tib [ret]
 
 
+_to_in_fetch_header: # ( -- c)
+            # get char from TIB
+            .word _tib_header
+            .cstr ">in@"
+_to_in_fetch:
+            call _tib
+            call _to_in
+            a:add t d-
+            call _fetch
+            a:nop t r- [ret]
+
+
+_to_in_inc_header: # (--)
+            .word _to_in_fetch_header
+            .cstr ">in++"
+_to_in_inc:
+            call _to_in
+            call _fetch
+            lit 1
+            a:add t d-
+            call _to_in
+            call _store
+            a:nop t r- [ret]
+
 _tib_size_header:
             # ( -- n)
             # put size of TIB on stack
-            .word _tib_header
+            .word _to_in_inc_header
             .cstr "#tib"
 _tib_size:
             lit tib_size [ret]
 
 
-_word_header:
+_word_header: # (c -- )
+            # copy next word from TIB to temp area (here) as c-str
+            # word delimited by char c
             .word _to_in_header
             .cstr "word"
 _word:
+            # skip space
+            call _to_in_fetch   # (del -- del c)
+            # TODO
+            # copy word to here (don't use comma, because it moves "here" pointer)
             a:nop t r- [ret]
 
 
@@ -95,7 +125,12 @@ _interpret_header: # ( -- )
             .word _word_header
             .cstr "interpret"
 _interpret:
-
+            # #TIB = 0
+            lit 0
+            call _to_in
+            call _store
+            # get word
+            call _word
             a:nop t r- [ret]
 
 
@@ -221,6 +256,36 @@ _over_header:      # (a b -- a b a)
 _over:
             a:n t d+ r- [ret]
 
+
+_here_add:  # (n -- )
+            # helper function, not a word
+            call _here      # (n -- n a)
+            a:add t d-      # (n a -- n+a)
+            lit dp          # (a -- a dp)
+            call _store     # (a dp -- )
+            a:nop t r- [ret]
+
+
+_here_header: # ( -- a)
+            .word _over_header
+            .cstr "here"
+_here:
+            lit dp
+            call _fetch
+            a:nop t r- [ret]
+
+
+_comma_header:     # (w --)
+            # comma puts a word into the cell pointed to by here
+            # and increments the data space pointer (value returned by here)
+            .word _here_header
+            .cstr ","
+_comma:
+            call _here          # (w -- w a)
+            call _store         # (w a -- )
+            lit 1               # ( -- 1)
+            call _here_add      # (1 --)
+            a:nop t r- [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
