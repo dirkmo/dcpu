@@ -7,10 +7,6 @@
 0x10000 allocate throw constant tmemory
 tmemory 0x10000 0 fill
 
-: tmemory-dump tmemory there dump ;
-: update s" dasm.fs" included ;
-
-
 \ the dictionary pointer (offset into tmemory)
 variable tdp 0 tdp !
 
@@ -36,6 +32,10 @@ variable tdp 0 tdp !
 \ tw, ( w -- )
 \ store w in tmemory and inc tdp
 : tw, there tw! 2 tdp +! ;
+
+
+: tmemory-dump tmemory there dump ;
+: update s" dasm.fs" included ;
 
 
 
@@ -120,6 +120,35 @@ rjp-zero            rjp-op      rjz,
 rjp-notzero         rjp-op      rjnz,
 rjp-negative        rjp-op      rjn,
 rjp-notnegative     rjp-op      rjnn,
+
+
+
+: begin, ( -- a )
+        there ;
+
+: again, ( a -- )
+        rj, ;
+
+: until, ( a -- )
+        rjz, ;
+
+: while, ( a -- )
+        rjnz, ;
+
+: if,   ( -- a )
+        there \ save current location on stack
+        0 tw, \ reserve space for rjz in tmemory
+        ;
+
+: then, ( a -- )
+        0xe400 there or \ rjz = 0xe400
+        swap tw! ;
+
+: else, ( a -- )
+        \ TODO
+        ;
+
+\ : iftest val? if ." ja" else ." nein" then ;
 
 
 ( Labels )
