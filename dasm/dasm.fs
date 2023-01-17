@@ -43,19 +43,20 @@ variable tdp 0 tdp !
 ( mnemonics )
 
 \ call      0 <addr:15>
-: call,     dup 0x8000 and throw tw, ;
+: call,     dup 0x8000 and abort" ERROR: call address out of range (0-0x7fff)"
+            tw, ;
 
 \ lit.l     100 <imm:13>
-: lit.l,    dup 0xe000 and throw ( imm out of range)
+: lit.l,    dup 0x1fff > abort" ERROR: lit.l value out of range (0-0x3fff)"
             0x8000 or tw, ;
 
 \ lit.h     101 <unused:4> <ret:1> <imm:8>
 \ TODO: [ret] not supported yet
-: lit.h,    dup 0xff00 and throw
+: lit.h,    dup 0xff > abort" ERROR: lit.h value out of range (0-0xff)"
             0xa000 or tw, ;
 
 : lit,      dup 0x1fff and lit.l,
-            dup 0xff > if 8 rshift lit.h, else drop then ;
+            dup 0x1fff > if 8 rshift lit.h, else drop then ;
 
 \ alu       110 <unused:1> <alu:5> <ret:1> <dst:2> <dsp:2> <rsp:2>
 
@@ -112,7 +113,9 @@ variable tdp 0 tdp !
 
 : rjp-op
     create , ( cond -- )
-    does> @ 0xe000 or or tw, ( addr -- )
+    does> @ 0xe000 or
+    swap dup 0x7ff > abort" ERROR: rjp-op address out of range (0-0x7ff)"
+    or tw, ( addr -- )
     ;
 
 rjp-always          rjp-op      rj,
@@ -122,25 +125,33 @@ rjp-negative        rjp-op      rjn,
 rjp-notnegative     rjp-op      rjnn,
 
 
+0xcafe constant BEGINGUARD
+0xcaff constant IFGUARD
+
 
 : begin, ( -- a )
-        there ;
+        there BEGINGUARD ;
 
 : again, ( a -- )
+        BEGINGUARD <> abort" ERROR: No BEGINGUARD on top of stack"
         rj, ;
 
 : until, ( a -- )
+        BEGINGUARD <> abort" ERROR: No BEGINGUARD on top of stack"
         rjz, ;
 
 : while, ( a -- )
+        BEGINGUARD <> abort" ERROR: No BEGINGUARD on top of stack"
         rjnz, ;
 
 : if,   ( -- a )
+        IFGUARD
         there \ save current location on stack
         0 tw, \ reserve space for rjz in tmemory
         ;
 
 : then, ( a -- )
+        IFGUARD <> abort" ERROR: No IFGUARD on top of stack"
         0xe400 there or \ rjz = 0xe400
         swap tw! ;
 
