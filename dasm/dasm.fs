@@ -3,16 +3,9 @@
 ( Forth crossassembler for J1: https://github.com/jamesbowman/j1 )
 
 
-(
-DCPU cannot address single bytes, only word accesses. Thus, "there" returns a
-"word address".
-)
 
-\ write word to address
-: w! ( w addr -- )
-    2dup swap 8 rshift swap \ ( w a c a)
-    c! 1+ c!
-    ;
+\ DCPU cannot address single bytes, only word accesses. Thus, "there" returns a "word address".
+
 
 \ target memory (64k words = 128k bytes)
 0x10000 allocate throw constant tmemory
@@ -114,14 +107,14 @@ variable tlatest 0 tlatest !
 0x600 constant rjp-negative
 0x700 constant rjp-notnegative
 
-\ rjp-op, ( cond addr -- )
-\ : rjp-op,   dup 0xfc00 and throw 0xe000 or or ;
-
 : rjp-op
-    create , ( cond -- )
-    does> @ 0xe000 or
-    swap dup 0x7ff > abort" ERROR: rjp-op address out of range (0-0x7ff)"
-    or tw, ( addr -- )
+    create  ( cond -- )
+            0xe000 or ,
+    does>   ( addr -- )
+    @ swap
+    there - \ make relative address
+    dup abs 0x3ff > abort" ERROR: rjp-op address out of range"
+    0x7ff and or tw,
     ;
 
 rjp-always          rjp-op      rj,
