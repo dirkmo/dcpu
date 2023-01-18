@@ -3,40 +3,46 @@
 ( Forth crossassembler for J1: https://github.com/jamesbowman/j1 )
 
 
-\ Program will be assembled into tmemory
+(
+DCPU cannot address single bytes, only word accesses. Thus, "there" returns a
+"word address".
+)
+
+\ write word to address
+: w! ( w addr -- )
+    2dup swap 8 rshift swap \ ( w a c a)
+    c! 1+ c!
+    ;
+
+\ target memory (64k words = 128k bytes)
 0x10000 allocate throw constant tmemory
 tmemory 0x10000 0 fill
 
-\ the dictionary pointer (offset into tmemory)
+\ target dp
 variable tdp 0 tdp !
 
-\ here of tmemory (offset into tmemory)
+\ target latest
+variable tlatest 0 tlatest !
+
+\ target here (word address!)
 : there tdp @ ;
 
-\ tc! ( c offs -- )
-\ store c at offset in tmemory
-: tc! tmemory + c! ;
-
-\ tc, ( c -- )
-\ store c in tmemory and inc tdp
-: tc, there tc! 1 tdp +! ;
-
 \ tw! ( w offs -- )
-\ store word (16-bits)
+\ store word (16-bits) into target memory
+\ offs is word address
 : tw!
-    2dup swap 8 rshift swap
-    tc! 1+
-    tc!
+    2 * \ make byte address from word address
+    tmemory +
+    w!
     ;
 
 \ tw, ( w -- )
 \ store w in tmemory and inc tdp
-: tw, there tw! 2 tdp +! ;
+: tw, there tw! 1 tdp +! ;
 
-
-: tmemory-dump tmemory there dump ;
+\ for dev/debug
+: tmemory-dump tmemory there 2 * dump ;
 : update s" dasm.fs" included ;
-
 
 
 
@@ -167,4 +173,23 @@ rjp-notnegative     rjp-op      rjnn,
 : label
     create there ,
     does> @
+    ;
+
+( Forth stuff )
+
+\ append c-str to dict
+: append-name ( c-addr u -- )
+    dup tw, \ append count to dict
+    0 ?do
+        dup c@ tw, \ append char to dict
+        1+ \ increment c-addr
+    loop
+    ;
+
+\ create new dictionary entry
+: create,
+    tlatest @ tw, \ pointer to prev word
+    there 1- tlatest ! \ set to new word
+    parse-name \ get next word from input buffer
+    append-name
     ;
