@@ -11,6 +11,8 @@
 0x10000 allocate throw constant tmemory
 tmemory 0x10000 0 fill
 
+0x1000 allocate throw constant scratch
+
 \ target dp
 variable tdp 0 tdp !
 
@@ -27,6 +29,13 @@ variable tlatest 0 tlatest !
     2 * \ make byte address from word address
     tmemory +
     w!
+    ;
+
+\ tw@ ( offs -- w )
+: tw@
+    2 * \ make byte address from word address
+    tmemory +
+    uw@
     ;
 
 \ tw, ( w -- )
@@ -177,6 +186,7 @@ rjp-notnegative     rjp-op      rjnn,
         dup c@ tw, \ append char to dict
         1+ \ increment c-addr
     loop
+    drop
     ;
 
 \ create new dictionary entry
@@ -186,3 +196,62 @@ rjp-notnegative     rjp-op      rjnn,
     parse-name \ get next word from input buffer
     append-name
     ;
+
+\ copy c-str with 16-bit chars from tdict
+\ to host memory with 8-bit chars
+\ tc-addr: c-address in tmemory, pointing to count
+: copy-cstr-from-tdict-to-scratch ( tc-addr -- )
+    dup tw@ 1+ \ fetch count
+    0 ?do
+        dup tw@ \ fetch char
+        scratch i + c! \ put to scratch memory
+        1+
+    loop drop ;
+
+
+\ put name of word as c-str on stack
+\ input a: addr of entry in tdict
+\ a: prev-word address
+\ a+1: count
+\ a+2: first char of str
+: tword-name ( ta -- c-addr u)
+    1+ \ advance ta to point to count of c-str
+    copy-cstr-from-tdict-to-scratch
+    scratch 1+ scratch c@
+    ;
+
+\ get next word from tdict
+\ ta is address in tdict (word addressed)
+: tword-next ( ta -- ta )
+    tw@ ;
+
+\ find word in target dict
+\ twp means word-pointer in tdict, points to entry found
+\ f=0: not found, f=-1: found
+: tfind ( c-addr u -- twp f )
+    tlatest @               ( ca u -- ca u twp )
+    begin                   ( ca u twp )
+        >r 2dup             ( ca u twp -- ca u ca u         ; R: -- twp )
+        r@ tword-name       ( ca u ca u -- ca u ca u ca2 u2 ; R: twp -- twp )
+        compare 0= if       ( ca u ca u ca2 u2 -- ca u      ; R: twp -- twp )
+            \ found!
+            2drop r> -1 exit ( ca u -- twp -1               ; R: twp -- )
+        then
+        r> tword-next       ( ca u -- ca u twp              ; R: twp -- )
+        dup 0=              ( ca u twp -- ca u twp twp=0?   ; R: -- )
+    until                   ( ca u twp f -- ca u twp )
+    nip nip 0
+    ;
+
+
+clearstacks
+
+0xffff tw,
+create, eins
+create, zwei
+create, drei
+create, vier
+
+page
+
+parse-name vier tfind
