@@ -301,3 +301,6 @@ create, vier
 
 \ page
 
+
+s" sammlung.fs" r/o open-file throw constant file
+scratch 1024 file read-line throw
