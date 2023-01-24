@@ -8,8 +8,9 @@
 
 
 \ target memory (64k words = 128k bytes)
-0x10000 allocate throw constant tmemory
-tmemory 0x10000 0 fill
+0x20000 constant tmemory-size
+tmemory-size allocate throw constant tmemory
+tmemory tmemory-size 0 fill
 
 0x1000 allocate throw constant scratch
 
@@ -22,20 +23,30 @@ variable tlatest 0 tlatest !
 \ target here (word address!)
 : there tdp @ ;
 
+
+\ swap low and high byte of w1
+: swap-bytes ( w1 -- w2 )
+    dup  8 rshift 0x000000ff and
+    swap 8 lshift 0x0000ff00 and
+    or
+;
+
 \ tw! ( w offs -- )
 \ store word (16-bits) into target memory
 \ offs is word address
 : tw!
     2 * \ make byte address from word address
     tmemory +
+    swap swap-bytes swap
     w!
-    ;
+   ;
 
 \ tw@ ( offs -- w )
 : tw@
     2 * \ make byte address from word address
     tmemory +
     uw@
+    swap-bytes
     ;
 
 \ tw, ( w -- )
@@ -244,14 +255,49 @@ rjp-notnegative     rjp-op      rjnn,
     ;
 
 
+\ save target memory to binary file
+: target-save-binary ( "filename" -- )
+    parse-name w/o create-file abort" Cannot create file" ( fid )
+    dup tmemory tmemory-size rot write-file abort" Failed to write file" ( fid -- )
+    close-file
+;
+
+\ wordlist constant target-wordlist
+\
+\ \ :: adds word to target-wordlist
+\ : :: get-current >r target-wordlist set-current : r> set-current ;
+\
+\ \ add wordlist to search order
+\ : >order ( wid -- )
+\         >r get-order r> swap 1+ set-order ;
+\
+\ \ drop the first searched wordlist from search order
+\ : previous ( -- )
+\         get-order nip 1- set-order ;
+\
+\ \ now select DCPU forth wordlist
+\ target-wordlist >order
+
+
+
+( DCPU Forth implementation )
+
+\ ALU:          <ret:1> <dst:2>  <dsp:2> <rsp:2>
+
+\ :: dup          0       DT       D+      0      A:T, ;
+\ :: drop         0       DT       D-      0      A:NOP, ;
+\ :: call                                         call, ;
+
 clearstacks
 
-0xffff tw,
+0xfffe tw,
 create, eins
+0x1234 call,
+0x8d lit,
+
 create, zwei
 create, drei
 create, vier
 
-page
+\ page
 
-parse-name vier tfind
