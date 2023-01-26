@@ -290,17 +290,19 @@ rjp-notnegative     rjp-op      rjnn,
 
 clearstacks
 
-0xfffe tw,
-create, eins
-0x1234 call,
-0x8d lit,
+: dasm-open-file ( ca u -- fid )
+    r/o open-file throw ;
 
-create, zwei
-create, drei
-create, vier
+\ read line from file fid
+\ c-a: addr of data read
+\ num: num of bytes read
+\ f: -1 success
+: dasm-read-line ( fid -- c-a num f )
+    scratch 1024 rot read-line throw
+    scratch -rot
+    ;
 
-\ page
+s" test.fs" dasm-open-file constant file
 
+\ dasm-read-line
 
-s" sammlung.fs" r/o open-file throw constant file
-scratch 1024 file read-line throw
