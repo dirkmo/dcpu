@@ -17,8 +17,18 @@ tmemory tmemory-size 0 fill
 \ target dp
 variable tdp 0 tdp !
 
+\ Inspiration from colorforth:
+\ Two dictionaries, one for "normal" words, one for immediate words
+\ Convention: Words from the immediate dictionary are prefixed with $
+
+
+\ The "normal" dictionary
 \ target latest
 variable tlatest 0 tlatest !
+
+\ The immediate words dictionary
+variable $tlatest 0 $tlatest !
+
 
 \ target here (word address!)
 : there tdp @ ;
@@ -200,13 +210,22 @@ rjp-notnegative     rjp-op      rjnn,
     drop
     ;
 
-\ create new dictionary entry
-: create,
-    tlatest @ tw, \ pointer to prev word
-    there 1- tlatest ! \ set to new word
+\ create new dictionary entry "new-word"
+\ a: latest of dict, eg tlatest or $tlatest
+: target-create ( "new-word" a -- )
+    \ tlatest @ tw, \ pointer to prev word
+    \ there 1- tlatest ! \ set to new word
+    dup @ tw, \ pointer to prev word
+    there 1- swap ! \ set to new word
     parse-name \ get next word from input buffer
     append-name
     ;
+
+: tcreate ( "new-word" )
+    tlatest target-create ;
+
+: $tcreate ( "new-word" )
+    $tlatest target-create ;
 
 \ copy c-str with 16-bit chars from tdict
 \ to host memory with 8-bit chars
@@ -237,10 +256,11 @@ rjp-notnegative     rjp-op      rjnn,
     tw@ ;
 
 \ find word in target dict
+\ a: latest of dict (tlatest or $tlatest)
 \ twp means word-pointer in tdict, points to entry found
 \ f=0: not found, f=-1: found
-: tfind ( c-addr u -- twp f )
-    tlatest @               ( ca u -- ca u twp )
+: target-find ( a c-addr u -- twp f )
+    @               ( ca u -- ca u twp )
     begin                   ( ca u twp )
         >r 2dup             ( ca u twp -- ca u ca u         ; R: -- twp )
         r@ tword-name       ( ca u ca u -- ca u ca u ca2 u2 ; R: twp -- twp )
@@ -254,6 +274,8 @@ rjp-notnegative     rjp-op      rjnn,
     nip nip 0
     ;
 
+: tfind ( c-addr u -- twp f ) tlatest target-find ;
+: $tfind ( c-addr u -- twp f) $tlatest target-find ;
 
 \ save target memory to binary file
 : target-save-binary ( "filename" -- )
@@ -261,23 +283,6 @@ rjp-notnegative     rjp-op      rjnn,
     dup tmemory tmemory-size rot write-file abort" Failed to write file" ( fid -- )
     close-file
 ;
-
-\ wordlist constant target-wordlist
-\
-\ \ :: adds word to target-wordlist
-\ : :: get-current >r target-wordlist set-current : r> set-current ;
-\
-\ \ add wordlist to search order
-\ : >order ( wid -- )
-\         >r get-order r> swap 1+ set-order ;
-\
-\ \ drop the first searched wordlist from search order
-\ : previous ( -- )
-\         get-order nip 1- set-order ;
-\
-\ \ now select DCPU forth wordlist
-\ target-wordlist >order
-
 
 
 ( DCPU Forth implementation )

@@ -146,3 +146,24 @@ pad 20 accept pad swap type
 
 
 ( <-- Line parser and executor )
+
+( wordlist stuff --> )
+
+wordlist constant target-wordlist
+
+\ :: adds word to target-wordlist
+: :: get-current >r target-wordlist set-current : r> set-current ;
+
+\ add wordlist to search order
+: >order ( wid -- )
+        >r get-order r> swap 1+ set-order ;
+
+\ drop the first searched wordlist from search order
+: previous ( -- )
+        get-order nip 1- set-order ;
+
+\ now select DCPU forth wordlist
+target-wordlist >order
+
+( <-- wordlist stuff )
+
