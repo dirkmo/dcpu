@@ -2,6 +2,13 @@
 ( How Forth assemblers work: https://www.bradrodriguez.com/papers/tcjassem.txt )
 ( Forth crossassembler for J1: https://github.com/jamesbowman/j1 )
 
+: clear-up s" dasm-marker" find-name ?dup if name>int execute then ;
+clear-up
+
+marker dasm-marker
+
+: update s" dasm.fs" included ;
+: edit s" vim dasm.fs" system update ;
 
 
 \ DCPU cannot address single bytes, only word accesses. Thus, "there" returns a "word address".
@@ -65,7 +72,6 @@ variable $tlatest 0 $tlatest !
 
 \ for dev/debug
 : tmemory-dump tmemory there 2 * dump ;
-: update s" dasm.fs" included ;
 
 
 
@@ -102,8 +108,8 @@ variable $tlatest 0 $tlatest !
 0x400 constant RET
 
 : alu-op ( op -- )
-    create ,
-    does> @ 0xc000 or or or or or tw, ;
+    create 0xc000 or ,
+    does> @ or or or or tw, ;
 
 0   7 lshift alu-op     A:T,
 1   7 lshift alu-op     A:N,
@@ -128,6 +134,34 @@ variable $tlatest 0 $tlatest !
 20  7 lshift alu-op     A:MULL,
 21  7 lshift alu-op     A:MULH,
 
+
+\ alu       110 <unused:1> <alu:5> <ret:1> <dst:2> <dsp:2> <rsp:2>
+
+\           RET DST D+ R+
+: dup,      0   DT  D+  0  A:T, ;
+: dup-ret,  RET DT  D+  0  A:T, ;
+: drop,     0   DT  D-  0  A:T, ;
+: drop-ret, RET DT  D-  0  A:T, ;
+
+: swap,     0   DR  0  R+  A:N, \ N->R
+            0   DT  D-  0  A:T, \ T->N
+            0   DT  D+ R-  A:R, ; \ R->T
+
+: swap-ret, 0   DR  0  R+  A:N, \ N->R
+            0   DT  D-  0  A:T, \ T->N
+            0   DT  D+ R-  A:R, \ R->T
+            RET DT  0  R-  A:NOP, ; \ ret
+
+: +,        0   DT  D-  0  A:ADD, ;
+: +-ret     RET DT  D-  R- A:ADD, ;
+: -         0   DT  D-  0  A:SUB, ;
+: --ret     RET DT  D-  R- A:SUB, ;
+: @,        0   DT  D-  0  A:MEMT, ;
+: @-ret,    RET DT  D-  R- A:MEMT, ;
+: !,        0   DM  D-  0  A:N,
+            0   DT  D-  0  A:NOP, ;
+: !-ret,    0   DM  D-  0  A:N,
+            RET DT  D-  R- A:NOP, ;
 
 \ rjp       111 <cond:3> <imm:10>
 
@@ -310,4 +344,10 @@ clearstacks
 s" test.fs" dasm-open-file constant file
 
 \ dasm-read-line
+
+tcreate dup     dup-ret,
+tcreate drop    drop-ret,
+tcreate swap    swap-ret,
+tcreate @       @-ret,
+tcreate !       !-ret,
 
