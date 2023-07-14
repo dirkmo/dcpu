@@ -8,6 +8,11 @@ marker dasm-marker
 : update s" disasm.fs" included ;
 : edit s" vim disasm.fs" system update ;
 
+\ "poor mans case"
+: case?   ( n1 n2 -- n1 ff | tf )
+    over = dup IF nip THEN
+;
+
 variable pos 0 pos ! \ byte position in buf
 variable buf
 variable #buf
@@ -39,7 +44,7 @@ variable #buf
 
 \ 1 01 <unused:4> <return:1> <imm:8>      lit.h
 : disasm-lit.h  dup 0xe000 and 0xa000 <> if exit then
-                dup 0xff and h16. ."  lit.h" 
+                dup 0xff and h16. ."  lit.h"
                 0x100 and if ." r" then 0 ;
 \ Bsp: 0xa0ff, 0xa1ff (ret)
 
@@ -65,28 +70,28 @@ variable #buf
 
 \ 1 10 <unused:1> <alu:5> <return:1> <dst:2> <dsp:2> <rsp:2>  alu
 : alu-op.       dup 0xf80 and 8 rshift case
-                   0x0 of ." A:T" endof 
-                   0x1 of ." A:N" endof 
-                   0x2 of ." A:R" endof 
-                   0x3 of ." A:M" endof 
-                   0x4 of ." A:ADD" endof 
-                   0x5 of ." A:SUB" endof 
-                   0x6 of ." A:NOP" endof 
-                   0x7 of ." A:AND" endof 
-                   0x8 of ." A:OR" endof 
-                   0x9 of ." A:XOR" endof 
-                   0xa of ." A:LTS" endof 
-                   0xb of ." A:LT" endof 
-                   0xc of ." A:SR" endof 
-                   0xd of ." A:SRW" endof 
-                   0xe of ." A:SL" endof 
-                   0xf of ." A:SLW" endof 
-                   0x10 of ." A:JZ" endof 
-                   0x11 of ." A:JNZ" endof 
-                   0x12 of ." A:CARRY" endof 
-                   0x13 of ." A:INV" endof 
-                   0x14 of ." A:MULL" endof 
-                   0x15 of ." A:MULH" endof 
+                   0x0 of ." A:T" endof
+                   0x1 of ." A:N" endof
+                   0x2 of ." A:R" endof
+                   0x3 of ." A:M" endof
+                   0x4 of ." A:ADD" endof
+                   0x5 of ." A:SUB" endof
+                   0x6 of ." A:NOP" endof
+                   0x7 of ." A:AND" endof
+                   0x8 of ." A:OR" endof
+                   0x9 of ." A:XOR" endof
+                   0xa of ." A:LTS" endof
+                   0xb of ." A:LT" endof
+                   0xc of ." A:SR" endof
+                   0xd of ." A:SRW" endof
+                   0xe of ." A:SL" endof
+                   0xf of ." A:SLW" endof
+                   0x10 of ." A:JZ" endof
+                   0x11 of ." A:JNZ" endof
+                   0x12 of ." A:CARRY" endof
+                   0x13 of ." A:INV" endof
+                   0x14 of ." A:MULL" endof
+                   0x15 of ." A:MULH" endof
                    ." UNKNOWN"
                 endcase ;
 : alu-ret.      dup 0x40 and if ." RET " then ;
@@ -117,7 +122,7 @@ variable #buf
                 disasm-lit.l ?dup-0=-if exit then
                 disasm-lit.h ?dup-0=-if exit then
                 disasm-rjp ?dup-0=-if exit then
-                disasm-alu ?dup-0=-if exit then 
+                disasm-alu ?dup-0=-if exit then
                 h16.
                 ;
 

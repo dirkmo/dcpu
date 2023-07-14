@@ -19,7 +19,7 @@ endif
 CXXFLAGS=-g -Wall -O0  # -DVL_USER_STOP
 LDFLAGS=-lncurses
 
-CPPSRC=sim.cpp dcpu.c
+CPPSRC=sim.cpp dcpu.cpp
 VERILOGSRC=../rtl/dcpu.v
 
 all: top

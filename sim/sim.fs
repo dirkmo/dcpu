@@ -50,7 +50,7 @@ variable carry
 : rs! rsp@ tcells RS + w! ;
 
 : T@ dsp@ tcells DS + w@ ;
-: N@ dsp@ 1- DS_SIZE and tcells DS + w@ ; \ next on data stack
+: N@ dsp@ 1- DS_SIZE mod tcells DS + w@ ; \ next on data stack
 : R@ rsp@ tcells RS + w@ ;
 
 
@@ -190,33 +190,33 @@ variable alu-result
     alu-dst
     DT    case? if alu-result @ ds! exit then
     DR    case? if alu-result @ rs! exit then
-    DPC   case? if exit then
+    DPC   case? if exit then ( TODO write PC )
     DMEMT case? if N@ T@ tw! exit then \ addr in T, data in N
     drop ;
 
 \ setup alu-table
-:noname ." A:T " T@ alu-result! ;   0x00 bind
-:noname ." A:N"  N@ alu-result! ;   0x01 bind
-:noname ." A:R"  R@ alu-result! ;   0x02 bind
-:noname ." MEM" N@ T@ tw@ ; 0x03 bind
-:noname ." +" N@ T@ + alu-result! ;   0x04 bind
-:noname ." -" N@ T@ - alu-result! ;   0x05 bind
-:noname ." NOP" ; 0x06 bind
-:noname ." AND" N@ T@ and alu-result! ; 0x07 bind
-:noname ." OR" N@ T@ or alu-result! ;  0x08 bind
-:noname ." XOR" N@ T@ xor alu-result! ; 0x09 bind
-:noname ." LTS"  N@ T@ < alu-result! ; 0x0a bind
-:noname ." LT" N@ T@ < alu-result! ;  0x0b bind
-:noname ." >>1" T@ 1 rshift alu-result! ; 0x0c bind
-:noname ." >>8" T@ 8 rshift alu-result! ; 0x0d bind
-:noname ." <<1" T@ 1 lshift alu-result! ; 0x0e bind
-:noname ." <<8" T@ 8 lshift alu-result! ; 0x0f bind
-:noname ." JZ" ;  0x10 bind
-:noname ." JNZ" ; 0x11 bind
-:noname ." carry" carry@ alu-result! ; 0x12 bind
-:noname ." ~T" T@ invert 0xffff and alu-result! ; 0x13 bind
-:noname ." MUL-LO" T@ N@ * 0xffff and alu-result! ; 0x14 bind
-:noname ." MUL_HI" T@ N@ * 16 rshift 0xffff and alu-result! ; 0x15 bind
+:noname ." A:T "    T@ alu-result! ;   0x00 bind
+:noname ." A:N "    N@ alu-result! ;   0x01 bind
+:noname ." A:R "    R@ alu-result! ;   0x02 bind
+:noname ." MEM "    N@ T@ tw@ ; 0x03 bind
+:noname ." + "      N@ T@ + alu-result! ;   0x04 bind
+:noname ." - "      N@ T@ - alu-result! ;   0x05 bind
+:noname ." NOP "    ; 0x06 bind
+:noname ." AND "    N@ T@ and alu-result! ; 0x07 bind
+:noname ." OR "     N@ T@ or alu-result! ;  0x08 bind
+:noname ." XOR "    N@ T@ xor alu-result! ; 0x09 bind
+:noname ." LTS "    N@ T@ < alu-result! ; 0x0a bind
+:noname ." LT "     N@ T@ < alu-result! ;  0x0b bind
+:noname ." >>1 "    T@ 1 rshift alu-result! ; 0x0c bind
+:noname ." >>8 "    T@ 8 rshift alu-result! ; 0x0d bind
+:noname ." <<1 "    T@ 1 lshift alu-result! ; 0x0e bind
+:noname ." <<8 "    T@ 8 lshift alu-result! ; 0x0f bind
+:noname ." JZ "     T@ 0=  if N@ alu-result! then ; 0x10 bind
+:noname ." JNZ "    T@ 0<> if N@ alu-result! then ; 0x11 bind
+:noname ." carry "  carry@ alu-result! ; 0x12 bind
+:noname ." ~T "     T@ invert 0xffff and alu-result! ; 0x13 bind
+:noname ." MUL-LO " T@ N@ * 0xffff and alu-result! ; 0x14 bind
+:noname ." MUL_HI " T@ N@ * 16 rshift 0xffff and alu-result! ; 0x15 bind
 
 : cpu-alu
             dup alu-op alu

@@ -82,6 +82,7 @@ _to_in_fetch_header: # ( -- c)
 _to_in_fetch:
             call _tib
             call _to_in
+            call _fetch
             a:add t d-
             call _fetch
             a:nop t r- [ret]
