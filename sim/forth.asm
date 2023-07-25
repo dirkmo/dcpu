@@ -6,7 +6,7 @@
 
 # code entry
 
-call _quit
+rj _quit
 
 
 
@@ -76,7 +76,7 @@ _tib:
 
 
 _to_in_fetch_header: # ( -- c)
-            # get char from TIB
+            # get char from TIB at pos in
             .word _tib_header
             .cstr ">in@"
 _to_in_fetch:
@@ -109,24 +109,42 @@ _tib_size:
             lit tib_size [ret]
 
 
-_word_header: # (c -- )
-            # copy next word from TIB to temp area (here) as c-str
-            # word delimited by char c
+_word_header:
+            # copy next word from TIB to temp area (here) as c-str (addr u)
+            # word delimited by chars <= 32
             .word _to_in_header
             .cstr "word"
 _word:
-            # skip space
-            call _to_in_fetch   # (del -- del c)
+            # skip spaces, no bounds checking
+            call _to_in_fetch   # (-- c)
+            lit 33              # (c -- c 32)
+            a:sub t d-          # (c 32 -- c-32)
+            rj.nn _word_start   # (f --)
+            call _to_in_inc
+            rj _word
+_word_start: # (--)
+            call _to_in_fetch   # (-- in)
+            call _tib_size      # (in -- in TS)
+            a:sub t d-          # (in TS -- f)
+            rj.nn _word_nothing
             # TODO
             # copy word to here (don't use comma, because it moves "here" pointer)
+
+            # count chars
+            # copy chars to here
+
             a:nop t r- [ret]
+_word_nothing: # (--)
+            call _here
+            lit 0
+            a:nop t r- # (addr 0)
 
 
 _interpret_header: # ( -- )
             .word _word_header
             .cstr "interpret"
 _interpret:
-            # #TIB = 0
+            # >in = 0
             lit 0
             call _to_in
             call _store

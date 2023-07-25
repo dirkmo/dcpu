@@ -1,3 +1,4 @@
 {
-    "files.trimTrailingWhitespace": true
+    "files.trimTrailingWhitespace": true,
+    "cmake.sourceDirectory": "${workspaceFolder}/sim"
 }

@@ -8,3 +8,4 @@ sim/*.sim
 sim/test.c
 sim/forth.c
 sim/build
+build/
