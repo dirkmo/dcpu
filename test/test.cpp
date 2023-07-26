@@ -650,6 +650,21 @@ int main(int argc, char *argv[]) {
     }
 
     {
+        printf("Test %d: ALU: R, perform call with alu\n", count++);
+        uint16_t prog[] = {
+            LIT_L(0x0),
+            LIT_L(0x5),
+            ALU(ALU_T, 0, DST_R, 0, RSP_I),
+            ALU(ALU_R, 0, DST_PC, 0, RSP_RPC),
+            0xffff,
+            0xffff
+        };
+        test_t t = new_test();
+        t.t = 5; t.n = 0; t.r = 4; t.pc = 5; t.dsp = 1; t.rsp = 1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
         printf("Test %d: ALU: CARRY\n", count++);
         uint16_t prog[] = {
             LIT_L(0xff),

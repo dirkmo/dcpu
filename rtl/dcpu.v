@@ -167,10 +167,12 @@ always @(*)
 // side effects for alu operations
 wire w_op_alu_nop  = w_op_alu && (w_op_alu_op == 5'h6);
 wire w_op_alu_MEMT = w_op_alu && (w_op_alu_op == 5'h3) && ~w_op_alu_nop;
+wire w_op_alu_jc   = w_op_alu && (w_op_alu_op[4:1] == 4'h8);
 wire w_op_alu_jz   = w_op_alu && (w_op_alu_op == 5'h10);
 wire w_op_alu_jnz  = w_op_alu && (w_op_alu_op == 5'h11);
-wire w_op_alu_j_cond_fullfilled = (w_op_alu_jz  && (T==0))
-                               || (w_op_alu_jnz && (T!=0));
+wire w_op_alu_j_cond_fullfilled = (w_op_alu_jz  && (T==0)) // condition for jz
+                               || (w_op_alu_jnz && (T!=0)) // condition for jnz
+                               || !w_op_alu_jc;            // if not cond jump always fullfilled
 wire w_op_alu_RPC_branch_taken = w_op_alu && w_op_rsp_RPC && w_op_alu_j_cond_fullfilled;
 
 /*
