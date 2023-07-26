@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 cmake_policy(SET CMP0074 NEW)
-project(cmake_tracing_c)
+project(dcpu-simulator)
 
 find_package(verilator HINTS $ENV{VERILATOR_ROOT} ${VERILATOR_ROOT})
 if (NOT verilator_FOUND)
@@ -26,7 +26,7 @@ add_custom_target(assemble
     COMMAND ${PROJECT_SOURCE_DIR}/../dasm/dasm.py -i ${PROJECT_SOURCE_DIR}/forth.asm -o ${PROJECT_SOURCE_DIR}/forth
 )
 
-add_custom_target(sim
+add_custom_target(simulate
     COMMAND ${PROJECT_BINARY_DIR}/simulator ${PROJECT_SOURCE_DIR}/forth.bin ${PROJECT_SOURCE_DIR}/forth.sim
     DEPENDS assemble
     DEPENDS simulator

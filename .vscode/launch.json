@@ -19,7 +19,7 @@
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/sim/verilator/Vdcpu",
+            "program": "${workspaceFolder}/sim/build/simulator",
             "args": [
                 "forth.bin", "forth.sim"
             ],

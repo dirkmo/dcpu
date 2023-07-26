@@ -214,7 +214,7 @@ void step_over(void) {
     const uint16_t pc = pCore->dcpu->r_pc;
     const uint16_t opcode = mem[pc];
     bool isCall = ((opcode & 0x8000) == OP_CALL);
-    isCall |= (opcode & OP_ALU & RSP(RSP_RPC) & DST(DST_PC));
+    isCall |= (opcode & (OP_ALU | RSP(RSP_RPC) | DST(DST_PC)));
     if (isCall) {
         vSilentBreakPoints.push_back(pc+1);
         run = true;
@@ -436,7 +436,7 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
     noecho();
 
-    for (auto c: string("Hallo\r")) {
+    for (auto c: string(" Hallo\r")) {
         l_sim2dcpu.push_back(c);
     }
 
