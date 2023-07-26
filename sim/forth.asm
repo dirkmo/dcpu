@@ -6,8 +6,9 @@
 
 # code entry
 
-rj _quit
+# rj _quit
 
+rj _test
 
 
 .word SIM_END
@@ -42,8 +43,50 @@ in: .word 0
 # (c-addr u) c-addr: address of first char of string, u: char count
 
 
-_quit_header:
+_inc_header:
+            # increment TOS by 1
+            # (n -- n+1)
             .word 0
+            .cstr "1+"
+_inc:
+            lit 1
+            a:add t d- r- [ret]
+
+_dec_header:
+            # decrement TOS by 1
+            # (n -- n-1)
+            .word _inc_header
+            .cstr "1-"
+_dec:
+            lit 1
+            a:sub t d- r- [ret]
+
+
+_is_zero_header: # (n -- 0|-1)
+            # returns -1 if zero
+            # return ´s 0 if not zero
+            .word _dec_header
+            .cstr "0="
+_is_zero:
+            rj.z _is_zero_yes
+            lit 0 [ret]
+_is_zero_yes:
+            lit -1 [ret]
+
+
+_is_equal_header: # (n1 n2 -- 0|-1)
+            # return -1 if n1 and n2 are equal
+            # return 0 if not equal
+            .word _is_zero_header
+            .cstr "="
+_is_equal:
+            a:sub t d-
+            call _is_zero
+            a:nop t r- [ret]
+
+
+_quit_header:
+            .word _is_equal_header
             .cstr "quit"
 _quit:      # receive up to TIB_SIZE chars from keyboard
             call _tib
@@ -94,11 +137,11 @@ _to_in_inc_header: # (--)
 _to_in_inc:
             call _to_in
             call _fetch
-            lit 1
-            a:add t d-
+            call _inc
             call _to_in
             call _store
             a:nop t r- [ret]
+
 
 _tib_size_header:
             # ( -- n)
@@ -109,10 +152,72 @@ _tib_size:
             lit tib_size [ret]
 
 
-_word_header:
+_count_header:
+            # (a1 -- a2 n)
+            # make addr+len pair from c-str address
+            .word _tib_size_header
+            .cstr "count"
+_count:
+            a:mem t d+      # (a1 -- a1 n)
+            call _swap      # (a1 n -- n a1)
+            call _inc       # (n a1 -- n a1+1)
+            call _swap      # (n a2 -- a2 n)
+            a:nop t r- [ret]
+
+
+_advance_str_header:
+            # (a n -- a n)
+            # will increment address and decrement count of a c-str
+            # but only if count is greater 0
+            .word _count_header
+            .cstr "advance-str"
+_advance_str:
+            call _dup       # (a n -- a n n)
+            rj.z _advance_str_exit # (a n n -- a n)
+_advance_str_exit:
+            call _dec       # (a n -- a n-1)
+            call _swap      # (a n -- n a)
+            call _inc
+            call _swap
+            a:nop t r- [ret]
+
+
+_operate_on_range_header: # (a1 l af -- a2 0|-1)
+            # goes through memory range [a1,a1+l) and calls function at af
+            # until function af returns non-zero or end-of-range is reached.
+            # return values:
+            #   e-o-r reached: (-- a2 0)
+            #   af returns non-zero: (-- a2 -1)
+            # Function af: (a -- 0|-1)
+            #   Takes address a, does something and returns 0 or -1.
+            .word _advance_str_header
+            .cstr "oor"
+_operate_on_range: # (a1 l af)
+            a:t r d- r+         # (a1 l af -- a1 l r:af)
+_operate_on_range_loop: # (a1 l r:af)
+            # if end-of-range reached then exit with (a2 0)
+            a:t t d+            # (a1 l -- a1 l l r:af)
+            rj.z _operate_on_range_eorr # (a1 l l -- a1 l r:af)
+            call _over          # (a1 l -- a1 l a1 r:af)
+            # call function af
+            a:r pc r+pc         # (a1 l a1 r:af -- a1 l f r:af)
+            rj.nz _operate_on_range_found # (a1 l f -- a1 l r:af)
+            call _advance_str   # (a1 l -- a1 l)
+            rj _operate_on_range_loop
+_operate_on_range_found: # (a2 l r:af)
+            a:nop t d- r-         # (a2 l r:af -- a2)
+            lit 1 [ret]         # (a2 -- a2 1)
+_operate_on_range_eorr: # (a2 l r:af)
+            a:nop t d- r-         # (a2 l r:af -- a2)
+            lit 0 [ret]         # (a2 -- a2 0)
+
+
+_word_header: # (-- a u)
             # copy next word from TIB to temp area (here) as c-str (addr u)
             # word delimited by chars <= 32
-            .word _to_in_header
+            # moves >in pointer
+            # if no word found, returns (0 0)
+            .word _operate_on_range_header
             .cstr "word"
 _word:
             # skip spaces, no bounds checking
@@ -305,6 +410,27 @@ _comma:
             lit 1               # ( -- 1)
             call _here_add      # (1 --)
             a:nop t r- [ret]
+
+
+_is_space_header:
+            # (a -- 0|1)
+            # returns 1 if word at addr a is 32
+            .word _comma_header
+            .cstr "space?"
+_is_space:
+            call _fetch         # (a -- w)
+            lit 32              # (w -- w 32)
+            call _is_equal      # (w 32 -- f)
+            a:nop t r- [ret]
+
+
+buf: .cstr "hallo tschüss "
+
+_test:
+        lit buf
+        call _count
+        lit _is_space
+        call _operate_on_range
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
