@@ -11,7 +11,7 @@ module dcpu(
     output         o_we,
     output         o_cs,
 
-    input          i_irq
+    input          i_irq // see TODO below
 );
 
 parameter
@@ -68,6 +68,8 @@ always @(posedge i_clk)
         r_op <= 0;
     else if (s_fetch) begin
         if (r_irq) begin
+            // TODO: Problem: when waiting for i_ack and r_irq is asserted it will abort the instruction that
+            // waits for the memory access to complete. Maybe this is not a problem?
             r_op <= 1; // "call 1" instruction
         end
         else if (i_ack)
