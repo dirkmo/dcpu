@@ -182,7 +182,7 @@ _advance_str_exit:
             a:nop t r- [ret]
 
 
-_operate_on_range_header: # (a1 l af -- a2 0|-1)
+_scan_header: # (a1 l af -- a2 0|-1)
             # goes through memory range [a1,a1+l) and calls function at af
             # until function af returns non-zero or end-of-range is reached.
             # return values:
@@ -191,23 +191,23 @@ _operate_on_range_header: # (a1 l af -- a2 0|-1)
             # Function af: (a -- 0|-1)
             #   Takes address a, does something and returns 0 or -1.
             .word _advance_str_header
-            .cstr "oor"
-_operate_on_range: # (a1 l af)
+            .cstr "scan"
+_scan: # (a1 l af)
             a:t r d- r+         # (a1 l af -- a1 l r:af)
-_operate_on_range_loop: # (a1 l r:af)
+_scan_loop: # (a1 l r:af)
             # if end-of-range reached then exit with (a2 0)
             a:t t d+            # (a1 l -- a1 l l r:af)
-            rj.z _operate_on_range_eorr # (a1 l l -- a1 l r:af)
+            rj.z _scan_eorr # (a1 l l -- a1 l r:af)
             call _over          # (a1 l -- a1 l a1 r:af)
             # call function af
             a:r pc r+pc         # (a1 l a1 r:af -- a1 l f r:af)
-            rj.nz _operate_on_range_found # (a1 l f -- a1 l r:af)
+            rj.nz _scan_found # (a1 l f -- a1 l r:af)
             call _advance_str   # (a1 l -- a1 l)
-            rj _operate_on_range_loop
-_operate_on_range_found: # (a2 l r:af)
+            rj _scan_loop
+_scan_found: # (a2 l r:af)
             a:nop t d- r-         # (a2 l r:af -- a2)
-            lit 1 [ret]         # (a2 -- a2 1)
-_operate_on_range_eorr: # (a2 l r:af)
+            lit -1 [ret]         # (a2 -- a2 1)
+_scan_eorr: # (a2 l r:af)
             a:nop t d- r-         # (a2 l r:af -- a2)
             lit 0 [ret]         # (a2 -- a2 0)
 
@@ -217,7 +217,7 @@ _word_header: # (-- a u)
             # word delimited by chars <= 32
             # moves >in pointer
             # if no word found, returns (0 0)
-            .word _operate_on_range_header
+            .word _scan_header
             .cstr "word"
 _word:
             # skip spaces, no bounds checking
@@ -413,8 +413,8 @@ _comma:
 
 
 _is_space_header:
-            # (a -- 0|1)
-            # returns 1 if word at addr a is 32
+            # (a -- 0|-1)
+            # returns -1 if word at addr a is 32
             .word _comma_header
             .cstr "space?"
 _is_space:
@@ -424,13 +424,13 @@ _is_space:
             a:nop t r- [ret]
 
 
-buf: .cstr "hallo tschüss "
+buf: .cstr " hallo"
 
 _test:
         lit buf
         call _count
         lit _is_space
-        call _operate_on_range
+        call _scan
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
