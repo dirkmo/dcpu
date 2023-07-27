@@ -11,7 +11,7 @@ module dcpu(
     output         o_we,
     output         o_cs,
 
-    input          i_irq // TODO: implement interrupt handling
+    input          i_irq
 );
 
 parameter
@@ -38,13 +38,41 @@ wire s_execute /* verilator public */ = (r_state == EXECUTE);
 wire w_sim_next /* verilator public */ = w_state_changed && s_execute;
 `endif
 
+reg [1:0] r_irq_prev;
+always @(posedge i_clk)
+    r_irq_prev <= {r_irq_prev[0], i_irq};
+
+wire irq_pe = (r_irq_prev == 2'b01);
+reg r_irq /* verilator public */;
+reg r_irq_handled;
+always @(posedge i_clk)
+begin
+    if (r_irq_handled)
+        r_irq <= 1'b0;
+    else if (irq_pe)
+        r_irq <= 1'b1;
+    if (i_reset)
+        r_irq <= 1'b0;
+end
+
+always @(posedge i_clk)
+begin
+    r_irq_handled <= 1'b0;
+    if (r_irq && s_fetch)
+        r_irq_handled <= 1'b1;
+end
 
 reg [15:0] r_op /* verilator public */; // instruction register
 always @(posedge i_clk)
     if (i_reset)
         r_op <= 0;
-    else if (s_fetch && i_ack)
-        r_op <= i_dat;
+    else if (s_fetch) begin
+        if (r_irq) begin
+            r_op <= 1; // "call 1" instruction
+        end
+        else if (i_ack)
+            r_op <= i_dat;
+    end
 
 reg [15:0] T /* verilator public */; // top of dstack
 reg [15:0] N /* verilator public */; // 2nd on dstack
@@ -305,7 +333,8 @@ always @(posedge i_clk)
 reg [15:0] r_rstack[0:2**RSS-1] /* verilator public */;
 always @(posedge i_clk)
     if (s_execute && w_state_changed) begin
-        r_rstack[w_rspn] <= w_op_call ? (r_pc+1) :
+        r_rstack[w_rspn] <=     r_irq ? r_pc :
+                            w_op_call ? (r_pc+1) :
             w_op_alu_RPC_branch_taken ? (r_pc+1) :
       w_op_alu_dst_R && ~w_op_alu_nop ? w_alu[15:0] :
                                         r_rstack[w_rspn];
@@ -324,7 +353,7 @@ begin
 end
 
 wire w_mem_access_MEMT  = (w_op_alu_MEMT || w_op_alu_dst_MEMT);
-wire w_op_mem_access    = s_execute && w_op_alu && w_mem_access_MEMT;
+wire w_op_mem_access    = s_execute && w_op_alu && w_mem_access_MEMT && !r_irq;
 wire w_all_mem_accesses = s_fetch || w_op_mem_access;
 
 // state machine

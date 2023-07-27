@@ -52,6 +52,7 @@ void reset() {
     pCore->i_ack = 0;
     tick();
     tick();
+    tick();
     pCore->i_reset = 0;
 }
 
@@ -59,7 +60,7 @@ uint16_t mem[0x10000];
 
 int handle(Vdcpu *pCore) {
     // if (Verilated::gotFinish()) {
-    if ((pCore->dcpu->r_op == 0xffff) /*&& (pCore->dcpu->r_state == 1)*/) {
+    if (pCore->dcpu->r_op == 0xffff) { // && (pCore->dcpu->r_state == 1)) {
         return 1;
     }
     if (pCore->o_cs) {
@@ -86,7 +87,12 @@ typedef struct {
 
 void printregs(int count, test_t *t) {
     Vdcpu_dcpu *d = pCore->dcpu;
-    printf("%d: pc:%04x ", count, d->r_pc);
+    printf("%d: ", count);
+    if (d->r_irq) {
+        printf("irq ");
+    } else {
+        printf("pc:%04x ", d->r_pc);
+    }
     printf("T:%04x ", d->r_dstack[d->r_dsp]);
     printf("N:%04x ", d->r_dstack[d->r_dsp-1]);
     printf("R:%04x ", d->r_rstack[d->r_rsp]);
@@ -113,15 +119,14 @@ bool test(const uint16_t *prog, int len, test_t *t) {
             printregs(i, t);
             i++;
         }
+        pCore->i_irq = (t->interrupt_cycle*2 == i) || (t->interrupt_cycle*2+1 == i);
         if(handle(pCore)) {
             break;
         }
-        pCore->i_irq = (t->interrupt_cycle == i);
         tick();
     }
 
     bool total = true;
-    bool res;
     Vdcpu_dcpu *d = pCore->dcpu;
     total &= checkval(t->pc, d->r_pc, "PC");
     total &= checkval(t->t, d->r_dstack[d->r_dsp], "T");
@@ -169,8 +174,8 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    constexpr int DSS = (1 << pCore->dcpu->DSS);
-    constexpr int RSS = (1 << pCore->dcpu->RSS);
+    const int DSS = (1 << pCore->dcpu->DSS);
+    const int RSS = (1 << pCore->dcpu->RSS);
 
     int count = 1;
 
@@ -392,7 +397,6 @@ int main(int argc, char *argv[]) {
         t.t = LIT_L(82); t.n = 0; t.r = -1; t.pc = 3; t.dsp = 2; t.rsp = RSS-1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
-
 
     {
         printf("Test %d: ALU: ADD\n", count++);
@@ -703,6 +707,25 @@ int main(int argc, char *argv[]) {
         };
         test_t t = new_test();
         t.t = 0xff00; t.n = 0xff; t.r = -1; t.pc = 2; t.dsp = 1; t.rsp = RSS-1;
+        if (!test(prog, ARRSIZE(prog), &t)) goto done;
+    }
+
+    {
+        printf("Test %d: IRQ test\n", count++);
+        uint16_t prog[] = {
+            /* 0 */ RJP(COND_RJP_NONE, 4), // reset
+            /* 1 */ LIT_L(0x22), // isr
+            /* 2 */ ALU(ALU_T, RET, DST_T, 0, RSP_D), // alu return
+            /* 3 */ 0xffff,
+            /* 4 */ LIT_L(0xcd),
+            /* 5 */ LIT_L(0xce),
+            /* 6 */ LIT_L(0xcf),
+            /* 7 */ 0xffff
+        };
+
+        test_t t = new_test();
+        t.interrupt_cycle = 3;
+        t.t = 0xcf; t.n = 0x22; t.r = -1; t.pc = 7; t.dsp = 3; t.rsp = RSS-1;
         if (!test(prog, ARRSIZE(prog), &t)) goto done;
     }
 
