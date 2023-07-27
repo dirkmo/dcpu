@@ -213,8 +213,9 @@ bool pc_on_silent_breakpoint(uint16_t pc) {
 void step_over(void) {
     const uint16_t pc = pCore->dcpu->r_pc;
     const uint16_t opcode = mem[pc];
+    const uint16_t mask = OP_ALU | RSP(RSP_RPC) | DST(DST_PC);
     bool isCall = ((opcode & 0x8000) == OP_CALL);
-    isCall |= (opcode & (OP_ALU | RSP(RSP_RPC) | DST(DST_PC)));
+    isCall |= ((opcode & mask) == mask);
     if (isCall) {
         vSilentBreakPoints.push_back(pc+1);
         run = true;
