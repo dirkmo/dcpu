@@ -6,9 +6,7 @@
 
 # code entry
 
-# rj _quit
-
-rj _test
+rj _quit
 
 
 .word SIM_END
@@ -212,8 +210,8 @@ _scan_eorr: # (a2 l r:af)
             lit 0 [ret]         # (a2 -- a2 0)
 
 
-_word_header: # (-- a u)
-            # copy next word from TIB to temp area (here) as c-str (addr u)
+_word_header: # (-- a n)
+            # copy next word from TIB to temp area (here) as c-str (addr n)
             # word delimited by chars <= 32
             # moves >in pointer
             # if no word found, returns (0 0)
@@ -350,21 +348,29 @@ _emit:
             a:t mem d- r- [ret]
 
 
-_dup_header:       # (a -- a a)
+_dup_header: # (n -- n n)
             .word _emit_header
             .cstr "dup"
 _dup:
             a:t t d+ r- [ret]
 
 
-_drop_header:      # ( n -- )
+_2dup_header: # (n1 n2 -- n1 n2 n1 n2)
             .word _dup_header
+            .cstr "2dup"
+_2dup:
+            call _over
+            rj _over
+
+
+_drop_header: # ( n -- )
+            .word _2dup_header
             .cstr "drop"
 _drop:
             a:nop t d- r- [ret]
 
 
-_swap_header:      # (a b -- b a)
+_swap_header: # (a b -- b a)
             .word _drop_header
             .cstr "swap"
 _swap:
@@ -374,7 +380,7 @@ _swap:
             a:nop t d+ r- [ret] # (b a -- b a)
 
 
-_over_header:      # (a b -- a b a)
+_over_header: # (a b -- a b a)
             .word _swap_header
             .cstr "over"
 _over:
@@ -422,6 +428,16 @@ _is_space:
             lit 32              # (w -- w 32)
             call _is_equal      # (w 32 -- f)
             a:nop t r- [ret]
+
+
+_is_not_space_header:
+            # (a -- 0|-1)
+            # returns -1 if word at addr a is not 32
+            .word _is_space_header
+            .cstr "notspace?"
+_is_not_space:
+            call _is_space
+            a:inv t r- [ret]
 
 
 buf: .cstr " hallo"
