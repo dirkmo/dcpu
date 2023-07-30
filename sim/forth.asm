@@ -21,8 +21,8 @@ latest: .word _comma_header   # last word in dictionary
 dp: .word dp_init       # first free cell after dict
 
 ## input buffer
-# available space in input buffer
-tib_size: .word TIB_SIZE
+# number of words currently in TIB
+tib_num: .word 0
 # the input buffer itself
 tib: .space TIB_SIZE
 .word 13 # TIB delimiter
@@ -90,8 +90,8 @@ _quit:      # receive up to TIB_SIZE chars from keyboard
             call _tib
             lit TIB_SIZE
             call _accept    # (a n1 -- n2)
-            # store number of chars received into var "tib_size"
-            call _tib_size
+            # store number of chars received
+            lit tib_num
             call _store
             # interpret what's in TIB
             call _interpret
@@ -116,9 +116,19 @@ _tib:
             lit tib [ret]
 
 
+_tib_num_header:
+            # ( -- n)
+            # put number of words in TIB on stack
+            .word _tib_header
+            .cstr "tib-num"
+_tib_num:
+            lit tib_num
+            a:mem t r- [ret]
+
+
 _to_in_fetch_header: # ( -- c)
             # get char from TIB at pos in
-            .word _tib_header
+            .word _tib_num_header
             .cstr ">in@"
 _to_in_fetch:
             call _tib
@@ -141,19 +151,10 @@ _to_in_inc:
             a:nop t r- [ret]
 
 
-_tib_size_header:
-            # ( -- n)
-            # put size of TIB on stack
-            .word _to_in_inc_header
-            .cstr "#tib"
-_tib_size:
-            lit tib_size [ret]
-
-
 _count_header:
             # (a1 -- a2 n)
             # make addr+len pair from c-str address
-            .word _tib_size_header
+            .word _to_in_inc_header
             .cstr "count"
 _count:
             a:mem t d+      # (a1 -- a1 n)
@@ -219,17 +220,22 @@ _word_header: # (-- a n)
             .cstr "word"
 _word:
             # skip spaces, no bounds checking
-            call _to_in_fetch   # (-- c)
-            lit 33              # (c -- c 32)
-            a:sub t d-          # (c 32 -- c-32)
-            rj.nn _word_start   # (f --)
-            call _to_in_inc
-            rj _word
-_word_start: # (--)
-            call _to_in_fetch   # (-- in)
-            call _tib_size      # (in -- in TS)
-            a:sub t d-          # (in TS -- f)
-            rj.nn _word_nothing
+            call _tib           # (-- a)
+            call _tib_num       # (a -- a n)
+            lit _is_not_ws      # (a n -- a n af)
+            call _scan          # (a n af -- a f)
+            rj.z _word_nothing  # (a f -- a)
+            # a points to first non-whitespace in TIB
+            # now search next white space
+            call _dup           # (a -- a a)
+
+            call _tib           # (a a -- a a tib )
+            a:sub t d-          # (a a tib -- a n)
+            call _tib_num       # (a a -- a a n)
+            lit _is_ws          # (a a n -- a a n af)
+            call _scan          # (a a n af -- a a2 f)
+#TODO
+
             # TODO
             # copy word to here (don't use comma, because it moves "here" pointer)
 
@@ -238,6 +244,7 @@ _word_start: # (--)
 
             a:nop t r- [ret]
 _word_nothing: # (--)
+            call _drop
             call _here
             lit 0
             a:nop t r- # (addr 0)
@@ -440,13 +447,29 @@ _is_not_space:
             a:inv t r- [ret]
 
 
-buf: .cstr " hallo"
+_is_ws_header:
+            # (a -- 0|-1)
+            # returns -1 if word at addr a is <33
+            .word _is_not_space_header
+            .cstr "ws?"
+_is_ws:
+            call _fetch         # (a -- w)
+            lit 33              # (w -- w 33)
+            a:sub t d-
+            rj.n _is_ws_yes
+            lit 0 [ret]
+_is_ws_yes:
+            lit -1 [ret]
 
-_test:
-        lit buf
-        call _count
-        lit _is_space
-        call _scan
+
+_is_not_ws_header:
+            # (a -- 0|-1)
+            # returns -1 if word at addr a is >=33
+            .word _is_not_space_header
+            .cstr "notws?"
+_is_not_ws:
+            call _is_ws
+            a:inv t r- [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
