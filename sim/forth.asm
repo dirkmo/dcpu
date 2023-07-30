@@ -211,14 +211,20 @@ _scan_eorr: # (a2 l r:af)
             lit 0 [ret]         # (a2 -- a2 0)
 
 
-_word_header: # (-- a n)
-            # copy next word from TIB to temp area (here) as c-str (addr n)
+_word_header: # (-- a-cstr)
+            # copy next word from TIB to temp area (here) as c-str (addr)
             # word delimited by chars <= 32
             # moves >in pointer
-            # if no word found, returns (0 0)
+            # if no word found, returns (0)
             .word _scan_header
             .cstr "word"
 _word:
+            # first, enforce delimiter after TIB area
+            lit 13
+            call _tib
+            lit TIB_SIZE
+            a:add t d-
+            call _store
             # skip spaces, no bounds checking
             call _tib           # (-- a)
             call _tib_num       # (a -- a n)
@@ -228,26 +234,33 @@ _word:
             # a points to first non-whitespace in TIB
             # now search next white space
             call _dup           # (a -- a a)
-
-            call _tib           # (a a -- a a tib )
-            a:sub t d-          # (a a tib -- a n)
-            call _tib_num       # (a a -- a a n)
+            call _dup           # (a a -- a a a)
+            call _tib           # (a a a -- a a a tib )
+            a:sub t d-          # (a a a tib -- a a n)
+            call _tib_num       # (a a n -- a a n tn)
+            call _swap          # (a a n tn -- a a tn n)
+            a:sub t d-          # (a a tn n -- a a n)
             lit _is_ws          # (a a n -- a a n af)
             call _scan          # (a a n af -- a a2 f)
-#TODO
-
-            # TODO
-            # copy word to here (don't use comma, because it moves "here" pointer)
-
-            # count chars
-            # copy chars to here
-
+            call _drop          # (a a2 f -- a a2)
+            call _over          # (a a2 -- a a2 a)
+            a:sub t d-          # (a a2 a -- a n)
+            # copy word to here without moving here pointer
+            call _here          # (a n -- a n here)
+            # leave a word for string len
+            call _inc
+            call _swap          # (a n here -- a here n)
+            a:t r r+            # (a here n -- a here n r:n)
+            call _move          # (a here n -- r:n)
+            call _here          # ( -- here r:n)
+            a:r t d+ r-         # (here r:n -- here n)
+            call _swap          # (here n -- n here)
+            call _store         # (--)
+            call _here          # ( -- here)
             a:nop t r- [ret]
-_word_nothing: # (--)
+_word_nothing: # (a)
             call _drop
-            call _here
-            lit 0
-            a:nop t r- # (addr 0)
+            lit 0 [ret]
 
 
 _interpret_header: # ( -- )
@@ -259,7 +272,14 @@ _interpret:
             call _to_in
             call _store
             # get word
-            call _word
+            call _word          # (-- a-cstr)
+            # search word in dict
+            call _dup           # (a -- a a)
+            call _find          # (a a -- a aw)
+            call _dup
+            rj.z _interpret_number # (a aw aw -- a aw)
+_interpret_number:
+            # TODO try to convert into number
             a:nop t r- [ret]
 
 
@@ -377,8 +397,16 @@ _drop:
             a:nop t d- r- [ret]
 
 
-_swap_header: # (a b -- b a)
+_2drop_header:
             .word _drop_header
+            .cstr "2drop"
+_2drop:
+            a:nop t d-
+            a:nop t d- r- [ret]
+
+
+_swap_header: # (a b -- b a)
+            .word _2drop_header
             .cstr "swap"
 _swap:
             a:t r d- r+      # (a b -- a r:b)
@@ -470,6 +498,56 @@ _is_not_ws_header:
 _is_not_ws:
             call _is_ws
             a:inv t r- [ret]
+
+_move_word_header:
+            # (as ad -- )
+            # copy word from address as to address ad
+            .word _is_not_ws_header
+            .cstr "move-word"
+_move_word:
+            call _swap
+            call _fetch
+            call _swap
+            call _store
+            a:nop t r- [ret]
+
+
+_move_header:
+            # (as ad n -- )
+            # copy n words from as to ad
+            .word _move_word_header
+            .cstr "move"
+_move:
+            # check if words left to copy
+            call _dup           # (as ad n -- as ad n n)
+            rj.z _move_end      # (as ad n n -- as ad n)
+            a:t r d- r+         # (as ad n -- as ad r:n)
+            call _2dup
+            # copy single word
+            call _move_word
+            # increment
+            call _inc
+            call _swap
+            call _inc
+            call _swap
+            a:r t d+ r-         # (as ad r:n -- as ad n)
+            call _dec
+            rj _move
+_move_end:
+            call _2drop
+            call _drop
+            a:nop t r- [ret]
+
+
+_find_header:
+            # search word in dictionary
+            # (a1 -- a2)
+            # a1: address of cstr, the word to search for
+            # a2: address of word
+_find:
+            # TODO
+            call _drop
+            lit 0 [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
