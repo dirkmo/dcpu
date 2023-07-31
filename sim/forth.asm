@@ -17,7 +17,8 @@ rj _quit
 state: .word 0          # 0: interpreting, -1: compiling
 
 base: .word 10
-latest: .word _comma_header   # last word in dictionary
+latest: .word _tuck_header   # last word in forth dictionary
+latest_imm: .word 0   # last word in immediate dictionary
 dp: .word dp_init       # first free cell after dict
 
 ## input buffer
@@ -275,7 +276,9 @@ _interpret:
             call _word          # (-- a-cstr)
             # search word in dict
             call _dup           # (a -- a a)
-            call _find          # (a a -- a aw)
+            lit latest
+            call _fetch         # (a a latest -- a a a-dict)
+            call _find          # (a a a-dict -- a aw)
             call _dup
             rj.z _interpret_number # (a aw aw -- a aw)
 _interpret_number:
@@ -368,7 +371,7 @@ _key_avail:
 
 _emit_header: # (c --)
             # send char
-            .word _key_avail
+            .word _key_avail_header
             .cstr "emit"
 _emit:
             lit UART_TX
@@ -493,7 +496,7 @@ _is_ws_yes:
 _is_not_ws_header:
             # (a -- 0|-1)
             # returns -1 if word at addr a is >=33
-            .word _is_not_space_header
+            .word _is_ws_header
             .cstr "notws?"
 _is_not_ws:
             call _is_ws
@@ -540,14 +543,108 @@ _move_end:
 
 
 _find_header:
+            # (a-str a-dict -- a-word|0)
             # search word in dictionary
-            # (a1 -- a2)
-            # a1: address of cstr, the word to search for
-            # a2: address of word
+            # a-str: address of cstr, the word to search for
+            # a-dict: address of dictionary
+            # a-word: address of word, 0 if not found
+            .word _move_header
+            .cstr "find"
 _find:
-            # TODO
+            call _2dup
+            call _inc # move to word name
+            call _cstr_equal        # (as ad as ad -- as ad f)
+            rj.nz _find_exit
+            call _fetch             # (as ad -- as ad-next)
+            call _dup
+            rj.z _find_exit
+            rj _find
+_find_exit:
+            call _nip               # (as ad -- ad)
+            a:nop t r- [ret]
+
+
+_str_equal_header:
+            # (a1 n1 a2 n2 -- f)
+            # returns -1 if strings are equal, else 0
+            .word _find_header
+            .cstr "str="
+_str_equal:
+            call _rot           # (a1 n1 a2 n2 -- a1 a2 n2 n1)
+            call _over          # (a1 a2 n2 n1 -- a1 a2 n2 n1 n2)
+            call _is_equal      # (a1 a2 n2 n1 n2 -- a1 a2 n2 f)
+            rj.z _str_equal_no  # (a1 a2 n2 f -- a1 a2 n2)
+_str_equal_loop: # (a1 a2 n)
+            call _dup
+            rj.z _str_equal_yes
+            a:t r d- r+         # (a1 a2 n -- a1 a2 r:n)
+            call _over
+            call _fetch
+            call _over
+            call _fetch
+            call _is_equal      # (a1 a2 w1 w2 -- a1 a2 f r:n)
+            a:r t d+ r-         # (a1 a2 f r:n -- a1 a2 f n)
+            call _swap          # (a1 a2 f n -- a1 a2 n f)
+            rj.z _str_equal_no  # (a1 a2 n f -- a1 a2 n)
+            call _dec # n--
+            a:t r d- r+         # (a1 a2 n -- a1 a2 r:n)
+            call _inc # a2++
+            call _swap # since both strings have same length, swapping doesn't matter
+            call _inc # a1++
+            a:r t d+ r-         # (a1 a2 r:n -- a1 a2 n)
+            rj _str_equal_loop
+_str_equal_yes: # (a1 a2 n2)
+            call _2drop
+            call _drop
+            lit -1 [ret]
+_str_equal_no: # (a1 a2 n2)
+            call _2drop
             call _drop
             lit 0 [ret]
+
+
+_cstr_equal_header:
+            # (a1 a2 -- f)
+            # compare c-strings
+            .word _str_equal_header
+            .cstr "cstr="
+_cstr_equal:
+            a:t r d- r+
+            call _count
+            a:r t d+ r-
+            call _count
+            call _str_equal
+            a:nop t r- [ret]
+
+
+_rot_header:
+            # (n1 n2 n3 -- n2 n3 n1)
+            .word _cstr_equal_header
+            .cstr "rot"
+_rot:
+            a:t r d- r+         # (n1 n2 n3 -- n1 n2 r:n3)
+            call _swap          # (n1 n2 -- n2 n1)
+            a:r t d+ r-         # (n2 n1 r:n3 -- n2 n1 n3)
+            call _swap          # (n2 n1 n3 -- n2 n3 n1)
+            a:nop t r- [ret]
+
+
+_nip_header:
+            # (n1 n2 -- n2)
+            .word _rot_header
+            .cstr "nip"
+_nip:
+            a:t t d- r- [ret]
+
+
+_tuck_header:
+            # (n1 n2 -- n2 n1 n2)
+            .word _nip_header
+            .cstr "tuck"
+_tuck:
+            call _swap          # (n1 n2 -- n2 n1)
+            call _over          # (n2 n1 -- n2 n1 n2)
+            a:nop t r- [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
