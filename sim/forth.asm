@@ -281,7 +281,12 @@ _interpret:
             call _find          # (a a a-dict -- a aw)
             call _dup
             rj.z _interpret_number # (a aw aw -- a aw)
+            call _get_xt        # (a aw -- a xt)
+            # call word xt
+            a:t pc d- r+pc      # (a aw -- a)
+            a:nop t d- r- [ret] # (a --)
 _interpret_number:
+            call _drop          # (a aw -- a)
             # TODO try to convert into number
             a:nop t r- [ret]
 
@@ -644,6 +649,19 @@ _tuck_header:
 _tuck:
             call _swap          # (n1 n2 -- n2 n1)
             call _over          # (n2 n1 -- n2 n1 n2)
+            a:nop t r- [ret]
+
+
+_get_xt_header:
+            # (a -- xt)
+            # a points to header of a word, eg. _tuck_header
+            # returns xt, eg. address of _tuck
+_get_xt:
+            call _inc           # (a -- a)
+            call _dup           # (a -- a a)
+            call _fetch         # (a -- a n)
+            a:add t d-          # (a n -- a)
+            call _inc
             a:nop t r- [ret]
 
 
