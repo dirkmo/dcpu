@@ -282,9 +282,14 @@ _interpret:
             call _dup
             rj.z _interpret_number # (a aw aw -- a aw)
             call _get_xt        # (a aw -- a xt)
-            # call word xt
-            a:t pc d- r+pc      # (a aw -- a)
+            lit state
+            call _fetch
+            rj.nz _interpret_compile # (a xt f -- a xt)
+            # call (interpret/execute) word xt
+            a:t pc d- r+pc      # (a xt -- a)
             a:nop t d- r- [ret] # (a --)
+_interpret_compile:
+            # TODO compile word
 _interpret_number:
             call _drop          # (a aw -- a)
             # TODO try to convert into number
