@@ -26,7 +26,7 @@ dp: .word dp_init       # first free cell after dict
 tib_num: .word 0
 # the input buffer itself
 tib: .space TIB_SIZE
-.word 13 # TIB delimiter
+tib_end: .word 13 # TIB delimiter
 # offset into input buffer, 0: first char of TIB
 in: .word 0
 
@@ -117,25 +117,45 @@ _tib:
             lit tib [ret]
 
 
+_tib_to_in_header:
+            # ( -- a)
+            # put current address in TIB on stack
+            .word _tib_header
+            .cstr "tib+>in"
+_tib_to_in:
+            call _tib
+            call _to_in
+            call _fetch
+            a:add t d- r- [ret]
+
+
 _tib_num_header:
             # ( -- n)
             # put number of words in TIB on stack
-            .word _tib_header
+            .word _tib_to_in_header
             .cstr "tib-num"
 _tib_num:
             lit tib_num
             a:mem t r- [ret]
 
 
+_tib_num_left_header:
+            # ( -- n)
+            # put number of words left in TIB, starting from >in
+            .word _tib_num_header
+            .cstr "tib-num-left"
+_tib_num_left:
+            call _tib_num
+            call _to_in
+            a:sub t d- r- [ret]
+
+
 _to_in_fetch_header: # ( -- c)
             # get char from TIB at pos in
-            .word _tib_num_header
+            .word _tib_num_left_header
             .cstr ">in@"
 _to_in_fetch:
-            call _tib
-            call _to_in
-            call _fetch
-            a:add t d-
+            call _tib_to_in
             call _fetch
             a:nop t r- [ret]
 
@@ -222,9 +242,7 @@ _word_header: # (-- a-cstr)
 _word:
             # first, enforce delimiter after TIB area
             lit 13
-            call _tib
-            lit TIB_SIZE
-            a:add t d-
+            lit tib_end
             call _store
             # skip spaces, no bounds checking
             call _tib           # (-- a)
