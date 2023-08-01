@@ -117,22 +117,10 @@ _tib:
             lit tib [ret]
 
 
-_tib_to_in_header:
-            # ( -- a)
-            # put current address in TIB on stack
-            .word _tib_header
-            .cstr "tib+>in"
-_tib_to_in:
-            call _tib
-            call _to_in
-            call _fetch
-            a:add t d- r- [ret]
-
-
 _tib_num_header:
             # ( -- n)
             # put number of words in TIB on stack
-            .word _tib_to_in_header
+            .word _tib_header
             .cstr "tib-num"
 _tib_num:
             lit tib_num
@@ -145,9 +133,12 @@ _tib_num_left_header:
             .word _tib_num_header
             .cstr "tib-num-left"
 _tib_num_left:
-            call _tib_num
-            call _to_in
-            a:sub t d- r- [ret]
+            call _tib_num       # ( -- n)
+            call _to_in         # (n -- n a)
+            call _fetch         # (n a -- n >in)
+            call _tib           # (n >in -- n >in TIB)
+            a:sub t d-          # (n >in TIB -- n >in-TIB)
+            a:sub t d- r- [ret] # ( n >in-TIB -- n->in-TIB)
 
 
 _to_in_fetch_header: # ( -- c)
@@ -155,7 +146,7 @@ _to_in_fetch_header: # ( -- c)
             .word _tib_num_left_header
             .cstr ">in@"
 _to_in_fetch:
-            call _tib_to_in
+            call _to_in
             call _fetch
             a:nop t r- [ret]
 
@@ -245,32 +236,38 @@ _word:
             lit tib_end
             call _store
             # skip spaces, no bounds checking
-            call _tib           # (-- a)
-            call _tib_num       # (a -- a n)
+            call _to_in_fetch   # (-- a)
+            call _tib_num_left  # (a -- a n)
             lit _is_not_ws      # (a n -- a n af)
             call _scan          # (a n af -- a f)
             rj.z _word_nothing  # (a f -- a)
             # a points to first non-whitespace in TIB
+            # move >in pointer
+            call _dup
+            call _to_in
+            call _store
             # now search next white space
             call _dup           # (a -- a a)
-            call _dup           # (a a -- a a a)
-            call _tib           # (a a a -- a a a tib )
-            a:sub t d-          # (a a a tib -- a a n)
-            call _tib_num       # (a a n -- a a n tn)
-            call _swap          # (a a n tn -- a a tn n)
-            a:sub t d-          # (a a tn n -- a a n)
+            call _tib_num_left  # (a a -- a a n)
             lit _is_ws          # (a a n -- a a n af)
             call _scan          # (a a n af -- a a2 f)
             call _drop          # (a a2 f -- a a2)
+            # move >in pointer
+            call _dup
+            call _to_in
+            call _store
+            # calculate length of word
             call _over          # (a a2 -- a a2 a)
             a:sub t d-          # (a a2 a -- a n)
             # copy word to here without moving here pointer
             call _here          # (a n -- a n here)
-            # leave a word for string len
+            # reserve a word for string len
             call _inc
+            # copy word to temp area
             call _swap          # (a n here -- a here n)
             a:t r r+            # (a here n -- a here n r:n)
             call _move          # (a here n -- r:n)
+            # store count in front of string
             call _here          # ( -- here r:n)
             a:r t d+ r-         # (here r:n -- here n)
             call _swap          # (here n -- n here)
@@ -286,8 +283,8 @@ _interpret_header: # ( -- )
             .word _word_header
             .cstr "interpret"
 _interpret:
-            # >in = 0
-            lit 0
+            # set >in to start of TIB
+            call _tib
             call _to_in
             call _store
             # get word
