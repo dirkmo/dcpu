@@ -470,8 +470,16 @@ _2drop:
             a:nop t d- r- [ret]
 
 
-_swap_header: # (a b -- b a)
+_rdrop_header:
             .word _2drop_header
+            .cstr "rdrop"
+_rdrop:
+            a:nop t r-
+            a:nop t r- [ret]
+
+
+_swap_header: # (a b -- b a)
+            .word _rdrop_header
             .cstr "swap"
 _swap:
             a:t r d- r+      # (a b -- a r:b)
@@ -765,43 +773,96 @@ _digit2number_hex: # (n)
         lit 7                   # (n -- n 7)
         a:sub t d-              # (n 7 -- n-7)
         call _dup               # (n -- n n)
+        # TODO: use BASE!
         lit 16                  # (n n -- n n 16)
         a:sub t d-              # (n n 16 -- n n-16)
         rj.nn _digit2number_error # (n f -- n)
-        lit 1 [ret]             # (n -- n 1)
+        lit -1 [ret]            # (n -- n 1)
 _digit2number_error:            # (n)
         lit 0 [ret]             # (n -- n 0)
 
 
 _to_number_header:
-            # (d1 a1 n1 -- d2 a2 n2)
-            # convert string a/n to number with BASE.
-            # d1: accumulator, will be added to result
+            # (a1 n1 -- a2 n2 N)
+            # Convert string a/n to number with respect to BASE.
+            # Format: [-][$][0-9a-z]+
+            #         '$' will temporarily use base 16
+            #  accumulator, will be added to result
             # a1/n1: address/len
-            # d2: result of conversion
             # a2/n2: unconverted string
+            # N: result of conversion
             .word _digit2number_header
             .cstr ">number"
 _to_number:
-            # save sign (-1: negative, else positive)
-            call _str_first_nd      # (d1 a1 n1 -- d1 a1 n1 c)
+            call _dup
+            rj.z _to_number_exit0   # (a1 n1 n1 -- a1 n1)
+            # save sign (0: means there is a '-' sign)
+            call _str_first_nd      # (a1 n1 -- a1 n1 c)
             lit 45 # '-'
-            a:sub t d-              # (d1 a1 n1 c -- d1 a1 n1 sign?)
-            a:t r r+                # (d1 a1 n1 sign? -- d1 a1 n1 sign? r:sign?)
-            rj.nz _number_save_base # (d1 a1 n1 sign? r:sign? -- d1 a1 n1 r:sign?)
-            call _str_next          # (d1 a1 n1 -- d1 a1 n1 r:sign?)
+            a:sub t d-              # (a1 n1 c -- a1 n1 sign?)
+            a:t r r+                # (a1 n1 sign? -- a1 n1 sign? r:sign?)
+            rj.nz _number_save_base # (a1 n1 sign? r:sign? -- a1 n1 r:sign?)
+            call _str_next          # (a1 n1 -- a1 n1 r:sign?)
+            call _dup
+            rj.z _to_number_exit1   # (a1 n1 n1 -- a1 n1 r:sign?)
 _number_save_base:
-            call _base              # (d1 a1 n1 -- d1 a1 n1 a-base r:sign?)
-            a:mem r d- r+           # (d1 a1 n1 a-base -- d1 a1 n1 r:sign? base )
+            call _base              # (a1 n1 -- a1 n1 a-base r:sign?)
+            a:mem r d- r+           # (a1 n1 a-base -- a1 n1 r:sign? base)
             # check if next char is dollar ($) for hex numbers, put result on r-stack
             # 0 if dollar, else: not dollar
-            call _str_first_nd      # (d1 a1 n1 -- d1 a1 n1 c)
+            call _str_first_nd      # (a1 n1 -- a1 n1 c)
             lit 36 # '$'
-            a:sub t d-              # (d1 a1 n1 c 36 -- d1 a1 n1 dollar?)
-            a:t r r+                # (d1 a1 n1 dollar? -- d1 a1 n1 dollar? r:sign dollar?)
-            rj.nz _number_skip1     # (d1 a1 n1 dollar? -- d1 a1 n1 r:sign dollar?)
+            a:sub t d-              # (a1 n1 c 36 -- a1 n1 dollar?)
+            rj.nz _number_init      # (a1 n1 dollar? -- a1 n1 r:sign? base)
+            # yes, dollar: set base to 16
+            lit 16
+            call _base
+            call _store
+            # move to next char
             call _str_next
-_number_skip1: # (d1 a1 n1 r:sign dollar?)
+            call _dup
+            rj.z _to_number_exit2   # (a1 n1 n1 -- a1 n1)
+_number_init: # (a1 n1)
+            lit 0 # accumulator N
+            a:t r d- r+             # (a1 n1 N -- a1 n1 r:sign? base N)
+_number_loop: # (a1 n1 r:sign? base N)
+            # the loop that converts and adds all the digits begins here
+            call _str_first_nd      # (a1 n1 -- a1 n1 c r:sign? base N)
+            call _digit2number      # (a1 n1 c -- a1 n1 u f r:sign? base N)
+            rj.z _to_number_exit3   # (a1 n1 u f -- a1 n1 u r:sign? base N)
+            # Multiply accumulator with BASE
+            a:r t d+ r-             # (a1 n1 u r:sign? base N -- a1 n1 u N r:sign? base)
+            call _base
+            call _fetch             # (a1 n1 u N -- a1 n1 u N BASE r:sign? base)
+            a:mull t d-             # (a1 n1 u N BASE -- a1 n1 u N r:sign? base)
+            a:add r d- r+           # (a1 n1 u N -- a1 n1 u r:sign? base N)
+            call _drop              # (a1 n1 u -- a1 n1 r:sign? base N)
+            call _str_next
+            call _dup
+            rj.nz _number_loop      # (a1 n1 n1 -- a1 n1 r:sign? base N)
+            # conversion done, unwind r-stack
+            a:r t d+ r-             # (a1 n1 r:sign? base N -- a1 n1 N r:sign? base)
+            # restore base
+            a:r t d+ r-             # (a1 n1 N r:sign? base -- a1 n1 N base r:sign?)
+            call _base
+            call _store             # (a1 n1 N base a-base r:sign? -- a1 n1 N r:sign?)
+            # apply sign
+            a:r t d+ r-             # (a1 n1 N r:sign? -- a1 n1 N sign?)
+            rj.nz _to_number_done   # (a1 n1 N sign? -- a1 n1 N)
+            lit 0
+            call _swap
+            a:sub t d-
+_to_number_done: # (a1 n1 N)
+            a:nop t r- [ret]
+_to_number_exit3: # (a1 n1 u r:sign? base N)
+            call _drop              # (a1 n1 r:sign? base N)
+            call _rdrop
+_to_number_exit2: # (a1 n1 r:sign? base)
+            call _rdrop # ( ... -- a1 n1 r:sign?)
+_to_number_exit1: # (a1 n1 r:sign?)
+            call _rdrop # ( ... -- a1 n1)
+_to_number_exit0: # (a1 n1)
+            lit 0 [ret]             # (a1 n1 -- a1 n1 0)
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
