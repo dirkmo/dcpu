@@ -38,14 +38,24 @@ in: .word 0
 
 # https://www.complang.tuwien.ac.at/forth/gforth/Docs-html/String-Formats.html
 # c-addr can have two meanings:
-# (c-addr) address of c-str, pointing on count
+# (c-addr)   address of c-str, pointing on count, followed by chars. I will call these c-str
 # (c-addr u) c-addr: address of first char of string, u: char count
+#            I will call these a/n-str
 
+
+
+_base_header:
+            # ( -- a)
+            # return address BASE
+            .word 0
+            .cstr "base"
+_base:
+            lit base [ret]
 
 _inc_header:
             # increment TOS by 1
             # (n -- n+1)
-            .word 0
+            .word _base_header
             .cstr "1+"
 _inc:
             lit 1
@@ -165,7 +175,7 @@ _to_in_inc:
 
 _count_header:
             # (a1 -- a2 n)
-            # make addr+len pair from c-str address
+            # make a/n-str from c-str address
             .word _to_in_inc_header
             .cstr "count"
 _count:
@@ -176,16 +186,42 @@ _count:
             a:nop t r- [ret]
 
 
-_advance_str_header:
-            # (a n -- a n)
-            # will increment address and decrement count of a c-str
-            # but only if count is greater 0
+_str_first_header:
+            # (a n -- w)
+            # return first word of a/n-string
+            # if n=0, w=0
             .word _count_header
+            .cstr "str-first"
+_str_first:
+            rj.z _str_first_empty   # (a n -- a)
+            a:mem t r- [ret]        # (a -- w)
+_str_first_empty:
+            call _drop
+            lit 0 [ret]
+
+
+_str_first_nd_header:
+            # (a n -- a n w)
+            # return first word of a/n-string
+            # if n=0, w=0
+            # this will not drop a/n from stack
+            .word _str_first_header
+            .cstr "str-first-nd"
+_str_first_nd:
+            call _2dup
+            rj _str_first
+
+
+_str_next_header:
+            # (a n -- a n)
+            # will increment address and decrement count of a a/n-string
+            # but only if count is greater 0
+            .word _str_first_nd_header
             .cstr "advance-str"
-_advance_str:
+_str_next:
             call _dup       # (a n -- a n n)
-            rj.z _advance_str_exit # (a n n -- a n)
-_advance_str_exit:
+            rj.z _str_next  # (a n n -- a n)
+_str_next:
             call _dec       # (a n -- a n-1)
             call _swap      # (a n -- n a)
             call _inc
@@ -201,7 +237,7 @@ _scan_header: # (a1 l af -- a2 0|-1)
             #   af returns non-zero: (-- a2 -1)
             # Function af: (a -- 0|-1)
             #   Takes address a, does something and returns 0 or -1.
-            .word _advance_str_header
+            .word _str_next_header
             .cstr "scan"
 _scan: # (a1 l af)
             a:t r d- r+         # (a1 l af -- a1 l r:af)
@@ -213,7 +249,7 @@ _scan_loop: # (a1 l r:af)
             # call function af
             a:r pc r+pc         # (a1 l a1 r:af -- a1 l f r:af)
             rj.nz _scan_found # (a1 l f -- a1 l r:af)
-            call _advance_str   # (a1 l -- a1 l)
+            call _str_next   # (a1 l -- a1 l)
             rj _scan_loop
 _scan_found: # (a2 l r:af)
             a:nop t d- r-         # (a2 l r:af -- a2)
@@ -686,6 +722,57 @@ _get_xt:
             a:nop t r- [ret]
 
 
+_upchar_header: # (c -- C)
+        # convert char to upper case
+        .word _get_xt_header
+        .cstr "upchar"
+_upchar:
+        call _dup       # (c -- c c)
+        lit 32          # ( c c -- c c 32)
+        a:sub t d-      # ( c c 32 -- c c-32)
+        call _dup       # ( c C -- c C C)
+        lit 65 # 'A'    # ( c C C -- c C C 65)
+        a:lt t d-       # ( c C C 65 -- c C f)
+        rj.nz _upchar_1 # ( c C f -- c C)
+        call _dup       # ( c C -- c C C)
+        lit 91 # 90='Z' # ( c C C -- c C C 91)
+        a:lt t d-       # ( c C C 91 -- c C f)
+        rj.z _upchar_1  # ( c C f -- c C)
+        call _nip       # ( c C -- C)
+_upchar_done:
+        a:nop t r- [ret]    # (c -- c)
+_upchar_1: # (c C)
+        a:nop t d- r- [ret] # (c C -- c)
+
+
+_digit2number_header:  # (c -- n f)
+        # convert hexchar to int n
+        # f=0 on error, f=1 on success
+        .word _upchar_header
+        .cstr "digit>num"
+_digit2number:
+        call _upchar            # (c -- C)
+        lit 48                  # (c -- c '0')
+        a:sub t d-              # (c '0' -- n)
+        call _dup               # (n -- n n)
+        rj.n _digit2number_error    # (n n -- n)
+        lit 10                  # (n -- n 10)
+        a:sub t                 # (n 10 -- n n-10)
+        # if T < 0: number 0-9
+        rj.nn _digit2number_hex # (n f -- n)
+        lit 1 [ret]             # (n - n 1)
+_digit2number_hex: # (n)
+        lit 7                   # (n -- n 7)
+        a:sub t d-              # (n 7 -- n-7)
+        call _dup               # (n -- n n)
+        lit 16                  # (n n -- n n 16)
+        a:sub t d-              # (n n 16 -- n n-16)
+        rj.nn _digit2number_error # (n f -- n)
+        lit 1 [ret]             # (n -- n 1)
+_digit2number_error:            # (n)
+        lit 0 [ret]             # (n -- n 0)
+
+
 _to_number_header:
             # (d1 a1 n1 -- d2 a2 n2)
             # convert string a/n to number with BASE.
@@ -693,36 +780,28 @@ _to_number_header:
             # a1/n1: address/len
             # d2: result of conversion
             # a2/n2: unconverted string
-            .word _get_xt_header
+            .word _digit2number_header
             .cstr ">number"
 _to_number:
-            call _hex_to_num
-            a:nop t r- [ret]
-
-
-_hex_to_num_header:
-            # (a -- n f)
-            .word _to_number_header
-            .cstr "hex2num"
-_hex_to_num:
-            call _fetch     # (a -- w)
-            call _dup       # (w -- w w)
-            call _base      # (w w -- w w a)
-            call _fetch     # (w w a -- w w base)
-            a:lt t d-       # (w w base -- w f)
-            rj.nz _hex_to_num_invalid # (w f -- w)
-_hex_to_num_invalid:
-            call _drop
-            lit 0 [ret]
-
-
-_base_header:
-            # ( -- a)
-            # return address BASE
-            .word _hex_to_num_header
-            .cstr "base"
-_base:
-            lit _base [ret]
+            # save sign (-1: negative, else positive)
+            call _str_first_nd      # (d1 a1 n1 -- d1 a1 n1 c)
+            lit 45 # '-'
+            a:sub t d-              # (d1 a1 n1 c -- d1 a1 n1 sign?)
+            a:t r r+                # (d1 a1 n1 sign? -- d1 a1 n1 sign? r:sign?)
+            rj.nz _number_save_base # (d1 a1 n1 sign? r:sign? -- d1 a1 n1 r:sign?)
+            call _str_next          # (d1 a1 n1 -- d1 a1 n1 r:sign?)
+_number_save_base:
+            call _base              # (d1 a1 n1 -- d1 a1 n1 a-base r:sign?)
+            a:mem r d- r+           # (d1 a1 n1 a-base -- d1 a1 n1 r:sign? base )
+            # check if next char is dollar ($) for hex numbers, put result on r-stack
+            # 0 if dollar, else: not dollar
+            call _str_first_nd      # (d1 a1 n1 -- d1 a1 n1 c)
+            lit 36 # '$'
+            a:sub t d-              # (d1 a1 n1 c 36 -- d1 a1 n1 dollar?)
+            a:t r r+                # (d1 a1 n1 dollar? -- d1 a1 n1 dollar? r:sign dollar?)
+            rj.nz _number_skip1     # (d1 a1 n1 dollar? -- d1 a1 n1 r:sign dollar?)
+            call _str_next
+_number_skip1: # (d1 a1 n1 r:sign dollar?)
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
