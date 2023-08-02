@@ -438,7 +438,7 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
     noecho();
 
-    for (auto c: string("rot\r")) {
+    for (auto c: string("123\r")) {
         l_sim2dcpu.push_back(c);
     }
 

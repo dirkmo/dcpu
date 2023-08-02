@@ -17,7 +17,7 @@ rj _quit
 state: .word 0          # 0: interpreting, -1: compiling
 
 base: .word 10
-latest: .word _tuck_header   # last word in forth dictionary
+latest: .word _dec_header   # last word in forth dictionary
 latest_imm: .word 0   # last word in immediate dictionary
 dp: .word dp_init       # first free cell after dict
 
@@ -307,7 +307,8 @@ _interpret_compile:
             # TODO compile word
 _interpret_number:
             call _drop          # (a aw -- a)
-            # TODO try to convert into number
+            call _count         # (a -- a n)
+            call _to_number
             a:nop t r- [ret]
 
 
@@ -683,6 +684,45 @@ _get_xt:
             a:add t d-          # (a n -- a)
             call _inc
             a:nop t r- [ret]
+
+
+_to_number_header:
+            # (d1 a1 n1 -- d2 a2 n2)
+            # convert string a/n to number with BASE.
+            # d1: accumulator, will be added to result
+            # a1/n1: address/len
+            # d2: result of conversion
+            # a2/n2: unconverted string
+            .word _get_xt_header
+            .cstr ">number"
+_to_number:
+            call _hex_to_num
+            a:nop t r- [ret]
+
+
+_hex_to_num_header:
+            # (a -- n f)
+            .word _to_number_header
+            .cstr "hex2num"
+_hex_to_num:
+            call _fetch     # (a -- w)
+            call _dup       # (w -- w w)
+            call _base      # (w w -- w w a)
+            call _fetch     # (w w a -- w w base)
+            a:lt t d-       # (w w base -- w f)
+            rj.nz _hex_to_num_invalid # (w f -- w)
+_hex_to_num_invalid:
+            call _drop
+            lit 0 [ret]
+
+
+_base_header:
+            # ( -- a)
+            # return address BASE
+            .word _hex_to_num_header
+            .cstr "base"
+_base:
+            lit _base [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
