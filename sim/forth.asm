@@ -474,8 +474,8 @@ _rdrop_header:
             .word _2drop_header
             .cstr "rdrop"
 _rdrop:
-            a:nop t r-
-            a:nop t r- [ret]
+            a:r t d+ r-     # save return address
+            a:t pc d- r-    # pop data from rstack and return
 
 
 _swap_header: # (a b -- b a)
@@ -755,7 +755,7 @@ _upchar_1: # (c C)
 
 _digit2number_header:  # (c -- n f)
         # convert hexchar to int n
-        # f=0 on error, f=1 on success
+        # f=0 on error, f=-1 on success
         .word _upchar_header
         .cstr "digit>num"
 _digit2number:
@@ -768,15 +768,17 @@ _digit2number:
         a:sub t                 # (n 10 -- n n-10)
         # if T < 0: number 0-9
         rj.nn _digit2number_hex # (n f -- n)
-        lit 1 [ret]             # (n - n 1)
+        lit -1 [ret]             # (n - n 1)
 _digit2number_hex: # (n)
         lit 7                   # (n -- n 7)
         a:sub t d-              # (n 7 -- n-7)
         call _dup               # (n -- n n)
         # TODO: use BASE!
-        lit 16                  # (n n -- n n 16)
-        a:sub t d-              # (n n 16 -- n n-16)
-        rj.nn _digit2number_error # (n f -- n)
+        #lit 16                  # (n n -- n n 16)
+        call _base
+        call _fetch             # (n n -- n n base)
+        a:sub t d-              # (n n base -- n n-base)
+        rj.nn _digit2number_error # (n n-base -- n)
         lit -1 [ret]            # (n -- n 1)
 _digit2number_error:            # (n)
         lit 0 [ret]             # (n -- n 0)
@@ -855,8 +857,10 @@ _number_loop: # (a1 n1 r:sign? base N)
 _to_number_done: # (a1 n1 N)
             a:nop t r- [ret]
 _to_number_exit3: # (a1 n1 u r:sign? base N)
-            call _drop              # (a1 n1 r:sign? base N)
-            call _rdrop
+            a:r t r-                # (a1 n1 u r:sign? base N -- a1 n1 N r:sign? base)
+            call _rdrop             # (a1 n1 N r:sign? base -- a1 n1 N r:sign?)
+            call _rdrop             # (a1 n1 N r:sign? -- a1 n1 N)
+            rj _to_number_done
 _to_number_exit2: # (a1 n1 r:sign? base)
             call _rdrop # ( ... -- a1 n1 r:sign?)
 _to_number_exit1: # (a1 n1 r:sign?)
