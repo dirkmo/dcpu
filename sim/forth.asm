@@ -335,12 +335,14 @@ _interpret:
             call _get_xt        # (a aw -- a xt)
             lit state
             call _fetch
-            rj.nz _interpret_compile # (a xt f -- a xt)
+            #rj.nz _interpret_compile # (a xt f -- a xt)
+            rj.z _interpret_compile # (a xt f -- a xt) # testing! remove this....
             # call (interpret/execute) word xt
             a:t pc d- r+pc      # (a xt -- a)
             a:nop t d- r- [ret] # (a --)
-_interpret_compile:
-            # TODO compile word
+_interpret_compile: # (a xt)
+            call _compile       # (a xt -- a)
+            a:nop t r- [ret]
 _interpret_number:
             call _drop          # (a aw -- a)
             call _count         # (a -- a n)
@@ -509,7 +511,7 @@ _here_header: # ( -- a)
             .cstr "here"
 _here:
             lit dp
-            call _fetch
+            call _fetch # TODO: optimize
             a:nop t r- [ret]
 
 
@@ -867,6 +869,27 @@ _to_number_exit1: # (a1 n1 r:sign?)
             call _rdrop # ( ... -- a1 n1)
 _to_number_exit0: # (a1 n1)
             lit 0 [ret]             # (a1 n1 -- a1 n1 0)
+
+
+_compile_header:
+            # (xt --)
+            # compile call to xt to dict
+            .word _to_number
+            .cstr "compile"
+_compile:
+            lit 0x8000
+            a:lt t
+            rj.z _compile_far_call
+            call _comma         # (op --)
+            a:nop t r- [ret]
+_compile_far_call:
+            # TODO
+            # create opcodes, that pushes literals of xt on stack
+            # lit.l 0x8000  100 <imm:13>
+            # lit.h 0xa000  101 <unused:4> <return:1> <imm:8>
+            # create opcode, that pushes literal of alu-call on stack
+            # a:t pc d- r+pc
+            a:nop t r- [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
