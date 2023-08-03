@@ -213,8 +213,8 @@ bool pc_on_silent_breakpoint(uint16_t pc) {
 void step_over(void) {
     const uint16_t pc = pCore->dcpu->r_pc;
     const uint16_t opcode = mem[pc];
-    const uint16_t mask = 0xe000 | DST(3);
-    const uint16_t value = OP_ALU | DST(DST_PC);
+    const uint16_t mask = 0xe000 | DST(3) | RSP(3);
+    const uint16_t value = OP_ALU | DST(DST_PC) | RSP(RSP_RPC);
     bool isCall = ((opcode & 0x8000) == OP_CALL);
     isCall |= (opcode & mask) == value; // call via alu
     if (isCall) {
@@ -438,7 +438,7 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
     noecho();
 
-    for (auto c: string("-$123\r")) {
+    for (auto c: string("5a\r")) {
         l_sim2dcpu.push_back(c);
     }
 
