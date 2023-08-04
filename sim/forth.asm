@@ -925,22 +925,41 @@ _close_bracket:
             a:t mem d- r- [ret]
 
 
-
 _create_header:
-            # ("name" --)
+            # ("name" -- )
             # parsing word
             # create new dict entry
             .word _close_bracket_header
             .cstr "create"
 _create:
-            call _word
-
+            # get next word from TIB
+            call _word              # ( -- a n)
+            call _dup
+            rj.z _create_fail
+            # write address of previous word header
+            lit latest
+            call _fetch             # (a n -- a n latest)
+            call _comma             # (a n latest -- a n)
+            ## write c-str of name
+            # count
+            call _dup
+            call _comma
+            call _here              # (a n -- a n here)
+            call _swap              # (a n here -- a here n)
+            a:t r r+                # (a here n -- a here n r:n)
+            call _move              # (a here n -- r:n)
+            a:r t d+ r-             # (r:n -- n)
+            call _here_add          # (n -- )
+            a:nop t r- [ret]
+_create_fail:
+            call _2drop
+            a:nop t r- [ret]
 
 _colon_header:
             # ("name" -- entry)
             # parsing word
             # create new dict entry and enter compilation mode
-            # puts address of new dict entry on stack
+            # entry: address of new dict entry
             .word _create_header
             .cstr ":"
 _colon:
