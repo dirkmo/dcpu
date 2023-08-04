@@ -117,6 +117,7 @@ class OpLit(OpBase):
         ops = [OpBase.OP_LITL | (v & ((1<<13)-1))]
 
         if sym or (v >= (1<<13)) or ret:
+            # TODO: warum sym?? führt dazu, dass alle symbole lit.h nutzen, auch wenn v klein genug
             ops.append(OpBase.OP_LITH | ((v>>8)&0xff) | (ret << 8))
 
         return ops

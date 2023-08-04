@@ -16,7 +16,7 @@ rj _quit
 state: .word 0          # 0: interpreting, -1: compiling
 
 base: .word 10
-latest: .word _dec_header   # last word in forth dictionary
+latest: .word _semicolon_header   # last word in forth dictionary
 latest_imm: .word 0   # last word in immediate dictionary
 dp: .word dp_init       # first free cell after dict
 
@@ -898,6 +898,62 @@ _compile_far_call:
             lit 0xc02b
             call _comma
             a:nop t r- [ret]
+
+
+_open_bracket_header:
+            # enter compilation mode
+            # the interpreter will compile words to the dictionary
+            .word _compile_header
+            .cstr "["
+_open_bracket:
+            lit -1 # -1: compiling
+            lit state
+            a:t mem d- r- [ret]
+
+
+_close_bracket_header:
+            # leave compilation mode, enter immediate/execution mode
+            # the interpreter will execute words
+            .word _open_bracket_header
+            .cstr "["
+_close_bracket:
+            lit 0 # 0: interpreting
+            lit state
+            a:t mem d- r- [ret]
+
+
+
+_create_header:
+            # ("name" --)
+            # parsing word
+            # create new dict entry
+            .word _close_bracket_header
+            .cstr "create"
+_create:
+            # TODO
+
+
+_colon_header:
+            # ("name" -- entry)
+            # parsing word
+            # create new dict entry and enter compilation mode
+            # puts address of new dict entry on stack
+            .word _create_header
+            .cstr ":"
+_colon:
+            call _here              # ( -- here)
+            call _create
+            call _open_bracket
+            a:nop t r- [ret]
+
+
+_semicolon_header:
+            # (entry -- )
+            # end compilation mode, update "latest" pointer
+_semicolon:
+            call _close_bracket
+            lit latest
+            a:t mem d- r- [ret]     # (entry latest -- )
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
