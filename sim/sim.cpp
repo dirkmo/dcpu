@@ -194,6 +194,16 @@ void breakpoint_set(uint16_t addr) {
     }
 }
 
+int symbol_breakpoint_set(const char *symbol) {
+    uint16_t addr;
+    if (mapSymbols.find(symbol) != mapSymbols.end()) {
+        addr = mapSymbols[symbol];
+        breakpoint_set(addr);
+        return 0;
+    }
+    return 1;
+}
+
 void breakpoint_list(void) {
     vMessages.push_back("Breakpoints:");
     for (auto it: vBreakPoints) {
@@ -292,12 +302,16 @@ enum user_action user_interaction(void) {
     }
 
     uint32_t val, val2 = 0xffffffff;
+    char buf[128];
     if (sUserInput.size() == 0) {
         return UA_STEP; // step into
     } else if (sUserInput == "run") {
         run = true;
-    } else if (sscanf(sUserInput.c_str(), "break %x", &val) == 1) {
-        breakpoint_set(val);
+    } else if (sscanf(sUserInput.c_str(), "break %s", buf) == 1) {
+        if (symbol_breakpoint_set(buf)) {
+            val = strtol(buf, nullptr, 0);
+            breakpoint_set(val);
+        }
     } else if (sUserInput == "list") {
         breakpoint_list();
     } else if (sUserInput == "reset") {
@@ -406,19 +420,6 @@ int kbhit(void) {
     }
     nodelay(stdscr, FALSE);
     return (ch != ERR);
-}
-
-void symbol_breakpoint_set(const char *symbol) {
-    uint16_t addr;
-    try
-    {
-        addr = mapSymbols[symbol];
-        breakpoint_set(addr);
-    }
-    catch (const std::exception& e)
-    {
-        cout << "Failed to set breakpoint" << endl;
-    }
 }
 
 string getbasename(string asm_fn) {
