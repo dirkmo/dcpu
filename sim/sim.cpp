@@ -494,7 +494,7 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
     noecho();
 
-    for (auto c: string("create test\r")) {
+    for (auto c: string("create test create hallo\r")) {
         l_sim2dcpu.push_back(c);
     }
 

@@ -103,6 +103,10 @@ _quit:      # receive up to TIB_SIZE chars from keyboard
             # store number of chars received
             lit tib_num
             call _store
+            # set >in to start of TIB
+            call _tib
+            call _to_in
+            call _store
             # interpret what's in TIB
             call _interpret
             rj _quit
@@ -303,12 +307,10 @@ _interpret_header: # ( -- )
             .word _word_header
             .cstr "interpret"
 _interpret:
-            # set >in to start of TIB
-            call _tib
-            call _to_in
-            call _store
             # get word
-            call _word              # (-- a n)
+            call _word              # ( -- a n)
+            call _dup               # (a n -- a n n)
+            rj.z _interpret_exit
             # search word in dict
             call _2dup              # (a n -- a n a n)
             lit latest
@@ -326,15 +328,17 @@ _interpret:
             rj.nz _interpret_compile # (xt f -- xt)
             # call (interpret/execute) word xt
             a:t pc d- r+pc          # (xt -- )
-            a:nop t r- [ret]        # ( -- )
+            rj _interpret
 _interpret_compile: # (a n xt)
             call _compile           # (xt -- )
-            a:nop t r- [ret]
+            rj _interpret
 _interpret_number:
             call _drop              # (a n aw -- a n)
             call _to_number         # (a n -- N)
-            a:nop t r- [ret]
-
+            rj _interpret
+_interpret_exit: # (a n)
+            call _2drop
+            a:nop t r-
 
 _fetch_header:     # (addr -- n)
             .word _interpret_header
@@ -425,7 +429,7 @@ _emit_header: # (c --)
             .cstr "emit"
 _emit:
             lit UART_TX
-            a:t mem d- r- [ret]
+            a:n mem d- r- [ret]
 
 
 _dup_header: # (n -- n n)
@@ -870,10 +874,37 @@ _to_number_exit0: # (a1 n1)
             lit 0 [ret]             # (a1 n1 -- a1 n1 0)
 
 
+_lit_comma_header:
+            # (n -- )
+            # create opcode(s) to push literal on stack
+            # and append them to dict
+            .word _to_number_header
+            .cstr "lit,"
+_lit_comma:
+            # opcode lit.l 0x8000 | n-lo
+            lit 0x1fff
+            a:and t             # (n -- n n-lo)
+            lit 0x8000 # opcode lit.l
+            a:or t d-           # (n n-lo 0x8000 -- n op)
+            call _comma         # (n op -- n)
+            # opcode lit.h 0xa000 | n-hi
+            a:srw t             # (n -- n-hi)
+            lit 0xe0
+            a:and t d-
+            call _dup           #(n-hi -- n-hi n-hi)
+            rj.z _lit_comma_no_lith
+            lit 0xa000 # opcode lit.h
+            a:or t d-           # (n-hi -- op)
+            call _comma
+            a:nop t r- [ret]
+_lit_comma_no_lith: # (n-hi)
+            a:nop t d- r- [ret]
+
+
 _compile_header:
             # (xt --)
             # compile call to xt to dict
-            .word _to_number_header
+            .word _lit_comma_header
             .cstr "compile"
 _compile:
             # check if xt is below address 0x8000 (near call)
@@ -886,17 +917,7 @@ _compile:
             a:nop t r- [ret]
 _compile_far_call:
             # compile far call
-            # opcode lit.l 0x8000 | xt-lo
-            lit 0xff
-            a:and t             # (xt -- xt xt-lo)
-            lit 0x8000 # opcode lit.l
-            a:or t d-           # (xt xt-lo 0x8000 -- xt op)
-            call _comma         # (xt op -- xt)
-            # opcode lit.h 0xa000 | xt-hi
-            a:srw t             # (xt -- xt-hi)
-            lit 0xa000 # opcode lit.h
-            a:or t d-           # (xt-hi -- op)
-            call _comma
+            call _lit_comma
             # opcode a:t pc d- r+pc
             lit 0xc02b
             call _comma
@@ -911,7 +932,7 @@ _open_bracket_header:
 _open_bracket:
             lit -1 # -1: compiling
             lit state
-            a:t mem d- r- [ret]
+            a:n mem d- r- [ret]
 
 
 _close_bracket_header:
@@ -922,7 +943,7 @@ _close_bracket_header:
 _close_bracket:
             lit 0 # 0: interpreting
             lit state
-            a:t mem d- r- [ret]
+            a:n mem d- r- [ret]
 
 
 _create_header:
@@ -934,12 +955,18 @@ _create_header:
 _create:
             # get next word from TIB
             call _word              # ( -- a n)
-            call _dup
-            rj.z _create_fail
+            call _dup               # (a n -- a n n)
+            rj.z _create_fail       # (a n n -- a n)
+            # put here on stack, this is the header address (ah)
+            call _here              # (a n -- a n ah)
             # write address of previous word header
             lit latest
-            call _fetch             # (a n -- a n latest)
-            call _comma             # (a n latest -- a n)
+            call _fetch
+            call _comma
+            # update latest
+            lit latest
+            a:n mem d-              # (a n ah latest -- a n ah)
+            call _drop              # (a n ah -- a n)
             ## write c-str of name
             # count
             call _dup
@@ -947,9 +974,13 @@ _create:
             call _here              # (a n -- a n here)
             call _swap              # (a n here -- a here n)
             a:t r r+                # (a here n -- a here n r:n)
+            # copy chars
             call _move              # (a here n -- r:n)
             a:r t d+ r-             # (r:n -- n)
             call _here_add          # (n -- )
+            # add opcode that pushes here on stack
+            call _here
+            call _lit_comma         # (here -- )
             a:nop t r- [ret]
 _create_fail:
             call _2drop
@@ -963,7 +994,6 @@ _colon_header:
             .word _create_header
             .cstr ":"
 _colon:
-            call _here              # ( -- here)
             call _create
             call _open_bracket
             a:nop t r- [ret]
@@ -976,8 +1006,7 @@ _semicolon_header:
             .cstr ";"
 _semicolon:
             call _close_bracket
-            lit latest
-            a:t mem d- r- [ret]     # (entry latest -- )
+            a:nop t r- [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
