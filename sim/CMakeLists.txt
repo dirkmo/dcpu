@@ -27,7 +27,7 @@ add_custom_target(assemble
 )
 
 add_custom_target(simulate
-    COMMAND ${PROJECT_BINARY_DIR}/simulator ${PROJECT_SOURCE_DIR}/forth.bin ${PROJECT_SOURCE_DIR}/forth.sim
+    COMMAND ${PROJECT_BINARY_DIR}/simulator ${PROJECT_SOURCE_DIR}/forth.bin
     DEPENDS assemble
     DEPENDS simulator
     COMMENT "Executing simulation..."

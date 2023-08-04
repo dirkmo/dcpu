@@ -930,7 +930,7 @@ _create_header:
             .word _close_bracket_header
             .cstr "create"
 _create:
-            # TODO
+            call _word
 
 
 _colon_header:
@@ -950,6 +950,8 @@ _colon:
 _semicolon_header:
             # (entry -- )
             # end compilation mode, update "latest" pointer
+            .word _colon_header
+            .cstr ";"
 _semicolon:
             call _close_bracket
             lit latest

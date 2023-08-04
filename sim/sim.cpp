@@ -8,6 +8,7 @@
 #include "dcpu.h"
 #include <vector>
 #include <list>
+#include <map>
 #include <algorithm>
 #include <ncurses.h>
 #include <iostream>
@@ -49,6 +50,7 @@ vector<uint16_t> vBreakPoints;
 vector<uint16_t> vSilentBreakPoints;
 vector<string> vSourceList;
 vector<string> vMessages;
+map<string, uint16_t> mapSymbols;
 string sUserInput;
 
 list<char> l_sim2dcpu;
@@ -148,8 +150,11 @@ int program_load(const char *fn, uint16_t offset) {
     return 0;
 }
 
-int source_load(const char *fn) {
+int source_load(string fn) {
     ifstream in(fn);
+    if (!in.good()) {
+        return -1;
+    }
     string s;
     while(getline(in, s)) {
         if (s.size() > 0) {
@@ -403,10 +408,47 @@ int kbhit(void) {
     return (ch != ERR);
 }
 
+void symbol_breakpoint_set(const char *symbol) {
+    uint16_t addr;
+    try
+    {
+        addr = mapSymbols[symbol];
+        breakpoint_set(addr);
+    }
+    catch (const std::exception& e)
+    {
+        cout << "Failed to set breakpoint" << endl;
+    }
+}
+
+string getbasename(string asm_fn) {
+    int pos = asm_fn.rfind(".");
+    return asm_fn.substr(0, pos);
+}
+
+int symbols_load(string sym_fn) {
+    ifstream in(sym_fn);
+    if (!in.good()) {
+        return -1;
+    }
+    string s;
+
+    while(getline(in, s)) {
+        if (s.size() > 0) {
+            int pos = s.find(" ");
+            string name = s.substr(0, pos);
+            uint16_t value = stoi(s.substr(pos+1), nullptr, 0);
+            mapSymbols[name] = value;
+        }
+    }
+    return 0;
+}
+
 int main(int argc, char *argv[]) {
     printf("dcpu simulator\n\n");
-    if (argc < 3) {
-        fprintf(stderr, "Missing file names\n");
+    if (argc < 2) {
+        fprintf(stderr, "%s <prog.bin> [symbol]\n", argv[0]);
+        fprintf(stderr, "symbol: optional symbol name for setting breakpoint\n");
         return -1;
     }
 
@@ -415,9 +457,22 @@ int main(int argc, char *argv[]) {
         return -2;
     }
 
-    if (source_load(argv[2])) {
-        fprintf(stderr, "ERROR: Failed to load sim file '%s'\n", argv[2]);
+    string basename = getbasename(argv[1]);
+    string sim_fn = basename + ".sim";
+    string sym_fn = basename + ".symbols";
+
+    if (source_load(sim_fn)) {
+        fprintf(stderr, "ERROR: Failed to load sim file '%s'\n", sim_fn.c_str());
         return -3;
+    }
+
+    if (symbols_load(sym_fn)) {
+        fprintf(stderr, "ERROR: Failed to load sym file '%s'\n", sym_fn.c_str());
+        return -4;
+    }
+
+    if (argc >= 3) {
+        symbol_breakpoint_set(argv[2]);
     }
 
     Verilated::traceEverOn(true);
@@ -438,7 +493,7 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
     noecho();
 
-    for (auto c: string("1-\r")) {
+    for (auto c: string("create test\r")) {
         l_sim2dcpu.push_back(c);
     }
 
