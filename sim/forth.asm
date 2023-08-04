@@ -5,7 +5,6 @@
 .equ UART_TX 0xffff
 
 # code entry
-
 rj _quit
 
 
@@ -335,8 +334,7 @@ _interpret:
             call _get_xt        # (a aw -- a xt)
             lit state
             call _fetch
-            #rj.nz _interpret_compile # (a xt f -- a xt)
-            rj.z _interpret_compile # (a xt f -- a xt) # testing! remove this....
+            rj.nz _interpret_compile # (a xt f -- a xt)
             # call (interpret/execute) word xt
             a:t pc d- r+pc      # (a xt -- a)
             a:nop t d- r- [ret] # (a --)
@@ -775,8 +773,6 @@ _digit2number_hex: # (n)
         lit 7                   # (n -- n 7)
         a:sub t d-              # (n 7 -- n-7)
         call _dup               # (n -- n n)
-        # TODO: use BASE!
-        #lit 16                  # (n n -- n n 16)
         call _base
         call _fetch             # (n n -- n n base)
         a:sub t d-              # (n n base -- n n-base)
@@ -877,18 +873,30 @@ _compile_header:
             .word _to_number
             .cstr "compile"
 _compile:
+            # check if xt is below address 0x8000 (near call)
+            # because then call opcode can be used
             lit 0x8000
             a:lt t
             rj.z _compile_far_call
+            # compile  near call
             call _comma         # (op --)
             a:nop t r- [ret]
 _compile_far_call:
-            # TODO
-            # create opcodes, that pushes literals of xt on stack
-            # lit.l 0x8000  100 <imm:13>
-            # lit.h 0xa000  101 <unused:4> <return:1> <imm:8>
-            # create opcode, that pushes literal of alu-call on stack
-            # a:t pc d- r+pc
+            # compile far call
+            # opcode lit.l 0x8000 | xt-lo
+            lit 0xff
+            a:and t             # (xt -- xt xt-lo)
+            lit 0x8000 # opcode lit.l
+            a:or t d-           # (xt xt-lo 0x8000 -- xt op)
+            call _comma         # (xt op -- xt)
+            # opcode lit.h 0xa000 | xt-hi
+            a:srw t             # (xt -- xt-hi)
+            lit 0xa000 # opcode lit.h
+            a:or t d-           # (xt-hi -- op)
+            call _comma
+            # opcode a:t pc d- r+pc
+            lit 0xc02b
+            call _comma
             a:nop t r- [ret]
 
 
