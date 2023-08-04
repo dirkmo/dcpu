@@ -13,12 +13,12 @@ rj _quit
 # ----------------------------------------------------
 
 # variables
-state: .word 0          # 0: interpreting, -1: compiling
+state: .word 0 # 0: interpreting, -1: compiling
 
 base: .word 10
-latest: .word _inc_header   # last word in forth dictionary
-latest_imm: .word 0   # last word in immediate dictionary
-dp: .word dp_init       # first free cell after dict
+latest: .word _semicolon_header # last word in forth dictionary
+latest_imm: .word 0 # last word in immediate dictionary
+dp: .word dp_init # first free cell after dict
 
 ## input buffer
 # number of words currently in TIB
@@ -308,27 +308,31 @@ _interpret:
             call _to_in
             call _store
             # get word
-            call _word          # (-- a n)
+            call _word              # (-- a n)
             # search word in dict
-            call _2dup           # (a n -- a n a n)
+            call _2dup              # (a n -- a n a n)
             lit latest
-            call _fetch         # (a n a n latest -- a n a n a-dict)
-            call _find          # (a n a n a-dict -- a n aw)
+            call _fetch             # (a n a n latest -- a n a n a-dict)
+            call _find              # (a n a n a-dict -- a n aw)
             call _dup
             rj.z _interpret_number # (a n aw aw -- a n aw)
-            call _get_xt        # (a n aw -- a n xt)
+            # drop (a n)
+            a:t r d- r+
+            call _2drop
+            a:r t d+ r-
+            call _get_xt            # (aw -- xt)
             lit state
             call _fetch
-            rj.nz _interpret_compile # (a n xt f -- a n xt)
+            rj.nz _interpret_compile # (xt f -- xt)
             # call (interpret/execute) word xt
-            a:t pc d- r+pc      # (a n xt -- a n)
-            a:nop t d- r- [ret] # (a n --)
+            a:t pc d- r+pc          # (xt -- )
+            a:nop t r- [ret]        # ( -- )
 _interpret_compile: # (a n xt)
-            call _compile       # (a n xt -- a n)
+            call _compile           # (xt -- )
             a:nop t r- [ret]
 _interpret_number:
-            call _drop          # (a n aw -- a n)
-            call _to_number
+            call _drop              # (a n aw -- a n)
+            call _to_number         # (a n -- N)
             a:nop t r- [ret]
 
 
