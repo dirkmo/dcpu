@@ -16,7 +16,7 @@ rj _quit
 state: .word 0          # 0: interpreting, -1: compiling
 
 base: .word 10
-latest: .word _semicolon_header   # last word in forth dictionary
+latest: .word _inc_header   # last word in forth dictionary
 latest_imm: .word 0   # last word in immediate dictionary
 dp: .word dp_init       # first free cell after dict
 
@@ -258,8 +258,8 @@ _scan_eorr: # (a2 l r:af)
             lit 0 [ret]         # (a2 -- a2 0)
 
 
-_word_header: # (-- a-cstr)
-            # copy next word from TIB to temp area (here) as c-str (addr)
+_word_header: # (-- a n)
+            # copy next word from TIB to temp area (here) as a/n-string
             # word delimited by chars <= 32
             # moves >in pointer
             # if no word found, returns (0)
@@ -293,24 +293,9 @@ _word:
             call _store
             # calculate length of word
             call _over          # (a a2 -- a a2 a)
-            a:sub t d-          # (a a2 a -- a n)
-            # copy word to here without moving here pointer
-            call _here          # (a n -- a n here)
-            # reserve a word for string len
-            call _inc
-            # copy word to temp area
-            call _swap          # (a n here -- a here n)
-            a:t r r+            # (a here n -- a here n r:n)
-            call _move          # (a here n -- r:n)
-            # store count in front of string
-            call _here          # ( -- here r:n)
-            a:r t d+ r-         # (here r:n -- here n)
-            call _swap          # (here n -- n here)
-            call _store         # (--)
-            call _here          # ( -- here)
-            a:nop t r- [ret]
+            #a:sub t d-          # (a a2 a -- a n)
+            a:sub t d- r- [ret] # (a a2 a -- a n)
 _word_nothing: # (a)
-            call _drop
             lit 0 [ret]
 
 
@@ -323,27 +308,26 @@ _interpret:
             call _to_in
             call _store
             # get word
-            call _word          # (-- a-cstr)
+            call _word          # (-- a n)
             # search word in dict
-            call _dup           # (a -- a a)
+            call _2dup           # (a n -- a n a n)
             lit latest
-            call _fetch         # (a a latest -- a a a-dict)
-            call _find          # (a a a-dict -- a aw)
+            call _fetch         # (a n a n latest -- a n a n a-dict)
+            call _find          # (a n a n a-dict -- a n aw)
             call _dup
-            rj.z _interpret_number # (a aw aw -- a aw)
-            call _get_xt        # (a aw -- a xt)
+            rj.z _interpret_number # (a n aw aw -- a n aw)
+            call _get_xt        # (a n aw -- a n xt)
             lit state
             call _fetch
-            rj.nz _interpret_compile # (a xt f -- a xt)
+            rj.nz _interpret_compile # (a n xt f -- a n xt)
             # call (interpret/execute) word xt
-            a:t pc d- r+pc      # (a xt -- a)
-            a:nop t d- r- [ret] # (a --)
-_interpret_compile: # (a xt)
-            call _compile       # (a xt -- a)
+            a:t pc d- r+pc      # (a n xt -- a n)
+            a:nop t d- r- [ret] # (a n --)
+_interpret_compile: # (a n xt)
+            call _compile       # (a n xt -- a n)
             a:nop t r- [ret]
 _interpret_number:
-            call _drop          # (a aw -- a)
-            call _count         # (a -- a n)
+            call _drop          # (a n aw -- a n)
             call _to_number
             a:nop t r- [ret]
 
@@ -613,25 +597,38 @@ _move_end:
 
 
 _find_header:
-            # (a-str a-dict -- a-word|0)
+            # (a1 n1 a-dict -- a2)
             # search word in dictionary
-            # a-str: address of cstr, the word to search for
+            # a1/n1: a/n-str, the word to search for
             # a-dict: address of dictionary
-            # a-word: address of word, 0 if not found
+            # a2: address of word header, 0 if not found
             .word _move_header
             .cstr "find"
 _find:
-            call _2dup
-            call _inc # move to word name
-            call _cstr_equal        # (as ad as ad -- as ad f)
-            rj.nz _find_exit
-            call _fetch             # (as ad -- as ad-next)
-            call _dup
-            rj.z _find_exit
+            # end of dict reached?
+            call _dup           # (a1 n1 ad -- a1 n1 ad ad)
+            rj.z _find_not_found
+            a:t r d- r+         # (a1 n1 -- a1 n1 r:ad)
+            call _2dup          # (a1 n1 -- a1 n1 a1 n1 r:ad)
+            a:r t d+            # (a1 n1 a1 n1 -- a1 n1 a1 n1 ad r:ad)
+            # move to name of dict entry
+            call _inc           # (a1 n1 a1 n1 ad -- a1 n1 a1 n1 s r:ad)
+            call _count         # (a1 n1 a1 n1 s -- a1 n1 a1 n1 a2 n2 r:ad)
+            # compare names
+            call _str_equal     # (a1 n1 a1 n1 a2 n2 -- a1 n1 f r:ad)
+            rj.nz _find_found   # (a1 n1 f -- a1 n1 r:ad)
+            # names aren't equal, move to next entry
+            a:r t d+ r-         # (a1 n1 -- a1 n1 ad)
+            call _fetch         # (a1 n1 ad -- a1 n1 ad-next)
             rj _find
-_find_exit:
-            call _nip               # (as ad -- ad)
+_find_found: # (a1 n1 r:ad)
+            call _drop
+            a:r t r-
             a:nop t r- [ret]
+_find_not_found: # (a1 n1 ad)
+            call _2drop
+            call _drop
+            lit 0 [ret]
 
 
 _str_equal_header:
@@ -721,6 +718,8 @@ _get_xt_header:
             # (a -- xt)
             # a points to header of a word, eg. _tuck_header
             # returns xt, eg. address of _tuck
+            .word _tuck_header
+            .cstr "get-xt"
 _get_xt:
             call _inc           # (a -- a)
             call _dup           # (a -- a a)
@@ -870,7 +869,7 @@ _to_number_exit0: # (a1 n1)
 _compile_header:
             # (xt --)
             # compile call to xt to dict
-            .word _to_number
+            .word _to_number_header
             .cstr "compile"
 _compile:
             # check if xt is below address 0x8000 (near call)
