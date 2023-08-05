@@ -1,24 +1,46 @@
+# Forth for DCPU
+
+# This file implements a Forth-like language for the DCPU stack machine.
+# https://github.com/dirkmo/dcpu
+
+# ----------------------------------------------------
+
+# Notes
+
+# https://www.complang.tuwien.ac.at/forth/gforth/Docs-html/String-Formats.html
+# c-addr can have two meanings:
+# (c-addr)   address of c-str, pointing on count, followed by chars. I will call these c-str
+# (c-addr u) c-addr: address of first char of string, u: char count
+#            I will call these a/n-str
+
+# ----------------------------------------------------
+# some defines
+
 .equ SIM_END $be00
 .equ TIB_SIZE 64
 .equ UART_ST 0xfffe
 .equ UART_RX 0xffff
 .equ UART_TX 0xffff
 
-# code entry
+
+# ----------------------------------------------------
+# Reset and IRQ Vectors
+
+# Reset vector at address 0
 rj _quit
 
+# IRQ vector at address 1
+isr:
 
 .word SIM_END
 
+
 # ----------------------------------------------------
-
 # variables
-state: .word 0 # 0: interpreting, -1: compiling
 
+state: .word 0 # 0: interpreting, -1: compiling
 base: .word 10
-latest: .word _semicolon_header # last word in forth dictionary
-latest_imm: .word _test_header # last word in immediate dictionary
-dp: .word dp_init # first free cell after dict
+dp: .word dp_init # first free cell after dictionaries ("here")
 
 ## input buffer
 # number of words currently in TIB
@@ -30,18 +52,8 @@ tib_end: .word 13 # TIB delimiter
 in: .word 0
 
 
-
 # ----------------------------------------------------
-
-# dictionary
-
-# https://www.complang.tuwien.ac.at/forth/gforth/Docs-html/String-Formats.html
-# c-addr can have two meanings:
-# (c-addr)   address of c-str, pointing on count, followed by chars. I will call these c-str
-# (c-addr u) c-addr: address of first char of string, u: char count
-#            I will call these a/n-str
-
-
+# regular (non-immediate words) dictionary
 
 _base_header:
             # ( -- a)
@@ -51,6 +63,7 @@ _base_header:
 _base:
             lit base [ret]
 
+
 _inc_header:
             # increment TOS by 1
             # (n -- n+1)
@@ -59,6 +72,7 @@ _inc_header:
 _inc:
             lit 1
             a:add t d- r- [ret]
+
 
 _dec_header:
             # decrement TOS by 1
@@ -523,7 +537,7 @@ _here:
             a:nop t r- [ret]
 
 
-_comma_header:     # (w --)
+_comma_header: # (w --)
             # comma puts a word into the cell pointed to by here
             # and increments the data space pointer (value returned by here)
             .word _here_header
@@ -581,6 +595,7 @@ _is_not_ws_header:
 _is_not_ws:
             call _is_ws
             a:inv t r- [ret]
+
 
 _move_word_header:
             # (as ad -- )
@@ -1006,6 +1021,7 @@ _create_fail:
             call _2drop
             a:nop t r- [ret]
 
+
 _colon_header:
             # ("name" -- entry)
             # parsing word
@@ -1029,12 +1045,21 @@ _semicolon:
             a:nop t r- [ret]
 
 
+latest: .word _semicolon_header # last word in forth dictionary
+
+# ----------------------------------------------------
+# immediate dictionary words
+
 _test_header:
             .word 0
             .cstr "test"
 _test:
             lit 123 [ret]
 
+
+latest_imm: .word _test_header # last word in immediate dictionary
+
+# ----------------------------------------------------
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
          # value that "here" returns
