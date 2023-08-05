@@ -17,7 +17,7 @@ state: .word 0 # 0: interpreting, -1: compiling
 
 base: .word 10
 latest: .word _semicolon_header # last word in forth dictionary
-latest_imm: .word 0 # last word in immediate dictionary
+latest_imm: .word _test_header # last word in immediate dictionary
 dp: .word dp_init # first free cell after dict
 
 ## input buffer
@@ -311,13 +311,22 @@ _interpret:
             call _word              # ( -- a n)
             call _dup               # (a n -- a n n)
             rj.z _interpret_exit
-            # search word in dict
+            # search word in immediate dict
+            call _2dup              # (a n -- a n a n)
+            lit latest_imm
+            call _fetch             # (a n a n latest -- a n a n a-dict)
+            call _find              # (a n a n a-dict -- a n aw)
+            call _dup
+            rj.nz _interpret_execute
+            call _drop              # (a n aw -- a n)
+            # search word in regular dict
             call _2dup              # (a n -- a n a n)
             lit latest
             call _fetch             # (a n a n latest -- a n a n a-dict)
             call _find              # (a n a n a-dict -- a n aw)
             call _dup
             rj.z _interpret_number # (a n aw aw -- a n aw)
+_interpret_execute: # (a n aw)
             # drop (a n)
             a:t r d- r+
             call _2drop
@@ -334,7 +343,16 @@ _interpret_compile: # (a n xt)
             rj _interpret
 _interpret_number:
             call _drop              # (a n aw -- a n)
-            call _to_number         # (a n -- N)
+            call _to_number         # (a n -- a n N)
+            # drop (a n)
+            a:t r d- r+             # (a n N -- a n r:N)
+            call _2drop             # (a n r:N-- r:N)
+            a:r t d+ r-             # (r:N -- N)
+            # in compile mode?
+            lit state
+            call _fetch
+            rj.z _interpret
+            call _lit_comma         # (N -- )
             rj _interpret
 _interpret_exit: # (a n)
             call _2drop
@@ -932,18 +950,20 @@ _open_bracket_header:
 _open_bracket:
             lit -1 # -1: compiling
             lit state
-            a:n mem d- r- [ret]
+            a:n mem d-
+            a:nop t d- r- [ret]
 
 
 _close_bracket_header:
             # leave compilation mode, enter immediate/execution mode
             # the interpreter will execute words
             .word _open_bracket_header
-            .cstr "["
+            .cstr "]"
 _close_bracket:
             lit 0 # 0: interpreting
             lit state
-            a:n mem d- r- [ret]
+            a:n mem d-
+            a:nop t d- r- [ret]
 
 
 _create_header:
@@ -1007,6 +1027,13 @@ _semicolon_header:
 _semicolon:
             call _close_bracket
             a:nop t r- [ret]
+
+
+_test_header:
+            .word 0
+            .cstr "test"
+_test:
+            lit 123 [ret]
 
 
 dp_init: # this needs to be last in the file. Used to initialize dp, which is the
