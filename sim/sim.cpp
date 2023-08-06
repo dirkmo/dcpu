@@ -1,3 +1,4 @@
+#include <unistd.h>
 #include <stdint.h>
 #include <string.h>
 #include <ctype.h>
@@ -31,6 +32,11 @@ using namespace std;
 #define NORMAL "\033[0m"
 
 #define MSGAREA_W 40
+
+enum mode {
+    MODE_SIM = 0,
+    MODE_REPL = 1
+} mode;
 
 enum user_action {
     UA_NONE,
@@ -446,35 +452,56 @@ int symbols_load(string sym_fn) {
     return 0;
 }
 
+int parse_cmdline(int argc, char *argv[]) {
+    int c;
+    mode = MODE_SIM;
+    bool loaded = false;
+    while ((c = getopt(argc, argv, "i:b:r")) != -1) {
+        switch (c) {
+            case 'i': {
+                printf("Load image '%s'\n", optarg);
+                if (program_load(optarg, 0)) {
+                    fprintf(stderr, "ERROR: Failed to load file '%s'\n", optarg);
+                    return -1;
+                }
+                string basename = getbasename(optarg);
+                string sim_fn = basename + ".sim";
+                string sym_fn = basename + ".symbols";
+                printf("Load sim file '%s'\n", sim_fn.c_str());
+                if (source_load(sim_fn)) {
+                    fprintf(stderr, "ERROR: Failed to load sim file '%s'\n", sim_fn.c_str());
+                    return -2;
+                }
+                printf("Load symbol file '%s'\n", sym_fn.c_str());
+                if (symbols_load(sym_fn)) {
+                    fprintf(stderr, "ERROR: Failed to load sym file '%s'\n", sym_fn.c_str());
+                    return -3;
+                }
+                loaded = true;
+                break;
+            }
+            case 'b':
+                printf("Set breakpoint at symbol '%s'\n", optarg);
+                symbol_breakpoint_set(optarg);
+                break;
+            case 'r': // repl mode
+                mode = MODE_REPL;
+                break;
+            default: ;
+        }
+    }
+    return !loaded;
+}
+
 int main(int argc, char *argv[]) {
     printf("dcpu simulator\n\n");
-    if (argc < 2) {
-        fprintf(stderr, "%s <prog.bin> [symbol]\n", argv[0]);
-        fprintf(stderr, "symbol: optional symbol name for setting breakpoint\n");
+
+    if (parse_cmdline(argc, argv)) {
+        fprintf(stderr, "%s <-i image> [-b symbol] [-repl]\n", argv[0]);
+        fprintf(stderr, "  -i <image>      path to image (.bin)\n");
+        fprintf(stderr, "  -b <symbol>     sets breakpoint at symbol\n");
+        fprintf(stderr, "  -r              start in repl mode\n");
         return -1;
-    }
-
-    if (program_load(argv[1], 0)) {
-        fprintf(stderr, "ERROR: Failed to load file '%s'\n", argv[1]);
-        return -2;
-    }
-
-    string basename = getbasename(argv[1]);
-    string sim_fn = basename + ".sim";
-    string sym_fn = basename + ".symbols";
-
-    if (source_load(sim_fn)) {
-        fprintf(stderr, "ERROR: Failed to load sim file '%s'\n", sim_fn.c_str());
-        return -3;
-    }
-
-    if (symbols_load(sym_fn)) {
-        fprintf(stderr, "ERROR: Failed to load sym file '%s'\n", sym_fn.c_str());
-        return -4;
-    }
-
-    if (argc >= 3) {
-        symbol_breakpoint_set(argv[2]);
     }
 
     Verilated::traceEverOn(true);
