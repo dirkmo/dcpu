@@ -9,6 +9,7 @@
 #include <vector>
 #include <list>
 #include <map>
+#include <set>
 #include <algorithm>
 #include <ncurses.h>
 #include <iostream>
@@ -46,8 +47,8 @@ bool run = false;
 
 uint16_t mem[0x10000];
 
-vector<uint16_t> vBreakPoints;
-vector<uint16_t> vSilentBreakPoints;
+set<uint16_t> setBreakPoints;
+set<uint16_t> setSilentBreakPoints;
 vector<string> vSourceList;
 vector<string> vMessages;
 map<string, uint16_t> mapSymbols;
@@ -182,14 +183,14 @@ void print_cpustate(int y, int x, Vdcpu *pCore) {
 }
 
 void breakpoint_set(uint16_t addr) {
-    auto it = find(vBreakPoints.begin(), vBreakPoints.end(), addr);
+    auto it = find(setBreakPoints.begin(), setBreakPoints.end(), addr);
     stringstream ss;
     ss << hex << addr;
-    if (it == vBreakPoints.end()) {
-        vBreakPoints.push_back(addr);
+    if (it == setBreakPoints.end()) {
+        setBreakPoints.insert(addr);
         vMessages.push_back(string("Set breakpoint at $") + ss.str());
     } else {
-        vBreakPoints.erase(it);
+        setBreakPoints.erase(it);
         vMessages.push_back(string("Breakpoint deleted at $") + ss.str());
     }
 }
@@ -206,7 +207,7 @@ int symbol_breakpoint_set(const char *symbol) {
 
 void breakpoint_list(void) {
     vMessages.push_back("Breakpoints:");
-    for (auto it: vBreakPoints) {
+    for (auto it: setBreakPoints) {
         stringstream ss;
         ss << hex << it;
         vMessages.push_back(string("$") + ss.str());
@@ -214,14 +215,14 @@ void breakpoint_list(void) {
 }
 
 bool pc_on_breakpoint(uint16_t pc) {
-    auto it = find(vBreakPoints.begin(), vBreakPoints.end(), pc);
-    return it != vBreakPoints.end();
+    auto it = find(setBreakPoints.begin(), setBreakPoints.end(), pc);
+    return it != setBreakPoints.end();
 }
 
 bool pc_on_silent_breakpoint(uint16_t pc) {
-    auto it = find(vSilentBreakPoints.begin(), vSilentBreakPoints.end(), pc);
-    bool onbp = it != vSilentBreakPoints.end();
-    if (onbp) vSilentBreakPoints.erase(it);
+    auto it = find(setSilentBreakPoints.begin(), setSilentBreakPoints.end(), pc);
+    bool onbp = it != setSilentBreakPoints.end();
+    if (onbp) setSilentBreakPoints.erase(it);
     return onbp;
 }
 
@@ -233,7 +234,7 @@ void step_over(void) {
     bool isCall = ((opcode & 0x8000) == OP_CALL);
     isCall |= (opcode & mask) == value; // call via alu
     if (isCall) {
-        vSilentBreakPoints.push_back(pc+1);
+        setSilentBreakPoints.insert(pc+1);
         run = true;
     }
 }
