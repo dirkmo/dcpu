@@ -461,7 +461,8 @@ _emit_header: # (c --)
             .cstr "emit"
 _emit:
             lit UART_TX
-            a:n mem d- r- [ret]
+            call _store
+            a:nop t r- [ret]
 
 
 _dup_header: # (n -- n n)
@@ -1045,7 +1046,41 @@ _semicolon:
             a:nop t r- [ret]
 
 
-latest: .word _semicolon_header # last word in forth dictionary
+_type_header:
+            # (a n -- )
+            # display a/n-string
+            .word _semicolon_header
+            .cstr "type"
+_type:
+            call _dup
+            rj.z _type_end
+            call _dec               # (a n -- a n)
+            a:t r d- r+             # (a n -- a r:n)
+            call _dup
+            call _fetch
+            call _emit
+            call _inc
+            a:r t d+ r-             # (a r:n -- a n)
+            rj _type
+_type_end:
+            call _drop
+            a:nop t d- r- [ret]
+
+
+_print_header:
+        .word _print_header
+        .cstr "print"
+_print:
+        lit teststr
+        call _count
+        call _type
+        a:nop t r- [ret]
+
+
+teststr: .cstr "Test Hallo 123"
+
+
+latest: .word _print # last word in forth dictionary
 
 # ----------------------------------------------------
 # immediate dictionary words
