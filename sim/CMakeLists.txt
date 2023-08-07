@@ -20,7 +20,7 @@ INCLUDE_DIRS "../rtl" "../sim"
 VERILATOR_ARGS "+define+SIM=1"
 SOURCES ../rtl/dcpu.v)
 
-target_link_libraries(simulator PUBLIC ${CURSES_LIBRARIES})
+target_link_libraries(simulator PUBLIC ${CURSES_LIBRARIES} readline)
 
 add_custom_target(assemble
     COMMAND ${PROJECT_SOURCE_DIR}/../dasm/dasm.py -i ${PROJECT_SOURCE_DIR}/forth.asm -o ${PROJECT_SOURCE_DIR}/forth

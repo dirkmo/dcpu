@@ -16,6 +16,8 @@
 #include <iostream>
 #include <fstream>
 #include <sstream>
+#include <readline/readline.h>
+#include <readline/history.h>
 
 
 using namespace std;
@@ -42,6 +44,7 @@ enum user_action {
     UA_NONE,
     UA_QUIT,
     UA_STEP,
+    UA_REPL
 };
 
 VerilatedVcdC *pTrace = NULL;
@@ -60,8 +63,20 @@ vector<string> vMessages;
 map<string, uint16_t> mapSymbols;
 string sUserInput;
 
+uint16_t word_key_address = 0;
 list<char> l_sim2dcpu;
 string s_dcpu2sim;
+
+
+void suspend_ncurses(void) {
+    def_prog_mode();
+    endwin();
+}
+
+void resume_ncurses(void) {
+    reset_prog_mode();
+    refresh();
+}
 
 void opentrace(const char *vcdname) {
     if (!pTrace) {
@@ -107,6 +122,10 @@ int handle(Vdcpu *pCore) {
                     s_dcpu2sim += pCore->o_dat;
                     if ((pCore->o_dat == '\r' || pCore->o_dat == '\n')) {
                         vMessages.push_back(s_dcpu2sim);
+                        if(mode == MODE_REPL) {
+                            printf("%c", pCore->o_dat);
+                        }
+                        s_dcpu2sim = "";
                     }
                 }
             } else {
@@ -332,13 +351,20 @@ enum user_action user_interaction(void) {
         dump(val, val2);
     } else if (strstr(sUserInput.c_str(), "uart") != NULL) {
         send_via_uart(sUserInput);
+    } else if (sUserInput == "repl") {
+        suspend_ncurses();
+        mode = MODE_REPL;
+        sUserInput = "";
+        return UA_REPL;
     }
     sUserInput = "";
     return UA_NONE;
 }
 
 void the_end(void) {
-    endwin();
+    if (mode == MODE_SIM) {
+        endwin();
+    }
 }
 
 uint16_t pc_from_simline(string s) {
@@ -451,7 +477,17 @@ int symbols_load(string sym_fn) {
             mapSymbols[name] = value;
         }
     }
+    if (mapSymbols.find("_key") != mapSymbols.end()) {
+        word_key_address = mapSymbols["_key"];
+    }
     return 0;
+}
+
+int forth_waits_for_input(void) {
+    if ((mode != MODE_REPL) || (word_key_address == 0) || (word_key_address != pCore->dcpu->r_pc)) {
+        return 0;
+    }
+    return 1;
 }
 
 int parse_cmdline(int argc, char *argv[]) {
@@ -524,9 +560,13 @@ int main(int argc, char *argv[]) {
     keypad(stdscr, TRUE);
     noecho();
 
-    for (auto c: string("[ 255\r")) {
-        l_sim2dcpu.push_back(c);
+    if (mode == MODE_REPL) {
+        suspend_ncurses();
     }
+
+    //for (auto c: string("[ 255\r")) {
+        //l_sim2dcpu.push_back(c);
+    //}
 
     run = false;
     int rxbyte;
@@ -538,22 +578,42 @@ int main(int argc, char *argv[]) {
         }
         pc = pCore->dcpu->r_pc;
         if (pCore->dcpu->w_sim_next && pCore->i_clk) {
-            print_screen();
-            if (pc_on_breakpoint(pc)) {
-                vMessages.push_back("Stopped on breakpoint");
-                run = false;
-            }
-            if (pc_on_silent_breakpoint(pc) || kbhit()) {
-                run = false;
-            }
-            while (!run) {
+            if (mode == MODE_SIM) {
                 print_screen();
-                enum user_action ret = user_interaction();
-                print_screen();
-                if (ret == UA_QUIT) {
-                    goto finish;
-                } else if (ret == UA_STEP) {
-                    break;
+                if (pc_on_breakpoint(pc)) {
+                    vMessages.push_back("Stopped on breakpoint");
+                    run = false;
+                }
+                if (pc_on_silent_breakpoint(pc) || kbhit()) {
+                    run = false;
+                }
+                while (!run) {
+                    print_screen();
+                    enum user_action ret = user_interaction();
+                    if (ret == UA_REPL) {
+                        break;
+                    }
+                    print_screen();
+                    if (ret == UA_QUIT) {
+                        goto finish;
+                    } else if (ret == UA_STEP) {
+                        break;
+                    }
+                }
+            } else { // MODE_REPL
+                if (forth_waits_for_input()) {
+                    char *line = readline("");
+                    if (line) {
+                        string s(line);
+                        s += '\r';
+                        for (auto c: s) {
+                            l_sim2dcpu.push_back(c);
+                        }
+                        free(line);
+                    } else {
+                        mode = MODE_SIM;
+                        resume_ncurses();
+                    }
                 }
             }
         }
