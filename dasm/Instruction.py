@@ -296,12 +296,18 @@ class OpCstr(OpBase):
         return len(data)
 
     def data(self, symbols):
-        t = self.tokens[1]
-        v = t.value[1:-1]
         d = []
-        for i in range(len(v)):
-            d.append(ord(v[i]) & 0xff)
-        l = len(v)
+        l = 0
+        for t in self.tokens[1:]:
+            if t.type == "STRING":
+                v = t.value[1:-1]
+                for i in range(len(v)):
+                    d.append(ord(v[i]) & 0xff)
+                l += len(v)
+            elif t.type == "UNSIGNED_NUMBER":
+                v = convert_to_number(t.value)
+                d.append(v)
+                l += 1
         return [l] + d
 
 class OpSpace(OpBase):
