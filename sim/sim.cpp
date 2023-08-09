@@ -61,7 +61,7 @@ map<string, uint16_t> mapSymbols;
 string sUserInput;
 
 list<char> l_sim2dcpu;
-list<char> l_dcpu2sim;
+string s_dcpu2sim;
 
 void opentrace(const char *vcdname) {
     if (!pTrace) {
@@ -103,9 +103,11 @@ int handle(Vdcpu *pCore) {
         } else {
             // pseudo-uart
             if (pCore->o_we) {
-                if (pCore->o_addr == 0xffff) {
-                    l_dcpu2sim.push_back(pCore->o_dat);
-                    printw(GREEN "UART-RX: " NORMAL "%c\n", pCore->o_dat);
+                if ((pCore->o_addr == 0xffff) && (pCore->o_addr != last_addr)) {
+                    s_dcpu2sim += pCore->o_dat;
+                    if ((pCore->o_dat == '\r' || pCore->o_dat == '\n')) {
+                        vMessages.push_back(s_dcpu2sim);
+                    }
                 }
             } else {
                 switch(pCore->o_addr) {
