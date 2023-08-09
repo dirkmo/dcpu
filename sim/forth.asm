@@ -27,12 +27,10 @@
 # Reset and IRQ Vectors
 
 # Reset vector at address 0
-rj _quit
+reset: rj _quit
 
 # IRQ vector at address 1
-isr:
-
-.word SIM_END
+isr: .word SIM_END
 
 
 # ----------------------------------------------------
@@ -340,19 +338,26 @@ _interpret:
             call _find              # (a n a n a-dict -- a n aw)
             call _dup
             rj.z _interpret_number # (a n aw aw -- a n aw)
+
+            lit state
+            call _fetch
+            rj.nz _interpret_compile # (a n aw f -- a n aw)
+
 _interpret_execute: # (a n aw)
             # drop (a n)
             a:t r d- r+
             call _2drop
             a:r t d+ r-
             call _get_xt            # (aw -- xt)
-            lit state
-            call _fetch
-            rj.nz _interpret_compile # (xt f -- xt)
             # call (interpret/execute) word xt
             a:t pc d- r+pc          # (xt -- )
             rj _interpret
 _interpret_compile: # (a n xt)
+            # drop (a n)
+            a:t r d- r+
+            call _2drop
+            a:r t d+ r-
+            call _get_xt
             call _compile           # (xt -- )
             rj _interpret
 _interpret_number:
@@ -370,7 +375,8 @@ _interpret_number:
             rj _interpret
 _interpret_exit: # (a n)
             call _2drop
-            a:nop t r-
+            a:nop t r- [ret]
+
 
 _fetch_header:     # (addr -- n)
             .word _interpret_header
@@ -958,25 +964,13 @@ _compile_far_call:
             a:nop t r- [ret]
 
 
-_open_bracket_header:
+_close_bracket_header:
             # enter compilation mode
             # the interpreter will compile words to the dictionary
             .word _compile_header
-            .cstr "["
-_open_bracket:
-            lit -1 # -1: compiling
-            lit state
-            a:n mem d-
-            a:nop t d- r- [ret]
-
-
-_close_bracket_header:
-            # leave compilation mode, enter immediate/execution mode
-            # the interpreter will execute words
-            .word _open_bracket_header
             .cstr "]"
 _close_bracket:
-            lit 0 # 0: interpreting
+            lit -1 # -1: compiling
             lit state
             a:n mem d-
             a:nop t d- r- [ret]
@@ -1014,9 +1008,10 @@ _create:
             call _move              # (a here n -- r:n)
             a:r t d+ r-             # (r:n -- n)
             call _here_add          # (n -- )
+            # TODO: Folgendes nötig? wenn create von colon aufgerufen wird, stört das
             # add opcode that pushes here on stack
-            call _here
-            call _lit_comma         # (here -- )
+            # call _here
+            # call _lit_comma         # (here -- )
             a:nop t r- [ret]
 _create_fail:
             call _2drop
@@ -1032,16 +1027,6 @@ _colon_header:
             .cstr ":"
 _colon:
             call _create
-            call _open_bracket
-            a:nop t r- [ret]
-
-
-_semicolon_header:
-            # (entry -- )
-            # end compilation mode, update "latest" pointer
-            .word _colon_header
-            .cstr ";"
-_semicolon:
             call _close_bracket
             a:nop t r- [ret]
 
@@ -1049,7 +1034,7 @@ _semicolon:
 _type_header:
             # (a n -- )
             # display a/n-string
-            .word _semicolon_header
+            .word _colon_header
             .cstr "type"
 _type:
             call _dup
@@ -1068,7 +1053,7 @@ _type_end:
 
 
 _print_header:
-        .word _print_header
+        .word _type_header
         .cstr "print"
 _print:
         lit teststr
@@ -1077,22 +1062,38 @@ _print:
         a:nop t r- [ret]
 
 
-teststr: .cstr "Test Hallo 123"
+teststr: .cstr "Test", 10, "Hallo", 10, "Ende", 10
 
 
-latest: .word _print # last word in forth dictionary
+latest: .word _print_header # last word in forth dictionary
 
 # ----------------------------------------------------
 # immediate dictionary words
 
-_test_header:
+_open_bracket_header:
+            # leave compilation mode, enter immediate/execution mode
+            # the interpreter will execute words
             .word 0
-            .cstr "test"
-_test:
-            lit 123 [ret]
+            .cstr "["
+_open_bracket:
+            lit 0 # 0: interpreting
+            lit state
+            call _store
+            a:nop t r- [ret]
+
+_semicolon_header:
+            # (entry -- )
+            # end compilation mode, update "latest" pointer
+            .word _open_bracket_header
+            .cstr ";"
+_semicolon:
+            lit 0xc342 # opcode for a:nop r- [ret]
+            call _comma
+            call _open_bracket
+            a:nop t r- [ret]
 
 
-latest_imm: .word _test_header # last word in immediate dictionary
+latest_imm: .word _semicolon_header # last word in immediate dictionary
 
 # ----------------------------------------------------
 

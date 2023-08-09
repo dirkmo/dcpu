@@ -70,6 +70,7 @@ string s_dcpu2sim;
 
 void suspend_ncurses(void) {
     def_prog_mode();
+    echo();
     endwin();
 }
 
@@ -122,10 +123,10 @@ int handle(Vdcpu *pCore) {
                     s_dcpu2sim += pCore->o_dat;
                     if ((pCore->o_dat == '\r' || pCore->o_dat == '\n')) {
                         vMessages.push_back(s_dcpu2sim);
-                        if(mode == MODE_REPL) {
-                            printf("%c", pCore->o_dat);
-                        }
                         s_dcpu2sim = "";
+                    }
+                    if(mode == MODE_REPL) {
+                        printf("%c", pCore->o_dat);
                     }
                 }
             } else {
@@ -487,7 +488,7 @@ int forth_waits_for_input(void) {
     if ((mode != MODE_REPL) || (word_key_address == 0) || (word_key_address != pCore->dcpu->r_pc)) {
         return 0;
     }
-    return 1;
+    return l_sim2dcpu.empty();
 }
 
 int parse_cmdline(int argc, char *argv[]) {
@@ -602,7 +603,7 @@ int main(int argc, char *argv[]) {
                 }
             } else { // MODE_REPL
                 if (forth_waits_for_input()) {
-                    char *line = readline("");
+                    char *line = readline("> ");
                     if (line) {
                         string s(line);
                         s += '\r';
@@ -614,6 +615,9 @@ int main(int argc, char *argv[]) {
                         mode = MODE_SIM;
                         resume_ncurses();
                     }
+                } else if (kbhit()) {
+                    mode = MODE_SIM;
+                    resume_ncurses();
                 }
             }
         }
