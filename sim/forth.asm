@@ -960,8 +960,7 @@ _compile_far_call:
             call _lit_comma
             # opcode a:t pc d- r+pc
             lit 0xc02b
-            call _comma
-            a:nop t r- [ret]
+            rj _comma
 
 
 _close_bracket_header:
@@ -976,25 +975,27 @@ _close_bracket:
             a:nop t d- r- [ret]
 
 
-_create_header:
-            # ("name" -- )
-            # parsing word
-            # create new dict entry
-            .word _close_bracket_header
-            .cstr "create"
+#_create_header:
+#            # (a-dict "name" -- )
+#            # parsing word
+#            # create new dict entry in dictionary
+#            # a-latest: address of latest or latest_imm
+#            .word _close_bracket_header
+#            .cstr "create"
 _create:
+            a:t r d- r+             # (a-dict -- r:a-dict)
             # get next word from TIB
-            call _word              # ( -- a n)
-            call _dup               # (a n -- a n n)
-            rj.z _create_fail       # (a n n -- a n)
+            call _word              # ( -- a n r:a-dict)
+            call _dup               # (a n -- a n n r:a-dict)
+            rj.z _create_fail       # (a n n -- a n r:a-dict)
             # put here on stack, this is the header address (ah)
-            call _here              # (a n -- a n ah)
+            call _here              # (a n -- a n ah r:a-dict)
             # write address of previous word header
-            lit latest
+            a:r t d+                # (a n ah -- a n ah a-dict r:a-dcit)
             call _fetch
             call _comma
             # update latest
-            lit latest
+            a:r t d+ r-             # (a n ah -- a n ah a-dict)
             a:n mem d-              # (a n ah latest -- a n ah)
             call _drop              # (a n ah -- a n)
             ## write c-str of name
@@ -1013,9 +1014,30 @@ _create:
             # call _here
             # call _lit_comma         # (here -- )
             a:nop t r- [ret]
-_create_fail:
-            call _2drop
-            a:nop t r- [ret]
+_create_fail: # (a n r:a-dict)
+            call _rdrop
+            rj _2drop
+
+
+_create_forth_header:
+            # ("name" -- )
+            # parsing word
+            # create new dict entry in standard forth dictionary (non-immediate)
+            .word _close_bracket_header
+            .cstr "create-f"
+_create_forth:
+            lit latest
+            rj _create
+
+
+_create_immediate_header:
+            # ("name" -- )
+            # create new dict entry in standard forth dictionary (non-immediate)
+            .word _create_forth_header
+            .cstr "create-i"
+_create_immediate:
+            lit latest_imm
+            rj _create
 
 
 _colon_header:
@@ -1023,18 +1045,29 @@ _colon_header:
             # parsing word
             # create new dict entry and enter compilation mode
             # entry: address of new dict entry
-            .word _create_header
+            .word _create_immediate_header
             .cstr ":"
 _colon:
-            call _create
-            call _close_bracket
-            a:nop t r- [ret]
+            call _create_forth
+            rj _close_bracket
+
+
+_colon_i_header:
+            # ("name" -- entry)
+            # parsing word
+            # create new dict entry and enter compilation mode
+            # entry: address of new dict entry
+            .word _colon_header
+            .cstr ":i"
+_colon_i:
+            call _create_immediate
+            rj _close_bracket
 
 
 _type_header:
             # (a n -- )
             # display a/n-string
-            .word _colon_header
+            .word _colon_i_header
             .cstr "type"
 _type:
             call _dup
