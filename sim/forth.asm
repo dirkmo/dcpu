@@ -101,8 +101,7 @@ _is_equal_header: # (n1 n2 -- 0|-1)
             .cstr "="
 _is_equal:
             a:sub t d-
-            call _is_zero
-            a:nop t r- [ret]
+            rj _is_zero
 
 
 _quit_header:
@@ -172,8 +171,7 @@ _to_in_fetch_header: # ( -- c)
             .cstr ">in@"
 _to_in_fetch:
             call _to_in
-            call _fetch
-            a:nop t r- [ret]
+            rj _fetch
 
 
 _to_in_inc_header: # (--)
@@ -184,8 +182,7 @@ _to_in_inc:
             call _fetch
             call _inc
             call _to_in
-            call _store
-            a:nop t r- [ret]
+            rj _store
 
 
 _count_header:
@@ -197,8 +194,7 @@ _count:
             a:mem t d+      # (a1 -- a1 n)
             call _swap      # (a1 n -- n a1)
             call _inc       # (n a1 -- n a1+1)
-            call _swap      # (n a2 -- a2 n)
-            a:nop t r- [ret]
+            rj _swap        # (n a2 -- a2 n)
 
 
 _str_first_header:
@@ -240,8 +236,7 @@ _str_next:
             call _dec       # (a n -- a n-1)
             call _swap      # (a n -- n a)
             call _inc
-            call _swap
-            a:nop t r- [ret]
+            rj _swap
 
 
 _scan_header: # (a1 l af -- a2 0|-1)
@@ -338,11 +333,9 @@ _interpret:
             call _find              # (a n a n a-dict -- a n aw)
             call _dup
             rj.z _interpret_number # (a n aw aw -- a n aw)
-
             lit state
             call _fetch
             rj.nz _interpret_compile # (a n aw f -- a n aw)
-
 _interpret_execute: # (a n aw)
             # drop (a n)
             a:t r d- r+
@@ -374,8 +367,7 @@ _interpret_number:
             call _lit_comma         # (N -- )
             rj _interpret
 _interpret_exit: # (a n)
-            call _2drop
-            a:nop t r- [ret]
+            rj _2drop
 
 
 _fetch_header:     # (addr -- n)
@@ -467,8 +459,7 @@ _emit_header: # (c --)
             .cstr "emit"
 _emit:
             lit UART_TX
-            call _store
-            a:nop t r- [ret]
+            rj _store
 
 
 _dup_header: # (n -- n n)
@@ -540,8 +531,7 @@ _here_header: # ( -- a)
             .cstr "here"
 _here:
             lit dp
-            call _fetch # TODO: optimize
-            a:nop t r- [ret]
+            rj _fetch
 
 
 _comma_header: # (w --)
@@ -553,8 +543,7 @@ _comma:
             call _here          # (w -- w a)
             call _store         # (w a -- )
             lit 1               # ( -- 1)
-            call _here_add      # (1 --)
-            a:nop t r- [ret]
+            rj _here_add        # (1 --)
 
 
 _is_space_header:
@@ -565,8 +554,7 @@ _is_space_header:
 _is_space:
             call _fetch         # (a -- w)
             lit 32              # (w -- w 32)
-            call _is_equal      # (w 32 -- f)
-            a:nop t r- [ret]
+            rj _is_equal        # (w 32 -- f)
 
 
 _is_not_space_header:
@@ -613,8 +601,7 @@ _move_word:
             call _swap
             call _fetch
             call _swap
-            call _store
-            a:nop t r- [ret]
+            rj _store
 
 
 _move_header:
@@ -640,8 +627,7 @@ _move:
             rj _move
 _move_end:
             call _2drop
-            call _drop
-            a:nop t r- [ret]
+            rj _drop
 
 
 _find_header:
@@ -728,8 +714,7 @@ _cstr_equal:
             call _count
             a:r t d+ r-
             call _count
-            call _str_equal
-            a:nop t r- [ret]
+            rj _str_equal
 
 
 _rot_header:
@@ -740,8 +725,7 @@ _rot:
             a:t r d- r+         # (n1 n2 n3 -- n1 n2 r:n3)
             call _swap          # (n1 n2 -- n2 n1)
             a:r t d+ r-         # (n2 n1 r:n3 -- n2 n1 n3)
-            call _swap          # (n2 n1 n3 -- n2 n3 n1)
-            a:nop t r- [ret]
+            rj _swap          # (n2 n1 n3 -- n2 n3 n1)
 
 
 _nip_header:
@@ -758,8 +742,8 @@ _tuck_header:
             .cstr "tuck"
 _tuck:
             call _swap          # (n1 n2 -- n2 n1)
-            call _over          # (n2 n1 -- n2 n1 n2)
-            a:nop t r- [ret]
+            rj _over            # (n2 n1 -- n2 n1 n2)
+
 
 
 _get_xt_header:
@@ -774,7 +758,7 @@ _get_xt:
             call _fetch         # (a -- a n)
             a:add t d-          # (a n -- a)
             call _inc
-            a:nop t r- [ret]
+            a:nop t r- [ret] # Optimieren ????
 
 
 _upchar_header: # (c -- C)
