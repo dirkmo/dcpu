@@ -146,7 +146,7 @@ class OpRelJmp(OpBase):
             v = symbols[v.value] - self.pos
         else:
             v = convert_to_number(v.value)
-        assert (v < (1<<9)) or (v >= -(1<<9)), f"ERROR on line {self.tokens[0].line}: Relative jump is out of range (v)"
+        assert (v < (1<<9)) and (v >= -(1<<9)), f"ERROR on line {self.tokens[0].line}: Relative jump is out of range (offset {v})"
 
         cond = self._cond_codes[t.type]
 
