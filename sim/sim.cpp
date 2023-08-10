@@ -491,6 +491,22 @@ int forth_waits_for_input(void) {
     return l_sim2dcpu.empty();
 }
 
+string repl_prompt(void) {
+    constexpr int stacksize = (1 << pCore->dcpu->DSS);
+    char buf[64];
+    string s;
+    // the repl waits for input when the Forth is on the start address of the _key function.
+    // At that time, the top stack element is a TIB address, used by _accept, which is hidden here.
+    // Below that element is the user data.
+    constexpr int n = 3;
+    for (int i = 0; i < n; i++) {
+        int idx = (pCore->dcpu->r_dsp-n+i) % stacksize;
+        sprintf(buf, "%x ", pCore->dcpu->r_dstack[idx]);
+        s += buf;
+    }
+    return s + ">";
+}
+
 int parse_cmdline(int argc, char *argv[]) {
     int c;
     mode = MODE_SIM;
@@ -603,7 +619,7 @@ int main(int argc, char *argv[]) {
                 }
             } else { // MODE_REPL
                 if (forth_waits_for_input()) {
-                    char *line = readline("> ");
+                    char *line = readline(repl_prompt().c_str());
                     if (line) {
                         string s(line);
                         s += '\r';

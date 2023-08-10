@@ -53,10 +53,28 @@ in: .word 0
 # ----------------------------------------------------
 # regular (non-immediate words) dictionary
 
+_plus_header:
+            # (n1 n2 -- n3)
+            # add two numbers
+            .word 0
+            .cstr "+"
+_plus:
+            a:add t d- r- [ret]
+
+
+_minus_header:
+            # (n1 n2 -- n3)
+            # subtract two numbers
+            .word _plus_header
+            .cstr "-"
+_minus:
+            a:sub t d- r- [ret]
+
+
 _base_header:
             # ( -- a)
             # return address BASE
-            .word 0
+            .word _minus_header
             .cstr "base"
 _base:
             lit base [ret]
