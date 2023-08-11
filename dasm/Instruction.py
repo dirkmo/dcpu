@@ -301,6 +301,7 @@ class OpCstr(OpBase):
         for t in self.tokens[1:]:
             if t.type == "STRING":
                 v = t.value[1:-1]
+                v = v.replace(r'\"', r'"').replace(r'\n','\n').replace(r'\r', '\r')
                 for i in range(len(v)):
                     d.append(ord(v[i]) & 0xff)
                 l += len(v)
