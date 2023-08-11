@@ -299,7 +299,7 @@ void send_via_uart(string s) {
     if (p1 == string::npos) {
         return;
     }
-    int p2 = s.find("\"", p1+1);
+    int p2 = s.rfind("\"", p1+1);
     if (p2 == string::npos) {
         return;
     }

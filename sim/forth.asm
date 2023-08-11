@@ -993,10 +993,9 @@ _create:
             call _move              # (a here n -- r:n)
             a:r t d+ r-             # (r:n -- n)
             call _here_add          # (n -- )
-            # TODO: Folgendes nötig? wenn create von colon aufgerufen wird, stört das
-            # add opcode that pushes here on stack
-            # call _here
-            # call _lit_comma         # (here -- )
+            ## add opcode that pushes here on stack
+            #call _here
+            #call _lit_comma         # (here -- )
             a:nop t r- [ret]
 _create_fail: # (a n r:a-dict)
             call _rdrop
@@ -1011,17 +1010,21 @@ _create_forth_header:
             .cstr "create-f"
 _create_forth:
             lit latest
-            rj _create
+            call _create
+            call _here
+            rj _lit_comma
 
 
 _create_immediate_header:
             # ("name" -- )
-            # create new dict entry in standard forth dictionary (non-immediate)
+            # create new dict entry in standard forth dictionary (immediate)
             .word _create_forth_header
             .cstr "create-i"
 _create_immediate:
             lit latest_imm
-            rj _create
+            call _create
+            call _here
+            rj _lit_comma
 
 
 _colon_header:
