@@ -311,6 +311,16 @@ void send_via_uart(string s) {
     l_sim2dcpu.push_back('\r');
 }
 
+void displaySymbol(string symbol) {
+    if (mapSymbols.find(symbol) != mapSymbols.end()) {
+        uint16_t address = mapSymbols[symbol];
+        int len = symbol.length() + 32;
+        char buf[len];
+        sprintf(buf, "%s (address $%x) = $%x", symbol.c_str(), address, mem[address]);
+        vMessages.push_back(string(buf));
+    }
+}
+
 enum user_action user_interaction(void) {
     int key = getch();
     switch(key) {
@@ -357,6 +367,9 @@ enum user_action user_interaction(void) {
         mode = MODE_REPL;
         sUserInput = "";
         return UA_REPL;
+    } else {
+        // Try to find symbol, fetch and show value
+        displaySymbol(sUserInput);
     }
     sUserInput = "";
     return UA_NONE;
