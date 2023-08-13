@@ -122,8 +122,20 @@ _is_equal:
             rj _is_zero
 
 
-_quit_header:
+_plus_store_header: # (n a -- )
+            # increase word at a by n
             .word _is_equal_header
+            .cstr "+!"
+_plus_store:
+            a:t r r+        # (n a -- n a r:a)
+            call _fetch     # (n a -- n w r:a)
+            a:add t d-      # (n w -- n+w r:a)
+            a:r t d+ r-     # (n -- n a)
+            rj _store       # (n a -- )
+
+
+_quit_header:
+            .word _plus_store_header
             .cstr "quit"
 _quit:      # receive up to TIB_SIZE chars from keyboard
             call _tib
@@ -382,7 +394,8 @@ _interpret_number:
             lit state
             call _fetch
             rj.z _interpret
-            call _lit_comma         # (N -- )
+            # always use 2 words for literal to be predictable
+            call _lit2_comma        # (N -- )
             rj _interpret
 _interpret_exit: # (a n)
             rj _2drop
@@ -535,7 +548,10 @@ _over:
             a:n t d+ r- [ret]
 
 
-_here_add:  # (n -- )
+_allot_header: # (n -- )
+            .word _over_header
+            .cstr "allot"
+_allot:
             # helper function, not a word
             call _here      # (n -- n a)
             a:add t d-      # (n a -- n+a)
@@ -545,7 +561,7 @@ _here_add:  # (n -- )
 
 
 _here_header: # ( -- a)
-            .word _over_header
+            .word _allot_header
             .cstr "here"
 _here:
             lit dp
@@ -561,7 +577,7 @@ _comma:
             call _here          # (w -- w a)
             call _store         # (w a -- )
             lit 1               # ( -- 1)
-            rj _here_add        # (1 --)
+            rj _allot           # (1 --)
 
 
 _is_space_header:
@@ -920,6 +936,7 @@ _lit_comma_header:
             # (n -- )
             # create opcode(s) to push literal on stack
             # and append them to dict
+            # omits lit.h if possible
             .word _to_number_header
             .cstr "lit,"
 _lit_comma:
@@ -943,23 +960,38 @@ _lit_comma_no_lith: # (n-hi)
             a:nop t d- r- [ret]
 
 
+_lit2_comma_header:
+            # (n -- )
+            # create two opcodes for lit.l, lit.h to push literal on stack
+            # and append them to dict
+            # This always uses two words in dict
+            .word _lit_comma_header
+            .cstr "lit2,"
+_lit2_comma:
+            # opcode lit.l 0x8000 | n-lo
+            lit 0x1fff
+            a:and t             # (n -- n n-lo)
+            lit 0x8000 # opcode lit.l
+            a:or t d-           # (n n-lo 0x8000 -- n op)
+            call _comma         # (n op -- n)
+            # opcode lit.h 0xa000 | n-hi
+            a:srw t             # (n -- n-hi)
+            lit 0xe0
+            a:and t d-
+            lit 0xa000 # opcode lit.h
+            a:or t d-           # (n-hi -- op)
+            call _comma
+            a:nop t r- [ret]
+
+
 _compile_header:
             # (xt --)
-            # compile call to xt to dict
-            .word _lit_comma_header
+            # compile far call (3 words) to xt to dict
+            .word _lit2_comma_header
             .cstr "compile"
 _compile:
-            # check if xt is below address 0x8000 (near call)
-            # because then call opcode can be used
-            lit 0x8000
-            a:lt t
-            rj.z _compile_far_call
-            # compile  near call
-            call _comma         # (op --)
-            a:nop t r- [ret]
-_compile_far_call:
             # compile far call
-            call _lit_comma
+            call _lit2_comma
             # opcode a:t pc d- r+pc
             lit 0xc02b
             rj _comma
@@ -1010,7 +1042,7 @@ _create:
             # copy chars
             call _move              # (a here n -- r:n)
             a:r t d+ r-             # (r:n -- n)
-            call _here_add          # (n -- )
+            call _allot             # (n -- )
             ## add opcode that pushes here on stack
             #call _here
             #call _lit_comma         # (here -- )
@@ -1091,19 +1123,40 @@ _type_end:
 
 
 _print_header:
-        .word _type_header
-        .cstr "print"
+            .word _type_header
+            .cstr "print"
 _print:
-        lit teststr
-        call _count
-        call _type
-        a:nop t r- [ret]
+            lit teststr
+            call _count
+            call _type
+            a:nop t r- [ret]
+
+
+_tick_header: # ("name" -- xt)
+            .word _print_header
+            .cstr "'"
+_tick:
+            call _word              # ( -- a n)
+            call _2dup
+            lit latest_imm
+            call _find              # (a n a n a-dict -- a n nt)
+            # TODO
+
+
+_bracket_tick_header: # ()
+            .word _tick_header
+            .cstr "[']"
+_bracket_tick:
+            call _tick
+            # TODO
+
 
 
 teststr: .cstr "Test", 10, "Hallo", 10, "Ende", 10
 
+welcome: .cstr "Forth for DCPU", 13, 10
 
-latest: .word _print_header # last word in forth dictionary
+latest: .word _bracket_tick_header # last word in forth dictionary
 
 # ----------------------------------------------------
 # immediate dictionary words
@@ -1129,6 +1182,52 @@ _semicolon:
             call _comma
             call _open_bracket
             a:nop t r- [ret]
+
+
+_s_quote_header: # parse a string and append to dictionary
+            # parsing word
+            # This immediate word will compile the following instructions to dictionary:
+            # [litstring] [c-str] [type]
+            .word _semicolon_header
+            .cstr "s\""
+_s_quote:
+            # placeholder for literal c-str address
+            call _here          # ( -- a1)
+            lit 3
+            a:add t d-          # (a1 3 -- c-str)
+            call _lit2_comma    # (c-str -- )
+            # placeholder for rj "behind" cstr
+            call _here          # ( -- a2)
+            lit 0
+            call _comma
+            call _here          # ( -- a2 a3)
+            # placeholder for count of c-str
+            lit 0
+            call _comma
+_s_quote_loop: # (a2 a3)
+            call _to_in_fetch   # (a2 a3 -- a2 a3 w)
+            lit 0x22 # quote char "
+            a:sub t             # (a2 a3 w 0x22 -- a2 a3 w f)
+            rj.z _s_quote_loop_done # (a2 a3 w f -- a2 a3 w)
+            # store in dict
+            call _comma         # (a2 a3 w -- a2 a3)
+            # inc count
+            lit 1
+            call _over
+            call _plus_store    # (a2 a3 1 a3 -- a2 a3)
+            rj _s_quote_loop
+_s_quote_loop_done: # (a2 a3 w)
+            call _2drop         # (a2 a3 w -- a2)
+            call _here          # (a2 -- a2 a4)
+            call _swap          # (a2 a4 -- a4 a2)
+            a:sub t d+          # (a4 a2 -- a4 a2 offset)
+            lit 0xe000 # rj opcode
+            a:or t d-           # (a4 a2 offset 0xe000 -- a4 a2 opcode)
+            call _swap
+            call _store         # (a4 a2 opcode -- a4)
+            call _drop          # (a4 -- )
+            a:nop t r- [ret]
+
 
 
 latest_imm: .word _semicolon_header # last word in immediate dictionary
