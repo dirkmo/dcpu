@@ -295,15 +295,7 @@ void dump(uint16_t addr, int len) {
 }
 
 void send_via_uart(string s) {
-    int p1 = s.find("\"");
-    if (p1 == string::npos) {
-        return;
-    }
-    int p2 = s.rfind("\"", p1+1);
-    if (p2 == string::npos) {
-        return;
-    }
-    s = s.substr(p1+1, p2-p1-1);
+    s = s.substr(1);
     vMessages.push_back(string("uart-tx: ") + "'" + s + "'");
     for (char c : s) {
         l_sim2dcpu.push_back(c);
@@ -360,7 +352,7 @@ enum user_action user_interaction(void) {
             val2 = 16;
         }
         dump(val, val2);
-    } else if (strstr(sUserInput.c_str(), "uart") != NULL) {
+    } else if (sUserInput[0]=='"') {
         send_via_uart(sUserInput);
     } else if (sUserInput == "repl") {
         suspend_ncurses();
