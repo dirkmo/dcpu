@@ -1,0 +1,57 @@
+Record Types
+0 extended
+1 Wort definieren
+2 Wort kompilieren
+3 Wortadresse auf Stack pushen
+4 Wort ausführen
+ Literal dezimal
+ Literal hexadezimal
+ Stringliteral
+ Macro
+ Kommentar
+
+
+## Word definieren
+:word
+
+Hier muss der Wortname mit Extended Records abgelegt werden.
+1w 0o 0r 0d
+
+## Wort ausführen
+word
+
+Die Adresse des Wortes reicht:
+40 addr
+
+## Adresse von word auf Stack pushen
+'word
+
+30 addr
+
+## Wort kompilieren
+,word
+
+20 addr
+
+
+## Variable
+:var 0 ,
+
+## Wert pushen
+123
+$123
+
+## Literal kompilieren
+123 ,
+$123 ,
+
+## Macro definieren
+#macro
+Macros werden sofort ausgeführt, wie Immediates
+
+## Strings
+"Hallo"
+String ins Dict/Pad? legen, a/n auf Stack
+
+## Kommentar
+\ Kommentar \

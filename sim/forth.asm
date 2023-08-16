@@ -334,7 +334,6 @@ _word:
             call _store
             # calculate length of word
             call _over          # (a a2 -- a a2 a)
-            #a:sub t d-          # (a a2 a -- a n)
             a:sub t d- r- [ret] # (a a2 a -- a n)
 _word_nothing: # (a)
             lit 0 [ret]
@@ -1187,10 +1186,11 @@ _semicolon:
 _s_quote_header: # parse a string and append to dictionary
             # parsing word
             # This immediate word will compile the following instructions to dictionary:
-            # [litstring] [c-str] [type]
+            # [litl] [lith] [rj] [c-str]
             .word _semicolon_header
             .cstr "s\""
 _s_quote:
+                # TODO skip whitespace
             # placeholder for literal c-str address
             call _here          # ( -- a1)
             lit 3
@@ -1200,12 +1200,14 @@ _s_quote:
             call _here          # ( -- a2)
             lit 0
             call _comma
-            call _here          # ( -- a2 a3)
             # placeholder for count of c-str
+            call _here          # ( -- a2 a3)
             lit 0
             call _comma
 _s_quote_loop: # (a2 a3)
-            call _to_in_fetch   # (a2 a3 -- a2 a3 w)
+                # TODO first word is count, this is also compared with 0x22
+            call _to_in_fetch   # (a2 a3 -- a2 a3 a)
+            call _fetch         # (a2 a3 a -- a2 a3 w)
             lit 0x22 # quote char "
             a:sub t             # (a2 a3 w 0x22 -- a2 a3 w f)
             rj.z _s_quote_loop_done # (a2 a3 w f -- a2 a3 w)
@@ -1215,6 +1217,7 @@ _s_quote_loop: # (a2 a3)
             lit 1
             call _over
             call _plus_store    # (a2 a3 1 a3 -- a2 a3)
+            call _to_in_inc
             rj _s_quote_loop
 _s_quote_loop_done: # (a2 a3 w)
             call _2drop         # (a2 a3 w -- a2)
@@ -1228,9 +1231,13 @@ _s_quote_loop_done: # (a2 a3 w)
             call _drop          # (a4 -- )
             a:nop t r- [ret]
 
+# TODOs
+# Fix _s_quote_loop:
+#  - first skip whitespace
+#  - count
 
 
-latest_imm: .word _semicolon_header # last word in immediate dictionary
+latest_imm: .word _s_quote_header # last word in immediate dictionary
 
 # ----------------------------------------------------
 
