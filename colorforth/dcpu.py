@@ -1,4 +1,13 @@
-class dcpu:
+#! /usr/bin/env python3
+
+class DcpuMemoryIf:
+    def read(self, wordaddr) -> int:
+        ...
+
+    def write(self, wordaddr, word):
+        ...
+
+class Dcpu:
     OP_LITL = 0x8000
     OP_LITH = 0xa000
     OP_RJP = 0xe000
@@ -21,12 +30,14 @@ class dcpu:
     DST_PC = 0x2
     DST_MEM = 0x3
 
-    def __init__(self, mif):
+    def __init__(self, mif: DcpuMemoryIf):
         self._mif = mif
-        self.ds = []
-        self.rs = []
+        self._ir = 0
+        self.ds = [0] * self.DS_SIZE
+        self.rs = [0] * self.RS_SIZE
         self.dsp = 0
         self.rsp = 0
+        self.reset()
 
     def dsp_op(self, dspmod):
         assert dspmod in [self.DSP_INC, self.DSP_DEC], f"Invalid dspmod {dspmod}"
@@ -37,7 +48,7 @@ class dcpu:
 
     def rsp_op(self, rspmod):
         assert rspmod in [self.RSP_RPC, self.RSP_INC, self.RSP_DEC, 0], f"Invalid rspmod {rspmod}"
-        if rspmod == self.RSP_PLUS:
+        if rspmod == self.RSP_INC:
             self.rsp = (self.rsp + 1) % self.RS_SIZE
         elif rspmod in [self.RSP_MINUS, self.RSP_RPC]:
             self.rsp = (self.rsp - 1) % self.RS_SIZE
@@ -46,13 +57,15 @@ class dcpu:
         return self.ds[self.dsp]
 
     def n(self):
-        return self.ds[(self.dsp-1)%self.DS_SIZE]
+        return self.ds[(self.dsp-1) % self.DS_SIZE]
 
     def r(self):
         return self.rs[self.rsp]
 
     def call(self):
-        self.rpush(self._pc + 1)
+        # self.rpush(self._pc + 1)
+        self.rsp_op(self.RSP_INC)
+        self.rs[self.rsp] = (self._pc + 1) & 0xffff
         self._pc = self._ir & 0x7fff
 
     def litl(self):
@@ -107,5 +120,39 @@ class dcpu:
     def reset(self):
         self._pc = 0
 
+    def decode(self):
+        if self._ir & 0x8000 == 0:
+            self.call()
+        elif self._ir & 0xe000 == 0x8000:
+            self.litl()
+        elif self._ir & 0xe000 == 0xa000:
+            self.lith()
+        elif self._ir & 0xe000 == 0xe000:
+            self.rjp()
+        elif self._ir & 0xe000 == 0xc000:
+            self.alu()
+        else:
+            assert False, f"Unknown opcode {self._ir:04x}"
+
     def step(self):
-        pass
+        self._ir = self._mif.read(self._pc)
+        self._pc += 1
+        self.decode()
+
+
+class Mif(DcpuMemoryIf):
+    def __init__(self):
+        self._mem = bytearray(0x20000)
+
+    def read(self, wordaddr):
+        return (self._mem[wordaddr*2] << 8) | self._mem[wordaddr*2+1]
+
+    def write(self, wordaddr, word):
+       self._mem[wordaddr*2] = (word >> 8) & 0xff
+       self._mem[wordaddr*2+1] = word & 0xff
+
+mif = Mif()
+
+cpu = Dcpu(mif)
+cpu.step()
+
