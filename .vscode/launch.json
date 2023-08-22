@@ -16,6 +16,17 @@
             "cwd": "${workspaceFolder}/dasm",
         },
         {
+            "name": "Python: dcpu.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/colorforth/dcpu.py",
+            "console": "integratedTerminal",
+            // "args": [
+            //     "-i", "${workspaceFolder}/sim/forth.asm",
+            //     "-o", "${workspaceFolder}/sim/forth"],
+            "cwd": "${workspaceFolder}/colorforth",
+        },
+        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",
