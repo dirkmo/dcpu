@@ -1,17 +1,17 @@
 Record Types
-0  extended
-1  Wort definieren
-2  Wort kompilieren
-3  Wortadresse auf Stack pushen
-4  Wort ausführen
-5  Push number dezimal
-6  Push number hex
-7  Literal dezimal
-8  Literal hexadezimal
-9  Stringliteral
-10 Macro
-11 Kommentar
-12 Whitespace
+  extended
+  Wort definieren
+  Wort kompilieren
+  Wort ausführen
+  Wort ausführen und Ergebnis kompilieren (Macro)
+  Wortadresse auf Stack pushen
+  Push number dezimal
+  Push number hex
+  Literal dezimal
+  Literal hexadezimal
+  Stringliteral
+  Kommentar
+  Whitespace
 
 
 ## Word definieren

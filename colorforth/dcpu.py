@@ -14,6 +14,7 @@ class Dcpu:
     OP_LITL = 0x8000
     OP_LITH = 0xa000
     OP_RJP = 0xe000
+    SIM_END = OP_LITH | (0xf << 9)
     RJP_COND_ALWAYS = 0
     RJP_COND_ZERO = 0x400
     RJP_COND_NOTZERO = 0x500
@@ -65,17 +66,17 @@ class Dcpu:
         self.reset()
 
     def dsp_op(self, dspmod):
-        assert dspmod in [self.DSP_INC, self.DSP_DEC], f"Invalid dspmod {dspmod}"
+        assert dspmod in [0, self.DSP_INC, self.DSP_DEC], f"Invalid dspmod {dspmod}"
         if dspmod == self.DSP_INC:
             self.dsp = (self.dsp + 1) % self.DS_SIZE
-        elif dspmod == self.DSP_MINUS:
+        elif dspmod == self.DSP_DEC:
             self.dsp = (self.dsp - 1) % self.DS_SIZE
 
     def rsp_op(self, rspmod):
         assert rspmod in [self.RSP_RPC, self.RSP_INC, self.RSP_DEC, 0], f"Invalid rspmod {rspmod}"
         if rspmod == self.RSP_INC:
             self.rsp = (self.rsp + 1) % self.RS_SIZE
-        elif rspmod in [self.RSP_MINUS, self.RSP_RPC]:
+        elif rspmod in [self.RSP_DEC, self.RSP_RPC]:
             self.rsp = (self.rsp - 1) % self.RS_SIZE
 
     def t(self):
@@ -91,21 +92,21 @@ class Dcpu:
         self.rsp_op(self.RSP_INC)
         self.rs[self.rsp] = (self._pc + 1) & 0xffff
         self._pc = self._ir & 0x7fff
-        print(f"call {self._pc}")
+        sys.stdout.write(f"call {self._pc}")
 
     def litl(self):
         self.dsp_op(self.DSP_INC)
         self.ds[self.dsp] = self._ir & ~0xe000
-        print(f"litl {self.ds[self.dsp]:x}")
+        sys.stdout.write(f"litl {self.ds[self.dsp]:x}")
 
     def lith(self):
         self.ds[self.dsp] = (self.ds[self.dsp] & 0xff) | ((self._ir & 0xff) << 8)
         if (self._ir & 0x100):
             # return bit set
             self._pc = self.r()
-            print(f"lith {self._ir & 0xff:x} [ret]")
+            sys.stdout.write(f"lith {self._ir & 0xff:x} [ret]")
         else:
-            print(f"lith {self._ir & 0xff:x}")
+            sys.stdout.write(f"lith {self._ir & 0xff:x}")
 
     def rjp(self):
         cond = self._ir & 0x1c00
@@ -118,14 +119,19 @@ class Dcpu:
         condition |= ((cond == self.RJP_COND_NEGATIVE) and (self.t() & 0x8000))
         condition |= ((cond == self.RJP_COND_NOTNEGATIVE) and not (self.t() & 0x8000))
 
-        if cond == self.RJP_COND_ALWAYS: print(f"rj {self._pc + offs}")
-        elif cond == self.RJP_COND_ZERO: print(f"rj.z {self._pc + offs}")
-        elif cond == self.RJP_COND_NOTZERO: print(f"rj.nz {self._pc + offs}")
-        elif cond == self.RJP_COND_NEGATIVE: print(f"rj.n {self._pc + offs}")
-        elif cond == self.RJP_COND_NOT_NEGATIVE: print(f"rj.nn {self._pc + offs}")
+        if cond == self.RJP_COND_ALWAYS: sys.stdout.write(f"rj {self._pc + offs}")
+        elif cond == self.RJP_COND_ZERO: sys.stdout.write(f"rj.z {self._pc + offs}")
+        elif cond == self.RJP_COND_NOTZERO: sys.stdout.write(f"rj.nz {self._pc + offs}")
+        elif cond == self.RJP_COND_NEGATIVE: sys.stdout.write(f"rj.n {self._pc + offs}")
+        elif cond == self.RJP_COND_NOT_NEGATIVE: sys.stdout.write(f"rj.nn {self._pc + offs}")
 
         if condition:
             self._pc = (self._pc + offs) & 0xffff
+
+    def complement2(self, v):
+        if v & 0x8000:
+            v = -(0x10000 - v)
+        return v
 
     def alu_op(self, op):
         if op == self.ALU_T:
@@ -153,8 +159,7 @@ class Dcpu:
         elif op == self.ALU_XOR:
             return (self.n() ^ self.t()) & 0xffff
         elif op == self.ALU_LTS:
-            print("TODO: signed comparison")
-            return self.n() < self.t() # TODO signed!
+            return self.complement2(self.n()) < self.complement2(self.t())
         elif op == self.ALU_LT:
             return self.n() < self.t()
         elif op == self.ALU_SR:
@@ -180,18 +185,16 @@ class Dcpu:
         else:
             assert False, f"Invalid alu op {op}"
 
-
-
     def alu(self):
         rsp_op = self._ir & 0x3
-        dsp_op = (self._ir >> 2) & 0x3
+        dsp_op = self._ir & 0xc
         dst = (self._ir >> 4) & 0x3
         ret = (self._ir >> 6) & 0x1
         op = (self._ir >> 7) & 0x1f
-        sys.stdout.print(f"a:{self.ALU_OP_MNEMONIC[op]}")
-
+        sys.stdout.write(f"a:{self.ALU_OP_MNEMONIC[op]}")
         result = self.alu_op(op)
         addr = self.t()
+        ret_addr = self.r()
         self.dsp_op(dsp_op)
         self.rsp_op(rsp_op)
         if dst == self.DST_T:
@@ -203,7 +206,9 @@ class Dcpu:
         elif dst == self.DST_MEM:
             self._mif.write(addr, result)
         if ret:
-            self._pc = self.r()
+            self._pc = ret_addr
+        if not ret and not (dst == self.DST_PC):
+            self._pc = (self._pc + 1) & 0xffff
 
     def reset(self):
         self._pc = 0
@@ -225,9 +230,22 @@ class Dcpu:
         else:
             assert False, f"Unknown opcode {self._ir:04x}"
 
+    def print_dstack(self):
+        sys.stdout.write(" <")
+        for i in range(0, (self.dsp+1)%self.DS_SIZE):
+            sys.stdout.write(f"{self.ds[i]:04x}")
+            if  i < self.dsp:
+                sys.stdout.write(" ")
+        sys.stdout.write(">\n")
+
     def step(self):
         self._ir = self._mif.read(self._pc)
+        if self._ir == self.SIM_END:
+            return False
+        sys.stdout.write(f"{self._pc:04x} ")
         self.decode()
+        self.print_dstack()
+        return True
 
 
 class Mif(DcpuMemoryIf):
@@ -245,13 +263,14 @@ class Mif(DcpuMemoryIf):
        self._mem[wordaddr*2] = (word >> 8) & 0xff
        self._mem[wordaddr*2+1] = word & 0xff
 
+
 def main():
     mif = Mif("prog.bin")
 
     cpu = Dcpu(mif)
-    cpu.step()
-    cpu.step()
-    cpu.step()
+    while cpu.step():
+        pass
+
 
 if __name__ == "__main__":
     main()
