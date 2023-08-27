@@ -1,44 +1,55 @@
 Record Types
   extended
-  Wort definieren
-  Wort kompilieren
-  Wort ausführen
-  Wort ausführen und Ergebnis kompilieren (Macro)
-  Wortadresse auf Stack pushen
-  Push number dezimal
-  Push number hex
-  Literal dezimal
-  Literal hexadezimal
-  Stringliteral
-  Kommentar
+  Wort definieren                                 :wort
+  Wort kompilieren                                wort
+  Wort ausführen (aka immediate)                  ^wort
+  Wort ausführen und Ergebnis kompilieren (Macro) #word
+  Wortadresse auf Stack pushen                    'word
+  Push number dezimal                             ^100
+  Push number hex                                 ^$100
+  Literal dezimal                                 #100
+  Literal hexadezimal                             #$100
+  Stringliteral                                   "string"
+  Kommentar                                       (Kommentar)
   Whitespace
 
 
 ## Word definieren
 :word
 
-Hier muss der Wortname mit Extended Records abgelegt werden.
-1w 0o 0r 0d
+7740 726f 0064
+ccnx cccc cccc
+   x: Token nibble
+  n: number of chars (nibble), 0: 1 char, 1: 2 chars
+c: char
+
+Bei Definitions des Wortes wird ein Lookup-Table erzeugt. Das Wort kann dann einfach
+über einen 3-Nibble-Index referenziert werden.
+
+0: <addr> "dup"
+1: <addr> "wort"
+
 
 ## Wort ausführen
 word
 
-Die Adresse des Wortes reicht:
-40 addr
+nnnx
+   x: Token nibble
+  n: Index für LUT
+
 
 ## Adresse von word auf Stack pushen
 'word
 
-30 addr
+nnnx
+   x: Token nibble
+  n: Index für LUT
 
 ## Wort kompilieren
-,word
+word
 
 20 addr
 
-
-## Variable
-:var 0 ,
 
 ## Wert pushen
 123
