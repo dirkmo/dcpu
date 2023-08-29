@@ -72,7 +72,8 @@ for num,line in enumerate(lines):
     for f in frags:
         fragments.append(Fragment(f, num))
 
-
+def lohi(v):
+    return [(v >> 8) & 0xff, v & 0xff]
 
 class Token:
     DEFINITION = 0
@@ -114,7 +115,11 @@ class TokenDefinition(Token):
         Token.addDefinition(name)
 
     def generate(self):
-        return []
+        l = len(self.name) & 0xf
+        data = [self.tag | (l << 4)]
+        for i in range(l):
+            data.append(self.name[i] & 0xff)
+        return data
 
 
 class TokenLiteralNumberDec(Token):
@@ -124,7 +129,7 @@ class TokenLiteralNumberDec(Token):
         print(f"literal: {self.value}")
 
     def generate(self):
-        return []
+        return [self.tag].extend(lohi(self.value))
 
 
 class TokenLiteralNumberHex(Token):
@@ -134,7 +139,7 @@ class TokenLiteralNumberHex(Token):
         print(f"literal: ${self.value:x}")
 
     def generate(self):
-        return []
+        return [self.tag].extend(lohi(self.value))
 
 
 class TokenLiteralString(Token):
@@ -144,7 +149,11 @@ class TokenLiteralString(Token):
         print(f"Literal string '{s}'")
 
     def generate(self):
-        return []
+        l = len(self.s) & 0xfff
+        data = [self.tag | (l << 4)]
+        for i in range(l):
+            data.append(self.s[i] & 0xff)
+        return data
 
 
 class TokenLiteralWordAddress(Token):
@@ -154,7 +163,8 @@ class TokenLiteralWordAddress(Token):
         print(f"Literal word address {s}")
 
     def generate(self):
-        return []
+        addr = Token.D[self.name]
+        return [self.tag].extend(lohi(addr))
 
 
 class TokenImmediate(Token):
@@ -164,7 +174,8 @@ class TokenImmediate(Token):
         print(f"Immediate call: {name}")
 
     def generate(self):
-        return []
+        idx = Token.D[self.name]
+        return [self.tag | (idx & 0xf) << 4, (idx >> 4) & 0xff, (idx >> 12) & 0xff]
 
 
 class TokenImmediateNumberHex(Token):
@@ -174,7 +185,7 @@ class TokenImmediateNumberHex(Token):
         print(f"Immedate number ${num:x}")
 
     def generate(self):
-        return []
+        return [self.tag].extend(lohi(self.value))
 
 
 class TokenImmediateNumberDec(Token):
@@ -184,7 +195,7 @@ class TokenImmediateNumberDec(Token):
         print(f"Immedate number {num}")
 
     def generate(self):
-        return []
+        return [self.tag].extend(lohi(addr))
 
 
 class TokenCommentBraces(Token):
@@ -193,8 +204,8 @@ class TokenCommentBraces(Token):
         self.comment = s
         print(f"Comment {self.comment}")
 
-    def generate(self):
-        return []
+    def generate(self): # TODO
+        return [self.tag]
 
 
 class TokenCommentBackslash(Token):
@@ -204,7 +215,7 @@ class TokenCommentBackslash(Token):
         print(f"Comment {self.comment}")
 
     def generate(self):
-        return []
+        return [self.tag]
 
 
 class TokenCompileWord(Token):
@@ -214,7 +225,7 @@ class TokenCompileWord(Token):
         print(f"Compile {s}")
 
     def generate(self):
-        return []
+        return [self.tag]
 
 
 class TokenImmediateWordAddress(Token):
@@ -224,7 +235,7 @@ class TokenImmediateWordAddress(Token):
         print(f"Push word address {s}")
 
     def generate(self):
-        return []
+        return [self.tag]
 
 
 tokens = []

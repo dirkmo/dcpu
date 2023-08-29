@@ -45,30 +45,4 @@ nnnx
    x: Token nibble
   n: Index für LUT
 
-## Wort kompilieren
-word
 
-20 addr
-
-
-## Wert pushen
-123
-$123
-
-## Literal kompilieren
-123 ,
-$123 ,
-
-## Macro definieren
-#macro
-Macros werden sofort ausgeführt, wie Immediates
-
-## Strings
-"Hallo"
-String ins Dict/Pad? legen, a/n auf Stack
-
-## Kommentar
-\ Kommentar \
-
-## Whitespace
-12 <count>
