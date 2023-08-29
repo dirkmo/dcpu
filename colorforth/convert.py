@@ -81,6 +81,12 @@ class Token:
     IMMEDIATE = 3
     IMMEDIATE_NUMBER_DEC = 4
     IMMEDIATE_NUMBER_HEX = 5
+    COMMENT_BRACES = 6
+    COMMENT_BACKSLASH = 7
+    IMMEDIATE_LITERAL = 8
+    COMPILE_WORD = 9
+    WORD_ADDRESS = 10
+
     D = {}
     Didx = 0
 
@@ -138,6 +144,16 @@ class TokenImmediate(Token):
     def generate(self):
         return []
 
+class TokenImmediateLiteral(Token):
+    def __init__(self, name):
+        super().__init__(self.IMMEDIATE_LITERAL)
+        self.name = name
+        print(f"Immediate literal: {name}")
+
+    def generate(self):
+        # execute immediately and compile result
+        # means: call word and compile result to dict as literal
+        return []
 
 class TokenImmediateNumberHex(Token):
     def __init__(self, num):
@@ -158,6 +174,41 @@ class TokenImmediateNumberDec(Token):
     def generate(self):
         return []
 
+class TokenCommentBraces(Token):
+    def __init__(self, s):
+        super().__init__(self.COMMENT_BRACES)
+        self.comment = s
+        print(f"Comment {self.comment}")
+
+    def generate(self):
+        return []
+
+class TokenCommentBackslash(Token):
+    def __init__(self, s):
+        super().__init__(self.COMMENT_BACKSLASH)
+        self.comment = s
+        print(f"Comment {self.comment}")
+
+    def generate(self):
+        return []
+
+class TokenCompileWord(Token):
+    def __init__(self, s):
+        super().__init__(self.COMPILE_WORD)
+        self.name = s
+        print(f"Compile {s}")
+
+    def generate(self):
+        return []
+
+class TokenImmediateWordAddress(Token):
+    def __init__(self, s):
+        super().__init__(self.WORD_ADDRESS)
+        self.name = s
+        print(f"Push word address {s}")
+
+    def generate(self):
+        return []
 
 tokens = []
 
@@ -183,10 +234,7 @@ for f in fragments:
                     assert False, f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
         elif t[0] == '#':
             if Token.definitionAvailable(t[1:]):
-                # execute immediately and compile result
-                # means: assemble call word (not to dict)
-                # and then compile result to dict as literal
-                pass
+                tokens.append(TokenImmediateLiteral(t[1:]))
             else:
                 # compile literal
                 try:
@@ -201,10 +249,16 @@ for f in fragments:
         elif t[0] == '"' and len(t) > 2:
             # string literal
             pass
+        elif t[0:2] == "\ ":
+            tokens.append(TokenCommentBackslash(t))
+        elif t[0:2] == "( ":
+            tokens.append(TokenCommentBraces(t))
+        elif t[0] == "'":
+            tokens.append(TokenImmediateWordAddress(t[1:]))
         else:
             # compile word
-            if Token.definitionAvailable(t):
-                pass
+            assert Token.definitionAvailable(t), f"ERROR on line {f.linenum+1}: Unknown word '{t[1:]}'"
+            tokens.append(TokenCompileWord(t))
 
     else: # empty line
         pass
