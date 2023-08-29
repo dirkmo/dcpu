@@ -78,14 +78,15 @@ class Token:
     DEFINITION = 0
     LIT_NUMBER_DEC = 1
     LIT_NUMBER_HEX = 2
-    IMMEDIATE = 3
-    IMMEDIATE_NUMBER_DEC = 4
-    IMMEDIATE_NUMBER_HEX = 5
-    COMMENT_BRACES = 6
-    COMMENT_BACKSLASH = 7
-    IMMEDIATE_LITERAL = 8
-    COMPILE_WORD = 9
-    WORD_ADDRESS = 10
+    LIT_STRING = 3
+    LIT_WORD_ADDRESS = 4
+    IMMEDIATE = 5
+    IMMEDIATE_NUMBER_DEC = 6
+    IMMEDIATE_NUMBER_HEX = 7
+    IMMEDIATE_WORD_ADDRESS = 8
+    COMMENT_BRACES = 9
+    COMMENT_BACKSLASH = 10
+    COMPILE_WORD = 11
 
     D = {}
     Didx = 0
@@ -115,11 +116,12 @@ class TokenDefinition(Token):
     def generate(self):
         return []
 
+
 class TokenLiteralNumberDec(Token):
     def __init__(self, num):
         super().__init__(self.LIT_NUMBER_DEC)
         self.value = num
-        print(f"String literal: {self.value}")
+        print(f"literal: {self.value}")
 
     def generate(self):
         return []
@@ -129,7 +131,27 @@ class TokenLiteralNumberHex(Token):
     def __init__(self, num):
         super().__init__(self.LIT_NUMBER_HEX)
         self.value = num
-        print(f"String literal: ${self.value:x}")
+        print(f"literal: ${self.value:x}")
+
+    def generate(self):
+        return []
+
+
+class TokenLiteralString(Token):
+    def __init__(self, s):
+        super().__init__(self.LIT_STRING)
+        self.s = s
+        print(f"Literal string '{s}'")
+
+    def generate(self):
+        return []
+
+
+class TokenLiteralWordAddress(Token):
+    def __init__(self, s):
+        super().__init__(self.LIT_WORD_ADDRESS)
+        self.name = s
+        print(f"Literal word address {s}")
 
     def generate(self):
         return []
@@ -144,16 +166,6 @@ class TokenImmediate(Token):
     def generate(self):
         return []
 
-class TokenImmediateLiteral(Token):
-    def __init__(self, name):
-        super().__init__(self.IMMEDIATE_LITERAL)
-        self.name = name
-        print(f"Immediate literal: {name}")
-
-    def generate(self):
-        # execute immediately and compile result
-        # means: call word and compile result to dict as literal
-        return []
 
 class TokenImmediateNumberHex(Token):
     def __init__(self, num):
@@ -169,10 +181,11 @@ class TokenImmediateNumberDec(Token):
     def __init__(self, num):
         super().__init__(self.IMMEDIATE_NUMBER_DEC)
         self.value = num
-        print(f"Immedate number {num:x}")
+        print(f"Immedate number {num}")
 
     def generate(self):
         return []
+
 
 class TokenCommentBraces(Token):
     def __init__(self, s):
@@ -183,6 +196,7 @@ class TokenCommentBraces(Token):
     def generate(self):
         return []
 
+
 class TokenCommentBackslash(Token):
     def __init__(self, s):
         super().__init__(self.COMMENT_BACKSLASH)
@@ -191,6 +205,7 @@ class TokenCommentBackslash(Token):
 
     def generate(self):
         return []
+
 
 class TokenCompileWord(Token):
     def __init__(self, s):
@@ -201,14 +216,16 @@ class TokenCompileWord(Token):
     def generate(self):
         return []
 
+
 class TokenImmediateWordAddress(Token):
     def __init__(self, s):
-        super().__init__(self.WORD_ADDRESS)
+        super().__init__(self.IMMEDIATE_WORD_ADDRESS)
         self.name = s
         print(f"Push word address {s}")
 
     def generate(self):
         return []
+
 
 tokens = []
 
@@ -218,37 +235,26 @@ for f in fragments:
     if len(t) > 1:
         if t[0] == ":":
             tokens.append(TokenDefinition(t[1:]))
-        elif t[0] == "^":
-            # execute immediately
-            if Token.definitionAvailable(t[1:]):
-                tokens.append(TokenImmediate(t[1:]))
+        elif t[0] == "#":
+            if t[1] == "'":
+                assert Token.definitionAvailable(t[2:]), f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
+                tokens.append(TokenImmediateWordAddress(t[2:]))
             else:
-                try:
-                    if t[1] == '$':
-                        num = int(t[2:], 16)
-                        tokens.append(TokenImmediateNumberHex(num))
-                    else:
-                        num = int(t[1:], 10)
-                        tokens.append(TokenImmediateNumberDec(num))
-                except:
-                    assert False, f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
-        elif t[0] == '#':
-            if Token.definitionAvailable(t[1:]):
-                tokens.append(TokenImmediateLiteral(t[1:]))
-            else:
-                # compile literal
-                try:
-                    if t[1] == '$':
-                        num = int(t[2:], 16)
-                        tokens.append(TokenLiteralNumberHex(num))
-                    else:
-                        num = int(t[1:], 10)
-                        tokens.append(TokenLiteralNumberDec(num))
-                except:
-                    assert False, f"ERROR on line {f.linenum+1}: Unknown word '{t[1:]}'"
+                # execute immediately
+                if Token.definitionAvailable(t[1:]):
+                    tokens.append(TokenImmediate(t[1:]))
+                else:
+                    try:
+                        if t[1] == '$':
+                            num = int(t[2:], 16)
+                            tokens.append(TokenImmediateNumberHex(num))
+                        else:
+                            num = int(t[1:], 10)
+                            tokens.append(TokenImmediateNumberDec(num))
+                    except:
+                        assert False, f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
         elif t[0] == '"' and len(t) > 2:
-            # string literal
-            pass
+            tokens.append(TokenLiteralString(t[1:-1]))
         elif t[0:2] == "\ ":
             tokens.append(TokenCommentBackslash(t))
         elif t[0:2] == "( ":
@@ -257,8 +263,19 @@ for f in fragments:
             tokens.append(TokenImmediateWordAddress(t[1:]))
         else:
             # compile word
-            assert Token.definitionAvailable(t), f"ERROR on line {f.linenum+1}: Unknown word '{t[1:]}'"
-            tokens.append(TokenCompileWord(t))
+            if Token.definitionAvailable(t):
+                tokens.append(TokenCompileWord(t))
+            else:
+                # compile literal
+                try:
+                    if t[0] == '$':
+                        num = int(t[1:], 16)
+                        tokens.append(TokenLiteralNumberHex(num))
+                    else:
+                        num = int(t, 10)
+                        tokens.append(TokenLiteralNumberDec(num))
+                except:
+                    assert False, f"ERROR on line {f.linenum+1}: Unknown word '{t[1:]}'"
 
     else: # empty line
         pass

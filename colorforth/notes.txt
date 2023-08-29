@@ -2,13 +2,13 @@ Record Types
   extended
   Wort definieren                                 :wort
   Wort kompilieren                                wort
-  Wort ausführen (aka immediate)                  ^wort
-  Wort ausführen und Ergebnis kompilieren (Macro) #word
-  Wortadresse auf Stack pushen                    'word
-  Push number dezimal                             ^100
-  Push number hex                                 ^$100
-  Literal dezimal                                 #100
-  Literal hexadezimal                             #$100
+  Wort ausführen (aka immediate)                  #wort
+  Wortadresse kompilieren                         'word
+  Wortadresse auf Stack pushen                    #'word
+  Push number dezimal                             #100
+  Push number hex                                 #$100
+  Literal dezimal                                 100
+  Literal hexadezimal                             $100
   Stringliteral                                   "string"
   Kommentar                                       ( Kommentar )
   Whitespace

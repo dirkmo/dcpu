@@ -2,8 +2,8 @@
 #123
 #$f5
 'hallo \ Kommentar
-^hallo
 #hallo
-^100 ( Kommentar ) ^$ff
+100 ( Kommentar ) $ff
 "Text"
 hallo
+#'hallo
