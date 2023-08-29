@@ -1,4 +1,9 @@
-:hallo 123  $f5 'hallo ; \ Kommentar
-
-(Kommentar)
+:hallo
+#123
+#$f5
+'hallo \ Kommentar
+^hallo
+#hallo
+^100 ( Kommentar ) ^$ff
+"Text"
 

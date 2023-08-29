@@ -10,7 +10,7 @@ Record Types
   Literal dezimal                                 #100
   Literal hexadezimal                             #$100
   Stringliteral                                   "string"
-  Kommentar                                       (Kommentar)
+  Kommentar                                       ( Kommentar )
   Whitespace
 
 
