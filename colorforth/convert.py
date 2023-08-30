@@ -2,7 +2,7 @@
 
 import os
 import sys
-from token import *
+from tokens import *
 
 # <add:t:d+:r-:ret>
 # <rjp offs>
@@ -63,12 +63,12 @@ def merge_fragments(fragments):
         pass
     return fragments
 
-def isMnemonic(s):
-    mn = [ "T", "N", "R", "MEMT", "ADD", "SUB", "NOP", "AND", "OR", "XOR", "LTS", "LT", "SR", "SRW", "SL", "SLW", "JZ", "JNZ", "CARR", "INV", "MULL", "MULH", "RJ", "RJZ", "RJNZ", "RJN", "RJNN" ]
+def isAluMnemonic(s):
+    # "RJ", "RJZ", "RJNZ", "RJN", "RJNN"
+    mn = [ "T", "N", "R", "MEMT", "ADD", "SUB", "NOP", "AND", "OR", "XOR", "LTS", "LT", "SR", "SRW", "SL", "SLW", "JZ", "JNZ", "CARR", "INV", "MULL", "MULH" ]
+    s = s.upper()
     p = s.find(">")
-    if p > 0:
-        pass
-    return False
+    return (p > 0) and (s[0:p] in mn)
 
 #if len(sys.argv) < 2:
 #    sys.stderr.write("Missing filename\n")
@@ -95,8 +95,8 @@ for f in fragments:
     if len(t.strip()):
         print(f"'{t.strip()}'")
     if len(t) > 1:
-        if isMnemonic(t):
-            pass
+        if isAluMnemonic(t):
+            print(f"alu: {t}")
         elif t[0] == ":":
             tokens.append(TokenDefinition(t[1:]))
         elif t[0] == "#":
