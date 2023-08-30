@@ -63,6 +63,12 @@ def merge_fragments(fragments):
         pass
     return fragments
 
+def isMnemonic(s):
+    mn = [ "T", "N", "R", "MEMT", "ADD", "SUB", "NOP", "AND", "OR", "XOR", "LTS", "LT", "SR", "SRW", "SL", "SLW", "JZ", "JNZ", "CARR", "INV", "MULL", "MULH", "RJ", "RJZ", "RJNZ", "RJN", "RJNN" ]
+    p = s.find(">")
+    if p > 0:
+        pass
+    return False
 
 #if len(sys.argv) < 2:
 #    sys.stderr.write("Missing filename\n")
@@ -89,7 +95,9 @@ for f in fragments:
     if len(t.strip()):
         print(f"'{t.strip()}'")
     if len(t) > 1:
-        if t[0] == ":":
+        if isMnemonic(t):
+            pass
+        elif t[0] == ":":
             tokens.append(TokenDefinition(t[1:]))
         elif t[0] == "#":
             if t[1] == "'":
