@@ -112,6 +112,12 @@ class DcpuAsm:
         return [opcode]
 
     def alu(self, s):
+        def find_and_remove(sub, s, val):
+            p = s.find(sub)
+            if p >= 0:
+                s = s[0:p] + s[p+len(sub):]
+            return (val if p>=0 else 0, s)
+
         mn = [ "T", "N", "R", "MEMT", "ADD", "SUB", "NOP", "AND", "OR", "XOR", "LTS", "LT", "SR", "SRW", "SL", "SLW", "JZ", "JNZ", "CARR", "INV", "MULL", "MULH" ]
         try:
             p = s.index(">")
@@ -120,25 +126,32 @@ class DcpuAsm:
         except:
             return []
         opcode = mn.index(s[0:p]) << 7
-        retbit = (s[p:].find(":RET") >= 0) << 6
         if s[p:].find(">T") == 0:
             dst = 0 << 4
+            s = s[p+2:]
         elif s[p:].find(">R") == 0:
             dst = 1 << 4
+            s = s[p+2:]
         elif s[p:].find(">PC") == 0:
             dst = 2 << 4
+            s = s[p+3:]
         elif s[p:].find(">MEM") == 0:
             dst = 3 << 4
+            s = s[p+4:]
         else:
             assert False, f"ERROR: Invalid destination in {s}"
         # TODO: check for invalid modifiers
-        dsp = 0
-        if s[p:].find(":D+"): dsp = 1 << 2
-        elif s[p:].find(":D-"): dsp = 2 << 2
-        rsp = 0
-        if s[p:].find(":R+"): rsp = 1 << 0
-        elif s[p:].find(":R-"): rsp = 2 << 0
-        elif s[p:].find(":RPC"): rsp = 3 << 0
+        #retbit = (s.find(":RET") >= 0) << 6
+        (retbit, s) = find_and_remove(":RET", s, 1<<6)
+        (dsp, s) = find_and_remove(":D+", s, 1<<2)
+        if dsp == 0:
+            (dsp, s) = find_and_remove(":D-", s, 2<<2)
+        (rsp, s) = find_and_remove(":R+", s, 1<<0)
+        if rsp == 0:
+            (rsp, s) = find_and_remove(":R-", s, 2<<0)
+        if rsp == 0:
+            (rsp, s) = find_and_remove(":RPC", s, 3<<0)
+        assert len(s)==0, f"ERROR: Invalid modifier {s}"
         opcode |= retbit | dst | dsp | rsp
         return [opcode]
 
@@ -172,6 +185,7 @@ def main():
     print(f'{asm.assemble("sub>pc:d+")}')
     print(f'{asm.assemble("and>mem:d+:r-")}')
     print(f'{asm.assemble("add>r:d+:r-:ret")}')
+    print(f'{asm.assemble("add>r:d+:r-:retblub")}')
 
 if __name__ == "__main__":
     main()
