@@ -56,23 +56,29 @@ class DcpuAsm:
         return []
 
     def lith(self, s):
-        # TODO: ret
+        retbit = 0
         p = startsWith("LITH ", s)
+        if not p:
+            retbit = (1<<8)
+            p = startsWith("LITH:RET ", s)
         if p:
             try: num = convert_to_number(s[p:])
             except: assert False, f"ERROR: Failed to convert to number {s[p:]}"
             assert num < 0x100, f"ERROR: LITH value is greater 0xff"
-            return [self.OP_LITH | num]
+            return [self.OP_LITH | retbit | num]
         return []
 
     def lit(self, s):
-        # TODO: ret
+        retbit = 0
         p = startsWith("LIT ", s)
+        if not p:
+            retbit = 1
+            p = startsWith("LIT:RET ", s)
         if p:
             try: num = convert_to_number(s[p:])
             except: assert False, f"ERROR: Failed to convert to number {s[p:]}"
             num = num & 0xffff
-            return [self.OP_LITL | num & 0xff, self.OP_LITH | ((num >> 8) & 0xff)]
+            return [self.OP_LITL | num & 0xff, self.OP_LITH | retbit | ((num >> 8) & 0xff)]
         return []
 
     def rjp(self, s):
@@ -107,8 +113,34 @@ class DcpuAsm:
 
     def alu(self, s):
         mn = [ "T", "N", "R", "MEMT", "ADD", "SUB", "NOP", "AND", "OR", "XOR", "LTS", "LT", "SR", "SRW", "SL", "SLW", "JZ", "JNZ", "CARR", "INV", "MULL", "MULH" ]
-
-        return []
+        try:
+            p = s.index(">")
+            if not s[0:p] in mn:
+                return []
+        except:
+            return []
+        opcode = mn.index(s[0:p]) << 7
+        retbit = (s[p:].find(":RET") >= 0) << 6
+        if s[p:].find(">T") == 0:
+            dst = 0 << 4
+        elif s[p:].find(">R") == 0:
+            dst = 1 << 4
+        elif s[p:].find(">PC") == 0:
+            dst = 2 << 4
+        elif s[p:].find(">MEM") == 0:
+            dst = 3 << 4
+        else:
+            assert False, f"ERROR: Invalid destination in {s}"
+        # TODO: check for invalid modifiers
+        dsp = 0
+        if s[p:].find(":D+"): dsp = 1 << 2
+        elif s[p:].find(":D-"): dsp = 2 << 2
+        rsp = 0
+        if s[p:].find(":R+"): rsp = 1 << 0
+        elif s[p:].find(":R-"): rsp = 2 << 0
+        elif s[p:].find(":RPC"): rsp = 3 << 0
+        opcode |= retbit | dst | dsp | rsp
+        return [opcode]
 
     def assemble(self, s):
         s = s.strip().upper()
@@ -128,13 +160,18 @@ def main():
     print(f'{asm.assemble("call $1234")}')
     print(f'{asm.assemble("litl $1234")}')
     print(f'{asm.assemble("lith $54")}')
+    print(f'{asm.assemble("lith:ret $54")}')
     print(f'{asm.assemble("lit $febc")}')
+    print(f'{asm.assemble("lit:ret $febc")}')
     print(f'{asm.assemble("rj -1")}')
     print(f'{asm.assemble("rj.z $1ff")}')
     print(f'{asm.assemble("rj.nz -$100")}')
     print(f'{asm.assemble("rj.n -$100")}')
     print(f'{asm.assemble("rj.nn -$1f")}')
-
+    print(f'{asm.assemble("add>t")}')
+    print(f'{asm.assemble("sub>pc:d+")}')
+    print(f'{asm.assemble("and>mem:d+:r-")}')
+    print(f'{asm.assemble("add>r:d+:r-:ret")}')
 
 if __name__ == "__main__":
     main()
