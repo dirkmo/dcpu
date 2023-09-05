@@ -1,48 +1,54 @@
-Record Types
-  extended
-  Wort definieren                                 :wort
-  Wort kompilieren                                wort
-  Wort ausführen (aka immediate)                  #wort
-  Wortadresse kompilieren                         'word
-  Wortadresse auf Stack pushen                    #'word
-  Push number dezimal                             #100
-  Push number hex                                 #$100
-  Literal dezimal                                 100
-  Literal hexadezimal                             $100
-  Stringliteral                                   "string"
-  Kommentar                                       ( Kommentar )
-  Whitespace
+convert.py, tokens.py
+Wandelt eine ColorForth-artige Sprache in eine binäre Repräsentation um.
+Diese Repräsentation besteht aus einem 4-bit Tag gefolgt von Daten. Dies nenne ich "Token".
+Die ColorForth-artige Sprache benutzt Präfixe, um den Token-Typ zu bestimmen.
+
+- Alu-Mnemonics
+ALUOP>DST:DOP:ROP:RET
+
+- Dictionary-Eintrag
+:WORD
+
+- Push word address immediately
+#'WORD
+
+- execute word immediately
+#WORD
+
+- Push number immediately
+#1234
+#$1234
+
+- Stringliteral
+"String"
+Was soll passieren? Compile to dict?
+
+- Kommentare
+\ Kommentar
+( Kommentar )
+
+- Compile Word address
+'WORD
+
+was ist mit #'WORD ?
 
 
-## Word definieren
-:word
+- Compile call to word
+WORD
 
-7740 726f 0064
-ccnx cccc cccc
-   x: Token nibble
-  n: number of chars (nibble), 0: 1 char, 1: 2 chars
-c: char
-
-Bei Definitions des Wortes wird ein Lookup-Table erzeugt. Das Wort kann dann einfach
-über einen 3-Nibble-Index referenziert werden.
-
-0: <addr> "dup"
-1: <addr> "wort"
+- Compile number literal
+1234
+$1234
 
 
-## Wort ausführen
-word
 
-nnnx
-   x: Token nibble
-  n: Index für LUT
+# dcpu.py
+Simulation der DCPU, führt Binärcode aus.
 
+# simpledasm.py
+Zeilenbasierter Assembler.
 
-## Adresse von word auf Stack pushen
-'word
+# TODO
 
-nnnx
-   x: Token nibble
-  n: Index für LUT
-
-
+- Skript, das binäre Repräsentation als farbigen Code darstellt.
+- Skript, das binäre Repräsentation ausführt

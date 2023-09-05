@@ -102,7 +102,7 @@ for f in fragments:
         elif t[0] == "#":
             if t[1] == "'":
                 assert Token.definitionAvailable(t[2:]), f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
-                tokens.append(TokenImmediateWordAddress(t[2:]))
+                tokens.append(TokenLiteralWordAddress(t[2:]))
             else:
                 # execute immediately
                 if Token.definitionAvailable(t[1:]):
