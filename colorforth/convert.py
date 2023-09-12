@@ -70,13 +70,13 @@ def isAluMnemonic(s):
     p = s.find(">")
     return (p > 0) and (s[0:p] in mn)
 
-#if len(sys.argv) < 2:
-#    sys.stderr.write("Missing filename\n")
-#    exit(1)
-#
-#fn = sys.argv[1]
+if len(sys.argv) < 2:
+    sys.stderr.write("Missing filename\n")
+    fn = "colorforth/test.cf"
+    sys.stderr.write(f"Using {fn}")
+else:
+    fn = sys.argv[1]
 
-fn = "colorforth/test.cf"
 
 with open(fn,"r") as f:
     lines = f.readlines()
@@ -98,48 +98,63 @@ for f in fragments:
         if isAluMnemonic(t):
             print(f"alu: {t}")
         elif t[0] == ":":
-            tokens.append(TokenDefinition(t[1:]))
+            tokens.append(TokenDefinition(t[1:], f))
         elif t[0] == "#":
             if t[1] == "'":
                 assert Token.definitionAvailable(t[2:]), f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
-                tokens.append(TokenLiteralWordAddress(t[2:]))
+                tokens.append(TokenLiteralWordAddress(t[2:], f))
             else:
                 # execute immediately
                 if Token.definitionAvailable(t[1:]):
-                    tokens.append(TokenImmediate(t[1:]))
+                    tokens.append(TokenImmediate(t[1:], f))
                 else:
                     try:
                         if t[1] == '$':
                             num = int(t[2:], 16)
-                            tokens.append(TokenImmediateNumberHex(num))
+                            tokens.append(TokenImmediateNumberHex(num, f))
                         else:
                             num = int(t[1:], 10)
-                            tokens.append(TokenImmediateNumberDec(num))
+                            tokens.append(TokenImmediateNumberDec(num, f))
                     except:
                         assert False, f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
         elif t[0] == '"' and len(t) > 2:
-            tokens.append(TokenLiteralString(t[1:-1]))
+            tokens.append(TokenLiteralString(t[1:-1], f))
         elif t[0:2] == "\ ":
-            tokens.append(TokenCommentBackslash(t))
+            tokens.append(TokenCommentBackslash(t, f))
         elif t[0:2] == "( ":
-            tokens.append(TokenCommentBraces(t))
+            tokens.append(TokenCommentBraces(t, f))
         elif t[0] == "'":
-            tokens.append(TokenImmediateWordAddress(t[1:]))
+            tokens.append(TokenImmediateWordAddress(t[1:], f))
         else:
             # compile word
             if Token.definitionAvailable(t):
-                tokens.append(TokenCompileWord(t))
+                tokens.append(TokenCompileWord(t, f))
             else:
                 # compile literal
                 try:
                     if t[0] == '$':
                         num = int(t[1:], 16)
-                        tokens.append(TokenLiteralNumberHex(num))
+                        tokens.append(TokenLiteralNumberHex(num, f))
                     else:
                         num = int(t, 10)
-                        tokens.append(TokenLiteralNumberDec(num))
+                        tokens.append(TokenLiteralNumberDec(num, f))
                 except:
                     assert False, f"ERROR on line {f.linenum+1}: Unknown word '{t[1:]}'"
     else: # empty line
         if len(t) and ord(t[0]) < 32:
-            tokens.append(TokenWhitespace(t))
+            tokens.append(TokenWhitespace(t, f))
+
+print("---------------------------------")
+
+data = []
+for t in tokens:
+    sys.stdout.write(f"{t.fragment.s} tag:{t.tag}| ")
+    tokendata = t.generate()
+    data.extend(tokendata)
+    for b in tokendata:
+        sys.stdout.write(f"{b:02x} ")
+    sys.stdout.write("\n")
+
+for b in data:
+    sys.stdout.write(f"{b:02x} ")
+sys.stdout.write("\n")

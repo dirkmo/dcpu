@@ -19,8 +19,9 @@ class Token:
     D = {}
     Didx = 0
 
-    def __init__(self, tag):
+    def __init__(self, tag, fragment):
         self.tag = tag
+        self.fragment = fragment
 
     def addDefinition(name):
         assert not name in Token.D, f"{name} already defined"
@@ -34,69 +35,74 @@ class Token:
     def generate(self):
         ...
 
+    def generateStringData(tag, s):
+        l = len(s) & 0xf
+        data = [tag | (l << 4)]
+        for i in range(l):
+            data.append(ord(s[i]) & 0xff)
+        return data
+
 
 class TokenDefinition(Token):
-    def __init__(self, name):
-        super().__init__(self.DEFINITION)
+    def __init__(self, name, fragment):
+        super().__init__(self.DEFINITION, fragment)
         self.name = name
         Token.addDefinition(name)
 
     def generate(self):
-        l = len(self.name) & 0xf
-        data = [self.tag | (l << 4)]
-        for i in range(l):
-            data.append(self.name[i] & 0xff)
-        return data
+        return Token.generateStringData(self.tag, self.name)
 
 
 class TokenLiteralNumberDec(Token):
-    def __init__(self, num):
-        super().__init__(self.LIT_NUMBER_DEC)
+    def __init__(self, num, fragment):
+        super().__init__(self.LIT_NUMBER_DEC, fragment)
         self.value = num
         print(f"literal: {self.value}")
 
     def generate(self):
-        return [self.tag].extend(lohi(self.value))
+        data = [self.tag]
+        data.extend(lohi(self.value))
+        return data
 
 
 class TokenLiteralNumberHex(Token):
-    def __init__(self, num):
-        super().__init__(self.LIT_NUMBER_HEX)
+    def __init__(self, num, fragment):
+        super().__init__(self.LIT_NUMBER_HEX, fragment)
         self.value = num
         print(f"literal: ${self.value:x}")
 
     def generate(self):
-        return [self.tag].extend(lohi(self.value))
+        data = [self.tag]
+        data.extend(lohi(self.value))
+        return data
 
 
 class TokenLiteralString(Token):
-    def __init__(self, s):
-        super().__init__(self.LIT_STRING)
+    def __init__(self, s, fragment):
+        super().__init__(self.LIT_STRING, fragment)
         self.s = s
         print(f"Literal string '{s}'")
 
     def generate(self):
-        l = len(self.s) & 0xfff
-        data = [self.tag | (l << 4)]
-        for i in range(l):
-            data.append(self.s[i] & 0xff)
-        return data
+        return Token.generateStringData(self.tag, self.s)
 
 
 class TokenLiteralWordAddress(Token):
-    def __init__(self, s):
-        super().__init__(self.LIT_WORD_ADDRESS)
+    def __init__(self, s, fragment):
+        super().__init__(self.LIT_WORD_ADDRESS, fragment)
         self.name = s
         print(f"Literal word address {s}")
 
     def generate(self):
         addr = Token.D[self.name]
-        return [self.tag].extend(lohi(addr))
+        data = [self.tag]
+        data.extend(lohi(addr))
+        return data
 
 
 class TokenImmediate(Token):
-    def __init__(self, name):
-        super().__init__(self.IMMEDIATE)
+    def __init__(self, name, fragment):
+        super().__init__(self.IMMEDIATE, fragment)
         self.name = name
         print(f"Immediate call: {name}")
 
@@ -106,48 +112,52 @@ class TokenImmediate(Token):
 
 
 class TokenImmediateNumberHex(Token):
-    def __init__(self, num):
-        super().__init__(self.IMMEDIATE_NUMBER_HEX)
+    def __init__(self, num, fragment):
+        super().__init__(self.IMMEDIATE_NUMBER_HEX, fragment)
         self.value = num
         print(f"Immedate number ${num:x}")
 
     def generate(self):
-        return [self.tag].extend(lohi(self.value))
+        data = [self.tag]
+        data.extend(lohi(self.value))
+        return data
 
 
 class TokenImmediateNumberDec(Token):
-    def __init__(self, num):
-        super().__init__(self.IMMEDIATE_NUMBER_DEC)
+    def __init__(self, num, fragment):
+        super().__init__(self.IMMEDIATE_NUMBER_DEC, fragment)
         self.value = num
         print(f"Immedate number {num}")
 
     def generate(self):
-        return [self.tag].extend(lohi(addr))
+        data = [self.tag]
+        data.extend(lohi(self.value))
+        return data
 
 
 class TokenCommentBraces(Token):
-    def __init__(self, s):
-        super().__init__(self.COMMENT_BRACES)
+    def __init__(self, s, fragment):
+        super().__init__(self.COMMENT_BRACES, fragment)
         self.comment = s
         print(f"Comment {self.comment}")
 
     def generate(self): # TODO
-        return [self.tag]
+        return Token.generateStringData(self.tag, self.comment)
 
 
 class TokenCommentBackslash(Token):
-    def __init__(self, s):
-        super().__init__(self.COMMENT_BACKSLASH)
+    def __init__(self, s, fragment):
+        super().__init__(self.COMMENT_BACKSLASH, fragment)
         self.comment = s
         print(f"Comment {self.comment}")
 
     def generate(self):
-        return [self.tag]
+        return Token.generateStringData(self.tag, self.comment)
 
 
 class TokenCompileWord(Token):
-    def __init__(self, s):
-        super().__init__(self.COMPILE_WORD)
+    def __init__(self, s, fragment):
+        super().__init__(self.COMPILE_WORD, fragment)
         self.name = s
         print(f"Compile {s}")
 
@@ -156,8 +166,8 @@ class TokenCompileWord(Token):
 
 
 class TokenImmediateWordAddress(Token):
-    def __init__(self, s):
-        super().__init__(self.IMMEDIATE_WORD_ADDRESS)
+    def __init__(self, s, fragment):
+        super().__init__(self.IMMEDIATE_WORD_ADDRESS, fragment)
         self.name = s
         print(f"Push word address {s}")
 
@@ -165,15 +175,10 @@ class TokenImmediateWordAddress(Token):
         return [self.tag]
 
 class TokenWhitespace(Token):
-    def __init__(self, s):
-        super().__init__(self.WHITESPACE)
-        self.s = s
+    def __init__(self, s, fragment):
+        super().__init__(self.WHITESPACE, fragment)
+        self.ws = s
         print(f"Whitespace")
 
     def generate(self):
-        l = len(self.s) & 0xfff
-        data = [self.tag | (l << 4)]
-        for i in range(l):
-            data.append(self.s[i] & 0xff)
-        return data
-
+        return Token.generateStringData(self.tag, self.ws)
