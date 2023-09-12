@@ -27,6 +27,14 @@
             "cwd": "${workspaceFolder}/colorforth",
         },
         {
+            "name": "Python: convert.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/colorforth/convert.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+        },
+        {
             "name": "(gdb) Launch",
             "type": "cppdbg",
             "request": "launch",

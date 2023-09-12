@@ -9,3 +9,4 @@ sim/test.c
 sim/forth.c
 sim/build
 build/
+__pycache__
