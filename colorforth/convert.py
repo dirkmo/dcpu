@@ -70,6 +70,11 @@ def isAluMnemonic(s):
     p = s.find(">")
     return (p > 0) and (s[0:p] in mn)
 
+def isBuildin(s):
+    bi = [ ";", "if", "else", "then" ]
+    return s in bi
+
+
 if len(sys.argv) < 2:
     sys.stderr.write("Missing filename\n")
     fn = "colorforth/test.cf"
@@ -95,7 +100,9 @@ for f in fragments:
     if len(t.strip()):
         print(f"'{t.strip()}'")
     if len(t) > 1:
-        if isAluMnemonic(t):
+        if isBuildin(t):
+            print(f"buildin: {t}")
+        elif isAluMnemonic(t):
             print(f"alu: {t}")
         elif t[0] == ":":
             tokens.append(TokenDefinition(t[1:], f))

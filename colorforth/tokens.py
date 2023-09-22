@@ -15,6 +15,8 @@ class Token:
     COMMENT_BACKSLASH = 10
     COMPILE_WORD = 11
     WHITESPACE= 12
+    MNEMONIC = 13
+    BUILDINS = 14
 
     D = {}
     Didx = 0

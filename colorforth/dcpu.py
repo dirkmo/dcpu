@@ -257,11 +257,21 @@ class Mif(DcpuMemoryIf):
             self._mem[i] = buf[i]
 
     def read(self, wordaddr):
-        return (self._mem[wordaddr*2] << 8) | self._mem[wordaddr*2+1]
+        if wordaddr == 0xfffe: # uart-status
+            pass
+        elif wordaddr == 0xffff: # uart-rx
+            pass
+        else:
+            return (self._mem[wordaddr*2] << 8) | self._mem[wordaddr*2+1]
 
     def write(self, wordaddr, word):
-       self._mem[wordaddr*2] = (word >> 8) & 0xff
-       self._mem[wordaddr*2+1] = word & 0xff
+       if wordaddr == 0xfffe:
+           pass
+       elif wordaddr == 0xffff: # uart-tx
+           pass
+       else:
+            self._mem[wordaddr*2] = (word >> 8) & 0xff
+            self._mem[wordaddr*2+1] = word & 0xff
 
 
 def main():
