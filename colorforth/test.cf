@@ -8,33 +8,4 @@
 hallo
 #'hallo
 sub>t:d+:r+:ret
-
-\ Alu ops:
-\ Ziel: T/R/PC/MEM
-
-\ T
-\ N
-\ R
-\ MEMT
-\ ADD
-\ SUB
-\ NOP
-\ AND
-\ OR
-\ XOR
-\ LTS
-\ LT
-\ SR
-\ SRW
-\ SL
-\ SLW
-\ JZ
-\ JNZ
-\ CARRY
-\ INV
-\ MULL
-\ MULH
-
-\ rjps:
-\ rjp z,nz,n,nn
-
+;

@@ -32,6 +32,9 @@
             "request": "launch",
             "program": "${workspaceFolder}/colorforth/convert.py",
             "console": "integratedTerminal",
+            "args": [
+                "-i", "${workspaceFolder}/colorforth/test.cf",
+                "-o", "${workspaceFolder}/colorforth/test.bin"],
             "cwd": "${workspaceFolder}",
         },
         {

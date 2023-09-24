@@ -166,26 +166,31 @@ class DcpuAsm:
         return opcodes
 
 
+assembler = DcpuAsm()
+
+def asm(op):
+    return assembler.assemble(op)
+
+
 def main():
-    asm = DcpuAsm()
-    print(f'{asm.assemble("call 1234")}')
-    print(f'{asm.assemble("call 0x1234")}')
-    print(f'{asm.assemble("call $1234")}')
-    print(f'{asm.assemble("litl $1234")}')
-    print(f'{asm.assemble("lith $54")}')
-    print(f'{asm.assemble("lith:ret $54")}')
-    print(f'{asm.assemble("lit $febc")}')
-    print(f'{asm.assemble("lit:ret $febc")}')
-    print(f'{asm.assemble("rj -1")}')
-    print(f'{asm.assemble("rj.z $1ff")}')
-    print(f'{asm.assemble("rj.nz -$100")}')
-    print(f'{asm.assemble("rj.n -$100")}')
-    print(f'{asm.assemble("rj.nn -$1f")}')
-    print(f'{asm.assemble("add>t")}')
-    print(f'{asm.assemble("sub>pc:d+")}')
-    print(f'{asm.assemble("and>mem:d+:r-")}')
-    print(f'{asm.assemble("add>r:d+:r-:ret")}')
-    print(f'{asm.assemble("add>r:d+:r-:retblub")}')
+    print(f'{assembler.assemble("call 1234")}')
+    print(f'{assembler.assemble("call 0x1234")}')
+    print(f'{assembler.assemble("call $1234")}')
+    print(f'{assembler.assemble("litl $1234")}')
+    print(f'{assembler.assemble("lith $54")}')
+    print(f'{assembler.assemble("lith:ret $54")}')
+    print(f'{assembler.assemble("lit $febc")}')
+    print(f'{assembler.assemble("lit:ret $febc")}')
+    print(f'{assembler.assemble("rj -1")}')
+    print(f'{assembler.assemble("rj.z $1ff")}')
+    print(f'{assembler.assemble("rj.nz -$100")}')
+    print(f'{assembler.assemble("rj.n -$100")}')
+    print(f'{assembler.assemble("rj.nn -$1f")}')
+    print(f'{assembler.assemble("add>t")}')
+    print(f'{assembler.assemble("sub>pc:d+")}')
+    print(f'{assembler.assemble("and>mem:d+:r-")}')
+    print(f'{assembler.assemble("add>r:d+:r-:ret")}')
+    print(f'{assembler.assemble("add>r:d+:r-:retblub")}')
 
 if __name__ == "__main__":
     main()

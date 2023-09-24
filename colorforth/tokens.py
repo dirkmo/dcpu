@@ -15,8 +15,8 @@ class Token:
     COMMENT_BACKSLASH = 10
     COMPILE_WORD = 11
     WHITESPACE= 12
-    MNEMONIC = 13
-    BUILDINS = 14
+    MNEMONIC_ALU = 13
+    BUILDIN = 14
 
     D = {}
     Didx = 0
@@ -184,3 +184,22 @@ class TokenWhitespace(Token):
 
     def generate(self):
         return Token.generateStringData(self.tag, self.ws)
+
+class TokenBuildin(Token):
+    def __init__(self, s, fragment):
+        super().__init__(self.BUILDIN, fragment)
+        self.name = s
+        print(f"Buildin")
+
+    def generate(self):
+        return Token.generateStringData(self.tag, self.name)
+
+class TokenAluMnemonic(Token):
+    def __init__(self, s, fragment):
+        super().__init__(self.MNEMONIC_ALU, fragment)
+        self.name = s
+        print(f"Alu-mnemonic")
+
+    def generate(self):
+        return Token.generateStringData(self.tag, self.name)
+
