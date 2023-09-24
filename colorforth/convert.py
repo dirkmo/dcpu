@@ -81,49 +81,49 @@ def tokenizeFragments(fragments):
         t = f.s
         if len(t.strip()):
             print(f"'{t.strip()}'")
-            if isBuildin(t):
+            if isBuildin(t): # ";"
                 tokens.append(TokenBuildin(t, f))
-            elif isAluMnemonic(t):
+            elif isAluMnemonic(t): # "add>t:d+:r-:ret"
                 tokens.append(TokenAluMnemonic(t, f))
-            elif t[0] == ":":
+            elif t[0] == ":": # add name to (virtual) dictionary ":name"
                 tokens.append(TokenDefinition(t[1:], f))
-            elif t[0] == "#":
-                if t[1] == "'":
+            elif t[0] == "#": # immediates
+                if t[1] == "'": # "#'name"
                     assert Token.definitionAvailable(t[2:]), f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
                     tokens.append(TokenLiteralWordAddress(t[2:], f))
-                else:
+                else: # "#name", "#123", "#$1a2b"
                     # execute immediately
-                    if Token.definitionAvailable(t[1:]):
+                    if Token.definitionAvailable(t[1:]): # "#name"
                         tokens.append(TokenImmediate(t[1:], f))
                     else:
                         try:
-                            if t[1] == '$':
+                            if t[1] == '$': # "#$1a2b"
                                 num = int(t[2:], 16)
                                 tokens.append(TokenImmediateNumberHex(num, f))
-                            else:
+                            else: # "#123",
                                 num = int(t[1:], 10)
                                 tokens.append(TokenImmediateNumberDec(num, f))
                         except:
                             assert False, f"ERROR on line {f.linenum+1}: Unkown word {t[1:]}"
-            elif t[0] == '"' and len(t) > 2:
+            elif t[0] == '"' and len(t) > 2: # '"str"'
                 tokens.append(TokenLiteralString(t[1:-1], f))
-            elif t[0:2] == "\ ":
+            elif t[0:2] == "\ ": # "\ comment"
                 tokens.append(TokenCommentBackslash(t, f))
-            elif t[0:2] == "( ":
+            elif t[0:2] == "( ": # "( comment )"
                 tokens.append(TokenCommentBraces(t, f))
-            elif t[0] == "'":
+            elif t[0] == "'": # "'name"
                 tokens.append(TokenImmediateWordAddress(t[1:], f))
-            else:
+            else: # "name", "123", "$1a2b"
                 # compile word
-                if Token.definitionAvailable(t):
+                if Token.definitionAvailable(t): # "name"
                     tokens.append(TokenCompileWord(t, f))
                 else:
                     # compile literal
                     try:
-                        if t[0] == '$':
+                        if t[0] == '$': # "$1a2b"
                             num = int(t[1:], 16)
                             tokens.append(TokenLiteralNumberHex(num, f))
-                        else:
+                        else: # "123"
                             num = int(t, 10)
                             tokens.append(TokenLiteralNumberDec(num, f))
                     except:
