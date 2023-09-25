@@ -38,8 +38,8 @@ class Token:
         ...
 
     def generateStringData(tag, s):
-        l = len(s) & 0xf
-        data = [tag | (l << 4)]
+        l = len(s) & 0xff
+        data = [tag, l]
         for i in range(l):
             data.append(ord(s[i]) & 0xff)
         return data
@@ -110,7 +110,7 @@ class TokenImmediate(Token):
 
     def generate(self):
         idx = Token.D[self.name]
-        return [self.tag | (idx & 0xf) << 4, (idx >> 4) & 0xff, (idx >> 12) & 0xff]
+        return [self.tag, idx & 0xff, (idx >> 8) & 0xff]
 
 
 class TokenImmediateNumberHex(Token):

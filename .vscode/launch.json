@@ -34,6 +34,17 @@
             "console": "integratedTerminal",
             "args": [
                 "-i", "${workspaceFolder}/colorforth/test.cf",
+                "-o", "${workspaceFolder}/colorforth/test.tok"],
+            "cwd": "${workspaceFolder}",
+        },
+        {
+            "name": "Python: cf.py",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/colorforth/cf.py",
+            "console": "integratedTerminal",
+            "args": [
+                "-i", "${workspaceFolder}/colorforth/test.tok",
                 "-o", "${workspaceFolder}/colorforth/test.bin"],
             "cwd": "${workspaceFolder}",
         },
