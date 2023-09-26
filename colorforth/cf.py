@@ -33,7 +33,7 @@ def interpret(data):
             pass
         elif tag == Token.IMMEDIATE:
             pass
-        elif tag == [Token.IMMEDIATE_NUMBER_DEC, IMMEDIATE_NUMBER_HEX]:
+        elif tag == [Token.IMMEDIATE_NUMBER_DEC, Token.IMMEDIATE_NUMBER_HEX]:
             idx += 2
             data.append(immediate_number(data[idx] << 8, data[idx+1]))
         elif tag == Token.IMMEDIATE_WORD_ADDRESS:

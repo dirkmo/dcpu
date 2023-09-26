@@ -1,3 +1,5 @@
+from simpledasm import asm
+
 def lohi(v):
     return [(v >> 8) & 0xff, v & 0xff]
 
@@ -192,7 +194,21 @@ class TokenBuildin(Token):
         print(f"Buildin")
 
     def generate(self):
-        return Token.generateStringData(self.tag, self.name)
+        op = None
+        if self.name == ";":
+            op = asm("nop>t:r-:ret")
+        elif self.name == "@":
+            op = asm("mem>t")
+        elif self.name == "!":
+            op = asm("t>mem:d-")
+        elif self.name == "swap":
+            op = asm("n>r:r+") + asm("t>t:d-") + asm("r>t:d+:r-")
+        assert not op is None, f"{self.name} is not a valid buildin."
+        data = [self.tag]
+        for o in op:
+            data.extend(lohi(o))
+        return data
+
 
 class TokenAluMnemonic(Token):
     def __init__(self, s, fragment):
@@ -201,5 +217,9 @@ class TokenAluMnemonic(Token):
         print(f"Alu-mnemonic")
 
     def generate(self):
-        return Token.generateStringData(self.tag, self.name)
+        data = [self.tag]
+        print(f"{self.name}: {asm(self.name)}")
+        for op in asm(self.name):
+            data.extend(lohi(op))
+        return data
 

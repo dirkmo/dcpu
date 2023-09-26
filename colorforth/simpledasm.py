@@ -118,7 +118,7 @@ class DcpuAsm:
                 s = s[0:p] + s[p+len(sub):]
             return (val if p>=0 else 0, s)
 
-        mn = [ "T", "N", "R", "MEMT", "ADD", "SUB", "NOP", "AND", "OR", "XOR", "LTS", "LT", "SR", "SRW", "SL", "SLW", "JZ", "JNZ", "CARR", "INV", "MULL", "MULH" ]
+        mn = [ "T", "N", "R", "MEM", "ADD", "SUB", "NOP", "AND", "OR", "XOR", "LTS", "LT", "SR", "SRW", "SL", "SLW", "JZ", "JNZ", "CARR", "INV", "MULL", "MULH" ]
         try:
             p = s.index(">")
             if not s[0:p] in mn:
@@ -190,7 +190,7 @@ def main():
     print(f'{assembler.assemble("sub>pc:d+")}')
     print(f'{assembler.assemble("and>mem:d+:r-")}')
     print(f'{assembler.assemble("add>r:d+:r-:ret")}')
-    print(f'{assembler.assemble("add>r:d+:r-:retblub")}')
+    print(f'{assembler.assemble("JZ>PC")}')
 
 if __name__ == "__main__":
     main()

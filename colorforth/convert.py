@@ -71,7 +71,7 @@ def isAluMnemonic(s):
 
 
 def isBuildin(s):
-    bi = [ ";" ]
+    bi = [ ";", "@", "!", "swap" ]
     return s in bi
 
 

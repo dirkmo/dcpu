@@ -1,11 +1,3 @@
-:hallo
-#123
-#$f5
-'hallo \ Kommentar
-#hallo
-100 ( Kommentar ) $ff
-"Text"
-hallo
-#'hallo
-sub>t:d+:r+:ret
-;
+:H 0
+:if 'H @ ;
+:then jz>pc swap ! ;
