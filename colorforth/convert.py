@@ -70,8 +70,13 @@ def isAluMnemonic(s):
     return (p > 0) and (s[0:p] in mn)
 
 
+def isMnemonic(s):
+    mn = [ ";", "@", "!", "swap" ]
+    return s in mn
+
+
 def isBuildin(s):
-    bi = [ ";", "@", "!", "swap" ]
+    bi = [ "H" ]
     return s in bi
 
 
@@ -83,8 +88,8 @@ def tokenizeFragments(fragments):
             print(f"'{t.strip()}'")
             if isBuildin(t): # ";"
                 tokens.append(TokenBuildin(t, f))
-            elif isAluMnemonic(t): # "add>t:d+:r-:ret"
-                tokens.append(TokenAluMnemonic(t, f))
+            elif isAluMnemonic(t) or isMnemonic(t): # "add>t:d+:r-:ret"
+                tokens.append(TokenMnemonic(t, f))
             elif t[0] == ":": # add name to (virtual) dictionary ":name"
                 tokens.append(TokenDefinition(t[1:], f))
             elif t[0] == "#": # immediates
@@ -129,8 +134,10 @@ def tokenizeFragments(fragments):
                     except:
                         assert False, f"ERROR on line {f.linenum+1}: Unknown word '{t[1:]}'"
         else: # empty line
-            if len(t) and ord(t[0]) < 32:
-                tokens.append(TokenWhitespace(t, f))
+            if len(t):
+                print(ord(t[0]))
+                if ord(t[0]) < 33:
+                    tokens.append(TokenWhitespace(t, f))
     return tokens
 
 
@@ -154,6 +161,7 @@ def convert(fn):
     data = []
     for t in tokens:
         tokendata = t.generate()
+        print(f"'{t.fragment.s}' tag:{t.tag} data:{tokendata}")
         data.extend(tokendata)
 
     return data
@@ -170,6 +178,7 @@ def main():
         f.write(bytes(data))
     for b in data:
         sys.stdout.write(f"{b:02x} ")
+    print()
 
 if __name__ == "__main__":
     sys.exit(main())

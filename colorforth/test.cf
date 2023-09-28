@@ -1,3 +1,2 @@
-:H 0
-:if 'H @ ;
+:if H @ ;
 :then jz>pc swap ! ;

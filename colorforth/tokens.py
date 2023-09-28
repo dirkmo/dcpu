@@ -3,6 +3,9 @@ from simpledasm import asm
 def lohi(v):
     return [(v >> 8) & 0xff, v & 0xff]
 
+class Consts:
+    HERE = 8 # here is at address 8
+
 class Token:
     DEFINITION = 0
     LIT_NUMBER_DEC = 1
@@ -17,7 +20,7 @@ class Token:
     COMMENT_BACKSLASH = 10
     COMPILE_WORD = 11
     WHITESPACE= 12
-    MNEMONIC_ALU = 13
+    MNEMONIC = 13
     BUILDIN = 14
 
     D = {}
@@ -166,7 +169,7 @@ class TokenCompileWord(Token):
         print(f"Compile {s}")
 
     def generate(self):
-        return [self.tag]
+        return [self.tag, Token.D[self.name]]
 
 
 class TokenImmediateWordAddress(Token):
@@ -178,6 +181,7 @@ class TokenImmediateWordAddress(Token):
     def generate(self):
         return [self.tag]
 
+
 class TokenWhitespace(Token):
     def __init__(self, s, fragment):
         super().__init__(self.WHITESPACE, fragment)
@@ -187,6 +191,7 @@ class TokenWhitespace(Token):
     def generate(self):
         return Token.generateStringData(self.tag, self.ws)
 
+
 class TokenBuildin(Token):
     def __init__(self, s, fragment):
         super().__init__(self.BUILDIN, fragment)
@@ -194,32 +199,30 @@ class TokenBuildin(Token):
         print(f"Buildin")
 
     def generate(self):
+        # TODO
         op = None
-        if self.name == ";":
-            op = asm("nop>t:r-:ret")
-        elif self.name == "@":
-            op = asm("mem>t")
-        elif self.name == "!":
-            op = asm("t>mem:d-")
-        elif self.name == "swap":
-            op = asm("n>r:r+") + asm("t>t:d-") + asm("r>t:d+:r-")
         assert not op is None, f"{self.name} is not a valid buildin."
-        data = [self.tag]
-        for o in op:
-            data.extend(lohi(o))
-        return data
 
-
-class TokenAluMnemonic(Token):
+class TokenMnemonic(Token):
     def __init__(self, s, fragment):
-        super().__init__(self.MNEMONIC_ALU, fragment)
+        super().__init__(self.MNEMONIC, fragment)
         self.name = s
-        print(f"Alu-mnemonic")
+        print(f"Mnemonic")
 
     def generate(self):
-        data = [self.tag]
-        print(f"{self.name}: {asm(self.name)}")
-        for op in asm(self.name):
+        data = [self.tag] # TODO: Länge fehlt
+        if self.name == ";":
+            ops = [asm("nop>t:r-:ret")]
+        elif self.name == "@":
+            ops = [asm("mem>t")]
+        elif self.name == "!":
+            ops = [asm("t>mem:d-")]
+        elif self.name == "swap":
+            ops = asm("n>r:r+") + asm("t>t:d-") + asm("r>t:d+:r-")
+        elif self.name == "H":
+            op = [asm(f"litl {Consts.HERE}")]
+        else:
+            ops = [asm(self.name)]
+        for op in ops:
             data.extend(lohi(op))
         return data
-
