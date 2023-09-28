@@ -53,9 +53,19 @@ def literal_number(hi, lo):
     # lit.l: 0x8000, lit.h: 0xa000
     return [0x8000 | lo, 0xa000 | hi]
 
+def compile(w):
+    here = mif.read(Consts.HERE)
+    mif.write(here, w)
+    mif.write(Consts.HERE, here+1)
 
 def compileWord(idx):
-    print(f"compile word {idx}: {Definition.D[idx]}")
+    (name,addr) = Definition.D[idx]
+    print(f"compile word {idx}: {name} (${addr:x})")
+    if addr < 0x8000:
+        compile(addr)
+    else:
+        compile(asm(f"lit {addr}"))
+        compile(asm("t>pc:d-:rpc"))
 
 
 def compileInstruction(op):
@@ -63,7 +73,6 @@ def compileInstruction(op):
 
 def interpret(tok):
     idx = 0
-    data = []
     mif.write(Consts.HERE, Consts.HERE+1)
     while idx < len(tok):
         tag = tok[idx]
@@ -75,7 +84,9 @@ def interpret(tok):
             Definition.add(tok[idx:idx+l], mif.read(Consts.HERE))
             idx += l
         elif tag in [Token.LIT_NUMBER_DEC, Token.LIT_NUMBER_HEX]:
-            data.extend(literal_number(tok[idx] << 8, tok[idx+1]))
+            data.extend()
+            for w in literal_number(tok[idx] << 8, tok[idx+1]):
+                compile(w)
             idx += 2
         elif tag == Token.LIT_STRING:
             pass

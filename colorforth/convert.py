@@ -71,12 +71,12 @@ def isAluMnemonic(s):
 
 
 def isMnemonic(s):
-    mn = [ ";", "@", "!", "swap" ]
+    mn = [ ";", "@", "!", "swap", "H", "0branch" ]
     return s in mn
 
 
 def isBuildin(s):
-    bi = [ "H" ]
+    bi = [ ]
     return s in bi
 
 
@@ -133,9 +133,8 @@ def tokenizeFragments(fragments):
                             tokens.append(TokenLiteralNumberDec(num, f))
                     except:
                         assert False, f"ERROR on line {f.linenum+1}: Unknown word '{t[1:]}'"
-        else: # empty line
-            if len(t):
-                print(ord(t[0]))
+        else: # empty line or whitespace
+            if len(t) and t != ' ': # ignore single space
                 if ord(t[0]) < 33:
                     tokens.append(TokenWhitespace(t, f))
     return tokens

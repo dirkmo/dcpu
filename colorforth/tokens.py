@@ -212,17 +212,17 @@ class TokenMnemonic(Token):
     def generate(self):
         data = [self.tag] # TODO: Länge fehlt
         if self.name == ";":
-            ops = [asm("nop>t:r-:ret")]
+            ops = asm("nop>t:r-:ret")
         elif self.name == "@":
-            ops = [asm("mem>t")]
+            ops = asm("mem>t")
         elif self.name == "!":
-            ops = [asm("t>mem:d-")]
+            ops = asm("t>mem:d-")
         elif self.name == "swap":
             ops = asm("n>r:r+") + asm("t>t:d-") + asm("r>t:d+:r-")
         elif self.name == "H":
-            op = [asm(f"litl {Consts.HERE}")]
+            ops = asm(f"litl {Consts.HERE}")
         else:
-            ops = [asm(self.name)]
+            ops = asm(self.name)
         for op in ops:
             data.extend(lohi(op))
         return data

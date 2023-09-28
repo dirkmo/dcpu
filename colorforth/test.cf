@@ -1,2 +1,2 @@
 :if H @ ;
-:then jz>pc swap ! ;
+:then H @ over - $fc00 and $e400 or ! ;
